@@ -1618,10 +1618,3 @@ h3 {
         box-shadow 0.15s ease,
         background 0.15s ease !important;
 }
-.page-header {
-    padding-bottom: 18px !important;
-}
-
-.page-header + .fines-filters-card {
-    margin-top: 0 !important;
-}

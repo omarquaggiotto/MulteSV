@@ -1934,9 +1934,18 @@ function renderPayments() {
                         ${money(summary.total)}
                     </div>
 
-                    <div class="payment-value">
-                        ${money(summary.paid)}
-                    </div>
+                    <div class="payment-value payment-paid-cell">
+
+                      <input
+                          type="number"
+                          class="payment-paid-input"
+                          data-payment-player="${escapeHtml(player)}"
+                          min="0"
+                          step="1"
+                          value="${summary.paid}"
+                      >
+
+                     </div>
 
                     <div class="
                         payment-value

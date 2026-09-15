@@ -2330,6 +2330,13 @@ function openFineModal(id = null) {
 
 
     /* =========================
+       MULTA PERSONALIZZATA
+       ========================= */
+
+    const CUSTOM_RULE_ID = "custom";
+
+
+    /* =========================
        REGOLA INIZIALE
        ========================= */
 
@@ -2487,7 +2494,62 @@ function openFineModal(id = null) {
                             .join("")
                     }
 
+                    <option value="${CUSTOM_RULE_ID}">
+                        ✏️ Multa personalizzata
+                    </option>
+
                 </select>
+
+            </div>
+
+
+            <!-- DESCRIZIONE PERSONALIZZATA -->
+
+            <div
+                class="field"
+                id="customDescriptionField"
+                style="display:none;"
+            >
+
+                <label>
+                    DESCRIZIONE
+                </label>
+
+                <input
+                    id="customDescription"
+                    type="text"
+                    placeholder="Descrizione della multa"
+                    value="${
+                        fine?.custom
+                            ? escapeHtml(
+                                fine.type || ""
+                            )
+                            : ""
+                    }"
+                >
+
+            </div>
+
+
+            <!-- QUANTITÀ -->
+
+            <div
+                class="field"
+                id="quantityField"
+                style="display:none;"
+            >
+
+                <label id="quantityLabel">
+                    QUANTITÀ
+                </label>
+
+                <input
+                    id="fineQuantity"
+                    type="number"
+                    min="0"
+                    step="1"
+                    value="1"
+                >
 
             </div>
 
@@ -2618,6 +2680,235 @@ function openFineModal(id = null) {
             "fineAmount"
         );
 
+    const quantityField =
+        document.getElementById(
+            "quantityField"
+        );
+
+    const quantityLabel =
+        document.getElementById(
+            "quantityLabel"
+        );
+
+    const quantityInput =
+        document.getElementById(
+            "fineQuantity"
+        );
+
+    const customDescriptionField =
+        document.getElementById(
+            "customDescriptionField"
+        );
+
+    const customDescription =
+        document.getElementById(
+            "customDescription"
+        );
+
+
+    /* =========================
+       AGGIORNA INTERFACCIA
+       ========================= */
+
+    function updateFineInterface() {
+
+        const selectedValue =
+            ruleSelect.value;
+
+
+        /* =========================
+           MULTA PERSONALIZZATA
+           ========================= */
+
+        if (
+            selectedValue ===
+            CUSTOM_RULE_ID
+        ) {
+
+            customDescriptionField.style.display =
+                "block";
+
+            quantityField.style.display =
+                "none";
+
+            amountInput.disabled =
+                false;
+
+            amountInput.min =
+                "0";
+
+            amountInput.value =
+                fine?.custom
+                    ? fine.amount
+                    : "";
+
+            return;
+
+        }
+
+
+        customDescriptionField.style.display =
+            "none";
+
+
+        /* =========================
+           REGOLA NORMALE
+           ========================= */
+
+        const rule =
+            state.rules.find(
+                item =>
+                    String(item.id) ===
+                    String(selectedValue)
+            );
+
+
+        if (!rule) {
+
+            quantityField.style.display =
+                "none";
+
+            amountInput.disabled =
+                false;
+
+            amountInput.value =
+                0;
+
+            return;
+
+        }
+
+
+        /* =========================
+           RITARDO AL MINUTO
+           ========================= */
+
+        if (
+            rule.calculation ===
+            "per_minute"
+        ) {
+
+            quantityField.style.display =
+                "block";
+
+            quantityLabel.textContent =
+                "MINUTI DI RITARDO";
+
+            quantityInput.min =
+                "0";
+
+            quantityInput.step =
+                "1";
+
+            quantityInput.value =
+                fine?.quantity ??
+                0;
+
+
+            amountInput.disabled =
+                true;
+
+            amountInput.value =
+                rule.baseAmount +
+                (
+                    Number(
+                        quantityInput.value
+                    ) || 0
+                ) *
+                rule.perMinute;
+
+            return;
+
+        }
+
+
+        /* =========================
+           IMPORTO PER PEZZO
+           ========================= */
+
+        if (
+            rule.calculation ===
+            "per_piece"
+        ) {
+
+            quantityField.style.display =
+                "block";
+
+            quantityLabel.textContent =
+                "NUMERO DI PEZZI";
+
+            quantityInput.min =
+                "1";
+
+            quantityInput.step =
+                "1";
+
+            quantityInput.value =
+                fine?.quantity ??
+                1;
+
+
+            amountInput.disabled =
+                true;
+
+            amountInput.value =
+                (
+                    Number(
+                        quantityInput.value
+                    ) || 1
+                ) *
+                rule.perPiece;
+
+            return;
+
+        }
+
+
+        /* =========================
+           IMPORTO MINIMO
+           ========================= */
+
+        if (
+            rule.calculation ===
+            "custom_min"
+        ) {
+
+            quantityField.style.display =
+                "none";
+
+            amountInput.disabled =
+                false;
+
+            amountInput.min =
+                rule.minAmount;
+
+            amountInput.value =
+                fine?.amount ??
+                rule.minAmount;
+
+            return;
+
+        }
+
+
+        /* =========================
+           MULTA FISSA
+           ========================= */
+
+        quantityField.style.display =
+            "none";
+
+        amountInput.disabled =
+            true;
+
+        amountInput.min =
+            "0";
+
+        amountInput.value =
+            rule.amount;
+
+    }
+
 
     /* =========================
        AGGIORNA REGOLE
@@ -2638,6 +2929,7 @@ function openFineModal(id = null) {
 
 
         ruleSelect.innerHTML =
+
             rules
                 .map(
                     rule => `
@@ -2659,6 +2951,15 @@ function openFineModal(id = null) {
                 .join("");
 
 
+        ruleSelect.innerHTML += `
+
+            <option value="${CUSTOM_RULE_ID}">
+                ✏️ Multa personalizzata
+            </option>
+
+        `;
+
+
         if (rules.length) {
 
             ruleSelect.value =
@@ -2666,14 +2967,10 @@ function openFineModal(id = null) {
                     rules[0].id
                 );
 
-            amountInput.value =
-                rules[0].amount;
-
-        } else {
-
-            amountInput.value = 0;
-
         }
+
+
+        updateFineInterface();
 
     }
 
@@ -2694,22 +2991,62 @@ function openFineModal(id = null) {
 
     ruleSelect.addEventListener(
         "change",
+        updateFineInterface
+    );
+
+
+    /* =========================
+       CAMBIO QUANTITÀ
+       ========================= */
+
+    quantityInput.addEventListener(
+        "input",
         () => {
+
+            const selectedValue =
+                ruleSelect.value;
+
 
             const rule =
                 state.rules.find(
                     item =>
                         String(item.id) ===
-                        String(
-                            ruleSelect.value
-                        )
+                        String(selectedValue)
                 );
 
 
-            if (rule) {
+            if (!rule) {
+                return;
+            }
+
+
+            const quantity =
+                Number(
+                    quantityInput.value
+                ) || 0;
+
+
+            if (
+                rule.calculation ===
+                "per_minute"
+            ) {
 
                 amountInput.value =
-                    rule.amount;
+                    rule.baseAmount +
+                    quantity *
+                    rule.perMinute;
+
+            }
+
+
+            if (
+                rule.calculation ===
+                "per_piece"
+            ) {
+
+                amountInput.value =
+                    quantity *
+                    rule.perPiece;
 
             }
 
@@ -2747,32 +3084,12 @@ function openFineModal(id = null) {
                     .value;
 
 
-            const ruleId =
-                Number(
-                    document
-                        .getElementById(
-                            "fineRule"
-                        )
-                        .value
-                );
-
-
             const date =
                 document
                     .getElementById(
                         "fineDate"
                     )
                     .value;
-
-
-            const amount =
-                Number(
-                    document
-                        .getElementById(
-                            "fineAmount"
-                        )
-                        .value
-                );
 
 
             const paid =
@@ -2783,11 +3100,152 @@ function openFineModal(id = null) {
                     .checked;
 
 
+            const selectedRule =
+                ruleSelect.value;
+
+
+            /* =========================
+               MULTA PERSONALIZZATA
+               ========================= */
+
+            if (
+                selectedRule ===
+                CUSTOM_RULE_ID
+            ) {
+
+                const description =
+                    customDescription.value.trim();
+
+
+                const customAmount =
+                    Number(
+                        amountInput.value
+                    );
+
+
+                if (
+                    !player ||
+                    !date ||
+                    !description ||
+                    !Number.isFinite(
+                        customAmount
+                    ) ||
+                    customAmount < 0
+                ) {
+
+                    showToast(
+                        "Controlla i dati inseriti."
+                    );
+
+                    return;
+
+                }
+
+
+                if (isEdit) {
+
+                    fine.player =
+                        player;
+
+                    fine.category =
+                        "Personalizzata";
+
+                    fine.type =
+                        description;
+
+                    fine.ruleId =
+                        null;
+
+                    fine.custom =
+                        true;
+
+                    fine.quantity =
+                        null;
+
+                    fine.date =
+                        date;
+
+                    fine.amount =
+                        customAmount;
+
+                    fine.paid =
+                        paid;
+
+                } else {
+
+                    state.fines.push({
+
+                        id:
+                            generateId(),
+
+                        date,
+
+                        player,
+
+                        category:
+                            "Personalizzata",
+
+                        type:
+                            description,
+
+                        ruleId:
+                            null,
+
+                        custom:
+                            true,
+
+                        quantity:
+                            null,
+
+                        amount:
+                            customAmount,
+
+                        paid
+
+                    });
+
+                }
+
+
+                saveState();
+
+                closeModal();
+
+                render();
+
+                showToast(
+                    isEdit
+                        ? "Multa modificata"
+                        : "Multa aggiunta"
+                );
+
+                return;
+
+            }
+
+
+            /* =========================
+               REGOLA NORMALE
+               ========================= */
+
+            const ruleId =
+                Number(
+                    selectedRule
+                );
+
+
+            const rule =
+                state.rules.find(
+                    item =>
+                        item.id ===
+                        ruleId
+                );
+
+
             if (
                 !player ||
-                !ruleId ||
-                !date ||
-                amount < 0
+                !rule ||
+                !date
             ) {
 
                 showToast(
@@ -2799,9 +3257,118 @@ function openFineModal(id = null) {
             }
 
 
-            /* =====================
+            let amount =
+                Number(
+                    amountInput.value
+                );
+
+
+            let quantity =
+                null;
+
+
+            /* =========================
+               CALCOLO AL MINUTO
+               ========================= */
+
+            if (
+                rule.calculation ===
+                "per_minute"
+            ) {
+
+                quantity =
+                    Number(
+                        quantityInput.value
+                    ) || 0;
+
+
+                amount =
+                    rule.baseAmount +
+                    quantity *
+                    rule.perMinute;
+
+            }
+
+
+            /* =========================
+               CALCOLO PER PEZZO
+               ========================= */
+
+            if (
+                rule.calculation ===
+                "per_piece"
+            ) {
+
+                quantity =
+                    Number(
+                        quantityInput.value
+                    ) || 0;
+
+
+                if (quantity < 1) {
+
+                    showToast(
+                        "Inserisci almeno 1 pezzo."
+                    );
+
+                    return;
+
+                }
+
+
+                amount =
+                    quantity *
+                    rule.perPiece;
+
+            }
+
+
+            /* =========================
+               IMPORTO MINIMO
+               ========================= */
+
+            if (
+                rule.calculation ===
+                "custom_min"
+            ) {
+
+                if (
+                    amount <
+                    rule.minAmount
+                ) {
+
+                    showToast(
+                        `L'importo minimo è ${money(
+                            rule.minAmount
+                        )}.`
+                    );
+
+                    return;
+
+                }
+
+            }
+
+
+            if (
+                !Number.isFinite(
+                    amount
+                ) ||
+                amount < 0
+            ) {
+
+                showToast(
+                    "Controlla l'importo."
+                );
+
+                return;
+
+            }
+
+
+            /* =========================
                MODIFICA
-               ===================== */
+               ========================= */
 
             if (isEdit) {
 
@@ -2812,18 +3379,10 @@ function openFineModal(id = null) {
                     ruleId;
 
                 fine.category =
-                    state.rules.find(
-                        rule =>
-                            rule.id ===
-                            ruleId
-                    )?.category || "";
+                    rule.category;
 
                 fine.type =
-                    state.rules.find(
-                        rule =>
-                            rule.id ===
-                            ruleId
-                    )?.type || "";
+                    rule.type;
 
                 fine.date =
                     date;
@@ -2831,25 +3390,23 @@ function openFineModal(id = null) {
                 fine.amount =
                     amount;
 
+                fine.quantity =
+                    quantity;
+
+                fine.custom =
+                    false;
+
                 fine.paid =
                     paid;
 
             }
 
 
-            /* =====================
+            /* =========================
                NUOVA MULTA
-               ===================== */
+               ========================= */
 
             else {
-
-                const rule =
-                    state.rules.find(
-                        item =>
-                            item.id ===
-                            ruleId
-                    );
-
 
                 state.fines.push({
 
@@ -2861,14 +3418,17 @@ function openFineModal(id = null) {
                     player,
 
                     category:
-                        rule?.category ||
-                        "",
+                        rule.category,
 
                     type:
-                        rule?.type ||
-                        "",
+                        rule.type,
 
                     ruleId,
+
+                    quantity,
+
+                    custom:
+                        false,
 
                     amount,
 
@@ -2892,6 +3452,13 @@ function openFineModal(id = null) {
             );
 
         };
+
+
+    /* =========================
+       INIZIALIZZAZIONE
+       ========================= */
+
+    updateFineInterface();
 
 }
 

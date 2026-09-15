@@ -933,14 +933,14 @@ function renderHome() {
        MESE CORRENTE
        ===================================================== */
 
-    const now = new Date();
+    const paymentMonths = getPaymentMonths();
 
-    const currentMonth =
-        months.includes(
+      const currentMonth =
+        paymentMonths.includes(
         selectedPaymentMonth
-    )
+          )
         ? selectedPaymentMonth
-        : months[0];
+        : paymentMonths[0];
 
     const currentMonthFines =
         state.fines.filter(
@@ -1862,10 +1862,11 @@ function renderPayments() {
         getPaymentMonths();
 
     const currentMonth =
-        selectedMonth !== "all" &&
-        months.includes(selectedMonth)
-            ? selectedMonth
-            : months[0];
+       months.includes(
+        selectedPaymentMonth
+    )
+        ? selectedPaymentMonth
+        : months[0];
 
     const monthLabel =
         new Date(

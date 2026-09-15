@@ -4350,20 +4350,6 @@ function bindPageEvents() {
                 openFineModal()
         );
 
-    /* =========================
-       NUOVA MULTA
-       ========================= */
-
-    document
-        .getElementById(
-            "addFine"
-        )
-        ?.addEventListener(
-            "click",
-            () =>
-                openFineModal()
-        );
-
 
     document
         .getElementById(
@@ -4681,7 +4667,12 @@ function bindPageEvents() {
 
         });
 
-
+   document
+    .getElementById("exportPaymentsImage")
+    ?.addEventListener(
+        "click",
+        exportPaymentsImage
+    );
     /* =========================
        SALVA IMPOSTAZIONI
        ========================= */

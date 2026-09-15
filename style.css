@@ -117,15 +117,12 @@ select:focus-visible {
    ========================================================= */
 
 .app {
-
     width: 100%;
     max-width: 1100px;
-
     min-height: 100vh;
-
     margin: 0 auto;
 
-    padding-bottom: 105px;
+    padding-bottom: 120px;
 }
 
 

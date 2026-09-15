@@ -1418,3 +1418,83 @@ h3 {
     outline: 2px solid var(--primary);
     outline-offset: 1px;
 }
+/* =========================================================
+   MULTE - FILTRI
+   ========================================================= */
+
+.fines-filters-card {
+    margin-bottom: 16px;
+}
+
+.fines-filters-header {
+    margin-bottom: 16px;
+}
+
+.fines-filters-header strong {
+    display: block;
+    font-size: 16px;
+    margin-bottom: 4px;
+}
+
+.fines-filters-header .muted {
+    display: block;
+    font-size: 13px;
+}
+
+.fines-filters-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.fines-filters-grid .field {
+    margin: 0;
+}
+
+
+/* =========================================================
+   MULTE - RIEPILOGO
+   ========================================================= */
+
+.fines-summary {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.fines-summary .stat {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px;
+    box-shadow: var(--shadow);
+}
+
+.fines-summary .stat-label {
+    display: block;
+    margin-bottom: 8px;
+}
+
+.fines-summary .stat-value {
+    font-size: 26px;
+}
+
+
+/* =========================================================
+   MULTE - RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 600px) {
+
+    .fines-filters-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    .fines-summary {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+}

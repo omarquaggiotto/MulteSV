@@ -1482,15 +1482,49 @@ h3 {
 
 
 /* =========================================================
-   MULTE - RESPONSIVE
+   MULTE - RIEPILOGO
    ========================================================= */
 
-@media (max-width: 600px) {
+.fines-summary {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 16px;
+}
 
-    .fines-filters-grid {
-        grid-template-columns: 1fr;
-        gap: 10px;
-    }
+.fines-summary .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px;
+    box-shadow: var(--shadow);
+}
+
+.fines-summary .stat-card span {
+    display: block;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 800;
+    margin-bottom: 8px;
+}
+
+.fines-summary .stat-card strong {
+    display: block;
+    font-size: 27px;
+    font-weight: 900;
+    line-height: 1;
+}
+
+.fines-summary .stat-card small {
+    display: block;
+    margin-top: 8px;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+
+@media (max-width: 600px) {
 
     .fines-summary {
         grid-template-columns: 1fr;

@@ -290,6 +290,16 @@ function loadState() {
                 );
 
 
+            /* =========================================
+               SALVA IL NUOVO MULTARIO
+               ========================================= */
+
+            localStorage.setItem(
+                STORAGE_KEY,
+                JSON.stringify(loaded)
+            );
+
+
             return loaded;
 
         }

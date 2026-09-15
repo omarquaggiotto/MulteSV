@@ -1,1121 +1,5 @@
-/* =========================================================
-   MulteFC
-   APP.JS
-   ========================================================= */
-
-const STORAGE_KEY = "multefc_v1";
-
-
-/* =========================================================
-   DATI INIZIALI
-   ========================================================= */
-
-const defaultState = {
-
-    team: "Multe FC",
-
-    season: "2026/27",
-
-    theme: "light",
-
-    players: [
-        "Marco",
-        "Luca",
-        "Andrea",
-        "Matteo",
-        "Davide",
-        "Simone"
-    ],
-
-    fines: [
-
-        {
-            id: 1,
-            date: "2026-09-12",
-            player: "Marco",
-            category: "Allenamento",
-            type: "Ritardo allenamento",
-            amount: 5,
-            paid: true
-        },
-
-        {
-            id: 2,
-            date: "2026-09-11",
-            player: "Luca",
-            category: "Partita",
-            type: "Ammonizione per proteste",
-            amount: 10,
-            paid: false
-        },
-
-        {
-            id: 3,
-            date: "2026-09-08",
-            player: "Andrea",
-            category: "Allenamento",
-            type: "Assenza ingiustificata",
-            amount: 20,
-            paid: true
-        }
-
-    ],
-
-    rules: [
-
-        {
-            id: 1,
-            category: "Allenamento",
-            type: "Ritardo allenamento",
-            amount: 5
-        },
-
-        {
-            id: 2,
-            category: "Allenamento",
-            type: "Ritardo oltre 15 minuti",
-            amount: 10
-        },
-
-        {
-            id: 3,
-            category: "Allenamento",
-            type: "Assenza ingiustificata",
-            amount: 20
-        },
-
-        {
-            id: 4,
-            category: "Partita",
-            type: "Ammonizione",
-            amount: 5
-        },
-
-        {
-            id: 5,
-            category: "Partita",
-            type: "Ammonizione per proteste",
-            amount: 10
-        },
-
-        {
-            id: 6,
-            category: "Partita",
-            type: "Espulsione",
-            amount: 20
-        },
-
-        {
-            id: 7,
-            category: "Materiale",
-            type: "Dimenticanza materiale",
-            amount: 5
-        }
-
-    ]
-
-};
-
-
-/* =========================================================
-   STATO APP
-   ========================================================= */
-
-let state = loadState();
-
-let currentPage = "home";
-
-let selectedMonth = "all";
-
-
-/* =========================================================
-   STORAGE
-   ========================================================= */
-
-function loadState() {
-
-    try {
-
-        const saved =
-            localStorage.getItem(STORAGE_KEY);
-
-        if (saved) {
-
-            return JSON.parse(saved);
-
-        }
-
-    } catch (error) {
-
-        console.error(
-            "Errore caricamento dati:",
-            error
-        );
-
-    }
-
-    return structuredClone(defaultState);
-}
-
-
-function saveState() {
-
-    localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify(state)
-    );
-
-}
-
-
-/* =========================================================
-   UTILITY
-   ========================================================= */
-
-function money(value) {
-
-    return new Intl.NumberFormat(
-        "it-IT",
-        {
-            style: "currency",
-            currency: "EUR",
-            maximumFractionDigits: 0
-        }
-    ).format(value);
-
-}
-
-
-function formatDate(date) {
-
-    return new Date(
-        date + "T12:00:00"
-    ).toLocaleDateString(
-        "it-IT",
-        {
-            day: "2-digit",
-            month: "2-digit",
-            year: "numeric"
-        }
-    );
-
-}
-
-
-function generateId() {
-
-    return Date.now() +
-        Math.floor(
-            Math.random() * 1000
-        );
-
-}
-
-
-function initials(name) {
-
-    return name
-        .split(/\s+/)
-        .map(word => word[0])
-        .join("")
-        .slice(0, 2)
-        .toUpperCase();
-
-}
-
-
-function escapeHtml(value) {
-
-    return String(value ?? "")
-        .replace(
-            /[&<>"']/g,
-            character => {
-
-                const map = {
-
-                    "&": "&amp;",
-                    "<": "&lt;",
-                    ">": "&gt;",
-                    '"': "&quot;",
-                    "'": "&#039;"
-
-                };
-
-                return map[character];
-
-            }
-        );
-
-}
-
-
-/* =========================================================
-   STAGIONE / MESI
-   ========================================================= */
-
-function getSeasonStartYear() {
-
-    const match =
-        String(state.season)
-            .match(/^(\d{4})/);
-
-    if (match) {
-
-        return Number(match[1]);
-
-    }
-
-    return new Date()
-        .getFullYear();
-
-}
-
-
-function getYearForMonth(month) {
-
-    const startYear =
-        getSeasonStartYear();
-
-    /*
-       Luglio → Dicembre
-       = anno di inizio stagione
-
-       Gennaio → Giugno
-       = anno successivo
-    */
-
-    if (month >= 7) {
-
-        return startYear;
-
-    }
-
-    return startYear + 1;
-
-}
-
-
-function getMonthName(month) {
-
-    return new Date(
-        2000,
-        month - 1,
-        1
-    ).toLocaleDateString(
-        "it-IT",
-        {
-            month: "long"
-        }
-    );
-
-}
-
-
-function getSeasonMonths() {
-
-    const months = [];
-
-    for (
-        let month = 1;
-        month <= 12;
-        month++
-    ) {
-
-        const year =
-            getYearForMonth(month);
-
-        const monthNumber =
-            String(month)
-                .padStart(2, "0");
-
-        months.push({
-
-            id:
-                `${year}-${monthNumber}`,
-
-            label:
-                `${getMonthName(month)} ${year}`
-
-        });
-
-    }
-
-    return months;
-
-}
-
-
-/* =========================================================
-   TEMA
-   ========================================================= */
-
-function applyTheme() {
-
-    document.documentElement
-        .dataset.theme =
-            state.theme === "dark"
-                ? "dark"
-                : "light";
-
-    const button =
-        document.getElementById(
-            "themeButton"
-        );
-
-    if (button) {
-
-        button.textContent =
-            state.theme === "dark"
-                ? "🌙"
-                : "☀️";
-
-    }
-
-}
-
-
-/* =========================================================
-   NAVIGAZIONE
-   ========================================================= */
-
-function updateNavigation() {
-
-    document
-        .querySelectorAll(
-            ".nav-button"
-        )
-        .forEach(button => {
-
-            button.classList.toggle(
-                "active",
-                button.dataset.page ===
-                    currentPage
-            );
-
-        });
-
-
-    const titles = {
-
-        home: "Home",
-
-        fines: "Multe",
-
-        rules: "Multario",
-
-        settings: "Impostazioni"
-
-    };
-
-
-    document.getElementById(
-        "pageTitle"
-    ).textContent =
-        titles[currentPage];
-
-}
-
-
-/* =========================================================
-   RENDER GENERALE
-   ========================================================= */
-
-function render() {
-
-    applyTheme();
-
-    updateNavigation();
-
-
-    const app =
-        document.getElementById(
-            "app"
-        );
-
-
-    if (currentPage === "home") {
-
-        app.innerHTML =
-            renderHome();
-
-    }
-
-
-    if (currentPage === "fines") {
-
-        app.innerHTML =
-            renderFines();
-
-    }
-
-
-    if (currentPage === "rules") {
-
-        app.innerHTML =
-            renderRules();
-
-    }
-
-
-    if (currentPage === "settings") {
-
-        app.innerHTML =
-            renderSettings();
-
-    }
-
-
-    bindPageEvents();
-
-}
-
-
-/* =========================================================
-   HOME
-   ========================================================= */
-
-function renderHome() {
-
-    /* =====================================================
-       CALCOLO STATISTICHE
-       ===================================================== */
-
-    const total = state.fines.reduce(
-        (sum, fine) => sum + Number(fine.amount),
-        0
-    );
-
-    const paid = state.fines
-        .filter(fine => fine.paid)
-        .reduce(
-            (sum, fine) => sum + Number(fine.amount),
-            0
-        );
-
-    const unpaid = total - paid;
-
-    const fineCount = state.fines.length;
-
-    const finedPlayers = new Set(
-        state.fines.map(fine => fine.player)
-    ).size;
-
-    const paymentPercentage =
-        total > 0
-            ? Math.round((paid / total) * 100)
-            : 0;
-
-    const averageFine =
-        fineCount > 0
-            ? total / fineCount
-            : 0;
-
-    const highestFine =
-        state.fines.length
-            ? Math.max(
-                ...state.fines.map(
-                    fine => Number(fine.amount)
-                )
-            )
-            : 0;
-
-
-    /* =====================================================
-       CLASSIFICA
-       ===================================================== */
-
-    const ranking = state.players
-        .map(player => {
-
-            const playerFines =
-                state.fines.filter(
-                    fine => fine.player === player
-                );
-
-            const amount =
-                playerFines.reduce(
-                    (sum, fine) =>
-                        sum + Number(fine.amount),
-                    0
-                );
-
-            const paidAmount =
-                playerFines
-                    .filter(fine => fine.paid)
-                    .reduce(
-                        (sum, fine) =>
-                            sum + Number(fine.amount),
-                        0
-                    );
-
-            return {
-                player,
-                fines: playerFines.length,
-                amount,
-                paidAmount
-            };
-
-        })
-        .filter(player => player.fines > 0)
-        .sort(
-            (a, b) =>
-                b.amount - a.amount
-        );
-
-
-    const podium =
-        ranking.slice(0, 3);
-
-
-    /* =====================================================
-       ULTIME MULTE
-       ===================================================== */
-
-    const latest =
-        [...state.fines]
-            .sort(
-                (a, b) =>
-                    b.date.localeCompare(a.date)
-            )
-            .slice(0, 5);
-
-
-    /* =====================================================
-       MESE CORRENTE
-       ===================================================== */
-
-    const now = new Date();
-
-    const currentMonth =
-        `${now.getFullYear()}-${String(
-            now.getMonth() + 1
-        ).padStart(2, "0")}`;
-
-    const currentMonthFines =
-        state.fines.filter(
-            fine =>
-                fine.date.slice(0, 7) ===
-                currentMonth
-        );
-
-    const currentMonthTotal =
-        currentMonthFines.reduce(
-            (sum, fine) =>
-                sum + Number(fine.amount),
-            0
-        );
-
-
-    /* =====================================================
-       PODIO
-       ===================================================== */
-
-    const podiumHtml =
-        podium.length
-            ? podium
-                .map((player, index) => {
-
-                    const positions = [
-                        "🥇",
-                        "🥈",
-                        "🥉"
-                    ];
-
-                    return `
-
-                        <div class="rank">
-
-                            <div class="rank-number">
-                                ${positions[index]}
-                            </div>
-
-                            <div class="avatar">
-                                ${initials(player.player)}
-                            </div>
-
-                            <div
-                                style="
-                                    flex:1;
-                                    min-width:0;
-                                "
-                            >
-
-                                <div class="row">
-
-                                    <strong>
-                                        ${escapeHtml(
-                                            player.player
-                                        )}
-                                    </strong>
-
-                                    <strong>
-                                        ${money(
-                                            player.amount
-                                        )}
-                                    </strong>
-
-                                </div>
-
-                                <div
-                                    class="small muted"
-                                    style="
-                                        margin-top:4px;
-                                    "
-                                >
-                                    ${player.fines}
-                                    ${
-                                        player.fines === 1
-                                            ? "multa"
-                                            : "multe"
-                                    }
-                                </div>
-
-                            </div>
-
-                        </div>
-
-                    `;
-
-                })
-                .join("")
-            :
-            `
-                <div class="empty">
-                    Nessuna multa registrata.
-                </div>
-            `;
-
-
-    /* =====================================================
-       CLASSIFICA COMPLETA
-       ===================================================== */
-
-    const rankingHtml =
-        ranking.length
-            ? ranking
-                .map(
-                    (player, index) => {
-
-                        const percentage =
-                            total > 0
-                                ?
-                            Math.min(
-                                100,
-                                (
-                                    player.amount /
-                                    total
-                                ) * 100
-                            )
-                                :
-                            0;
-
-                        return `
-
-                            <div class="rank">
-
-                                <div class="rank-number">
-                                    ${index + 1}
-                                </div>
-
-                                <div class="avatar">
-                                    ${initials(
-                                        player.player
-                                    )}
-                                </div>
-
-                                <div
-                                    style="
-                                        flex:1;
-                                        min-width:0;
-                                    "
-                                >
-
-                                    <div class="row">
-
-                                        <strong>
-                                            ${escapeHtml(
-                                                player.player
-                                            )}
-                                        </strong>
-
-                                        <strong>
-                                            ${money(
-                                                player.amount
-                                            )}
-                                        </strong>
-
-                                    </div>
-
-                                    <div
-                                        class="progress"
-                                    >
-
-                                        <i
-                                            style="
-                                                width:
-                                                ${percentage}%;
-                                            "
-                                        ></i>
-
-                                    </div>
-
-                                    <div
-                                        class="small muted"
-                                        style="
-                                            margin-top:5px;
-                                        "
-                                    >
-
-                                        ${player.fines}
-                                        ${
-                                            player.fines === 1
-                                                ? "multa"
-                                                : "multe"
-                                        }
-
-                                        ·
-
-                                        ${money(
-                                            player.paidAmount
-                                        )}
-                                        pagati
-
-                                    </div>
-
-                                </div>
-
-                            </div>
-
-                        `;
-
-                    }
-                )
-                .join("")
-            :
-            `
-                <div class="empty">
-                    Nessuna multa ancora.
-                </div>
-            `;
-
-
-    /* =====================================================
-       OUTPUT HOME
-       ===================================================== */
-
-    return `
-
-        <!-- ================================================
-             HERO
-             ================================================ -->
-
-        <section class="card hero">
-
-            <div class="small">
-
-                ${escapeHtml(state.team)}
-
-                ·
-
-                Stagione
-                ${escapeHtml(state.season)}
-
-            </div>
-
-            <h2>
-                Situazione multe
-            </h2>
-
-            <div class="hero-total">
-                ${money(total)}
-            </div>
-
-            <div class="hero-subtitle">
-                Totale multe della stagione
-            </div>
-
-        </section>
-
-
-        <!-- ================================================
-             STATISTICHE PRINCIPALI
-             ================================================ -->
-
-        <div
-            class="grid stats"
-            style="margin-top:14px"
-        >
-
-            <div class="card stat">
-
-                <div class="stat-label">
-                    PAGATO
-                </div>
-
-                <div
-                    class="stat-value"
-                    style="color:var(--green)"
-                >
-                    ${money(paid)}
-                </div>
-
-            </div>
-
-
-            <div class="card stat">
-
-                <div class="stat-label">
-                    DA PAGARE
-                </div>
-
-                <div
-                    class="stat-value"
-                    style="color:var(--red)"
-                >
-                    ${money(unpaid)}
-                </div>
-
-            </div>
-
-
-            <div class="card stat">
-
-                <div class="stat-label">
-                    MULTE
-                </div>
-
-                <div class="stat-value">
-                    ${fineCount}
-                </div>
-
-            </div>
-
-
-            <div class="card stat">
-
-                <div class="stat-label">
-                    GIOCATORI
-                </div>
-
-                <div class="stat-value">
-                    ${finedPlayers}
-                </div>
-
-            </div>
-
-        </div>
-
-
-        <!-- ================================================
-             STATISTICHE EXTRA
-             ================================================ -->
-
-        <div class="grid stats">
-
-            <div class="card stat">
-
-                <div class="stat-label">
-                    INCASSATO
-                </div>
-
-                <div class="stat-value">
-                    ${paymentPercentage}%
-                </div>
-
-            </div>
-
-
-            <div class="card stat">
-
-                <div class="stat-label">
-                    MEDIA MULTA
-                </div>
-
-                <div class="stat-value">
-                    ${money(averageFine)}
-                </div>
-
-            </div>
-
-
-            <div class="card stat">
-
-                <div class="stat-label">
-                    PIÙ ALTA
-                </div>
-
-                <div
-                    class="stat-value"
-                    style="color:var(--red)"
-                >
-                    ${money(highestFine)}
-                </div>
-
-            </div>
-
-
-            <div class="card stat">
-
-                <div class="stat-label">
-                    MESE
-                </div>
-
-                <div class="stat-value">
-                    ${money(currentMonthTotal)}
-                </div>
-
-            </div>
-
-        </div>
-
-
-        <!-- ================================================
-             BARRA INCASSI
-             ================================================ -->
-
-        <div class="card">
-
-            <div class="row">
-
-                <div>
-
-                    <strong>
-                        💰 Incasso multe
-                    </strong>
-
-                    <div class="small muted">
-                        ${money(paid)}
-                        di
-                        ${money(total)}
-                    </div>
-
-                </div>
-
-                <strong>
-                    ${paymentPercentage}%
-                </strong>
-
-            </div>
-
-
-            <div
-                class="progress"
-                style="
-                    margin-top:12px;
-                    height:10px;
-                "
-            >
-
-                <i
-                    style="
-                        width:${paymentPercentage}%;
-                    "
-                ></i>
-
-            </div>
-
-        </div>
-
-
-        <!-- ================================================
-             CLASSIFICA
-             ================================================ -->
-
-        <div class="section-head">
-
-            <h2>
-                🏆 Classifica
-            </h2>
-
-            <button
-                class="btn secondary"
-                id="goToFines"
-                type="button"
-            >
-                Vedi multe
-            </button>
-
-        </div>
-
-
-        <div class="card list">
-
-            ${podiumHtml}
-
-        </div>
-
-
-        ${
-            ranking.length > 3
-                ?
-
-            `
-
-                <div class="section-head">
-
-                    <h2>
-                        📊 Classifica completa
-                    </h2>
-
-                </div>
-
-
-                <div class="card list">
-
-                    ${rankingHtml}
-
-                </div>
-
-            `
-
-                :
-
-            ""
-
-        }
-
-
-        <!-- ================================================
-             ULTIME MULTE
-             ================================================ -->
-
-        <div class="section-head">
-
-            <h2>
-                🕘 Ultime multe
-            </h2>
-
-        </div>
-
-
-        <div class="card list">
-
-            ${
-                latest.length
-                    ?
-                latest
-                    .map(renderFineRow)
-                    .join("")
-                    :
-                `
-                    <div class="empty">
-                        Non ci sono multe.
-                    </div>
-                `
-            }
-
-        </div>
-
-    `;
-
-}
-
-
-/* =========================================================
-   MULTE
-   ========================================================= */
-
 function renderFines() {
+
     const allFines = state.fines || [];
 
     const monthNames = [
@@ -1133,195 +17,433 @@ function renderFines() {
         "Dicembre"
     ];
 
-    // Costruiamo direttamente i 12 mesi della stagione 2026/27
-    const seasonStartYear = Number(state.season?.slice(0, 4)) || new Date().getFullYear();
+
+    /* =========================
+       MESI STAGIONE
+       ========================= */
+
+    const seasonStartYear =
+        Number(
+            state.season?.slice(0, 4)
+        ) ||
+        new Date().getFullYear();
+
 
     const seasonMonths = [];
 
-    for (let monthIndex = 7; monthIndex <= 11; monthIndex++) {
 
-    	const year = seasonStartYear;
-    	const monthNumber = String(monthIndex + 1).padStart(2, "0");
+    // Agosto → Dicembre
+    for (
+        let monthIndex = 7;
+        monthIndex <= 11;
+        monthIndex++
+    ) {
 
-    	seasonMonths.push({
-        	id: `${year}-${monthNumber}`,
-        	label: `${monthNames[monthIndex]} ${year}`
-    	});
+        const year =
+            seasonStartYear;
+
+        const monthNumber =
+            String(monthIndex + 1)
+                .padStart(2, "0");
+
+
+        seasonMonths.push({
+
+            id:
+                `${year}-${monthNumber}`,
+
+            label:
+                `${monthNames[monthIndex]} ${year}`
+
+        });
+
     }
 
-    for (let monthIndex = 0; monthIndex <= 4; monthIndex++) {
 
-    	const year = seasonStartYear + 1;
-    	const monthNumber = String(monthIndex + 1).padStart(2, "0");
+    // Gennaio → Maggio
+    for (
+        let monthIndex = 0;
+        monthIndex <= 4;
+        monthIndex++
+    ) {
 
-    	seasonMonths.push({
-        	id: `${year}-${monthNumber}`,
-        	label: `${monthNames[monthIndex]} ${year}`
-    	});
+        const year =
+            seasonStartYear + 1;
+
+        const monthNumber =
+            String(monthIndex + 1)
+                .padStart(2, "0");
+
+
+        seasonMonths.push({
+
+            id:
+                `${year}-${monthNumber}`,
+
+            label:
+                `${monthNames[monthIndex]} ${year}`
+
+        });
+
     }
+
+
+    /* =========================
+       FILTRO MULTE
+       ========================= */
 
     let fines = allFines;
 
-    if (selectedMonth !== "all") {
-        fines = allFines.filter(fine =>
-            fine.date && fine.date.startsWith(selectedMonth)
-        );
+
+    if (
+        selectedMonth !== "all"
+    ) {
+
+        fines =
+            allFines.filter(
+                fine =>
+                    fine.date &&
+                    fine.date.startsWith(
+                        selectedMonth
+                    )
+            );
+
     }
 
-    const total = fines.reduce(
-        (sum, fine) => sum + Number(fine.amount || 0),
-        0
-    );
 
-    const unpaid = fines
-        .filter(fine => !fine.paid)
-        .reduce(
-            (sum, fine) => sum + Number(fine.amount || 0),
+    /* =========================
+       TOTALI
+       ========================= */
+
+    const total =
+        fines.reduce(
+            (sum, fine) =>
+                sum +
+                Number(
+                    fine.amount || 0
+                ),
             0
         );
 
-    const paid = total - unpaid;
 
-    const selectedMonthData = seasonMonths.find(
-        month => month.id === selectedMonth
-    );
+    const unpaid =
+        fines
+            .filter(
+                fine =>
+                    !fine.paid
+            )
+            .reduce(
+                (sum, fine) =>
+                    sum +
+                    Number(
+                        fine.amount || 0
+                    ),
+                0
+            );
+
+
+    const paid =
+        total - unpaid;
+
+
+    /* =========================
+       TITOLO
+       ========================= */
+
+    const selectedMonthData =
+        seasonMonths.find(
+            month =>
+                month.id ===
+                selectedMonth
+        );
+
 
     const title =
         selectedMonth === "all"
+
             ? "Tutte le multe"
+
             : selectedMonthData
                 ? selectedMonthData.label
                 : "Multe";
 
+
     const subtitle =
         fines.length === 0
+
             ? "Nessuna multa registrata"
+
             : `${fines.length} ${
-                fines.length === 1 ? "multa" : "multe"
+                fines.length === 1
+                    ? "multa"
+                    : "multe"
             } · ${money(total)} totali`;
 
-    const sortedFines = [...fines].sort(
-        (a, b) => new Date(b.date) - new Date(a.date)
-    );
 
-    const finesHtml = sortedFines.length
-        ? `
+    /* =========================
+       ORDINAMENTO
+       ========================= */
+
+    const sortedFines =
+        [...fines].sort(
+            (a, b) =>
+                new Date(b.date) -
+                new Date(a.date)
+        );
+
+
+    /* =========================
+       ELENCO
+       ========================= */
+
+    const finesHtml =
+        sortedFines.length
+
+            ?
+
+        `
             <div class="list fines-list">
-                ${sortedFines.map(renderFineRow).join("")}
+
+                ${
+                    sortedFines
+                        .map(renderFineRow)
+                        .join("")
+                }
+
             </div>
         `
-        : `
-            <div class="card empty-state">
-                <div class="empty-icon">🧾</div>
 
-                <h3>Nessuna multa</h3>
+            :
+
+        `
+            <div class="card empty-state">
+
+                <div class="empty-icon">
+                    🧾
+                </div>
+
+                <h3>
+                    Nessuna multa
+                </h3>
 
                 <p>
-                    Non ci sono multe registrate per questo periodo.
+                    Non ci sono multe
+                    registrate per questo periodo.
                 </p>
 
-                <button class="primary-btn" id="addFineEmpty">
+                <button
+                    class="primary-btn"
+                    id="addFineEmpty"
+                >
                     ＋ Aggiungi multa
                 </button>
+
             </div>
         `;
 
+
+    /* =========================
+       OUTPUT
+       ========================= */
+
     return `
+
         <section class="page-header">
+
             <div>
-                <div class="eyebrow">GESTIONE MULTE</div>
 
-                <h1>${escapeHtml(title)}</h1>
+                <div class="eyebrow">
+                    GESTIONE MULTE
+                </div>
 
-                <p>${subtitle}</p>
+                <h1>
+                    ${escapeHtml(title)}
+                </h1>
+
+                <p>
+                    ${subtitle}
+                </p>
+
             </div>
 
-            <button class="primary-btn" id="addFine">
+
+            <button
+                class="primary-btn"
+                id="addFine"
+            >
                 ＋ Nuova multa
             </button>
+
         </section>
+
+
+        <!-- =========================
+             SELETTORE MESE
+             ========================= -->
 
         <div class="card month-selector">
 
             <div class="section-title-row">
+
                 <div>
-                    <strong>Periodo</strong>
+
+                    <strong>
+                        Periodo
+                    </strong>
 
                     <span class="muted">
                         Seleziona il mese da visualizzare
                     </span>
+
                 </div>
+
             </div>
 
-            <div class="month-chips">
 
-                <button
-                    class="month-chip ${
-                        selectedMonth === "all" ? "active" : ""
-                    }"
-                    data-month="all"
+            <div class="month-select-wrapper">
+
+                <select
+                    id="monthSelector"
+                    class="month-select"
                 >
-                    Tutte
-                </button>
 
-                ${seasonMonths.map(month => `
-                    <button
-                        class="month-chip ${
-                            selectedMonth === month.id ? "active" : ""
-                        }"
-                        data-month="${month.id}"
+                    <option
+                        value="all"
+                        ${
+                            selectedMonth === "all"
+                                ? "selected"
+                                : ""
+                        }
                     >
-                        ${month.label}
-                    </button>
-                `).join("")}
+                        Tutte le multe
+                    </option>
+
+
+                    ${
+                        seasonMonths
+                            .map(
+                                month => `
+
+                                    <option
+                                        value="${month.id}"
+                                        ${
+                                            selectedMonth ===
+                                            month.id
+                                                ? "selected"
+                                                : ""
+                                        }
+                                    >
+                                        ${month.label}
+                                    </option>
+
+                                `
+                            )
+                            .join("")
+                    }
+
+                </select>
+
+
+                <span
+                    class="month-select-arrow"
+                >
+                    ⌄
+                </span>
 
             </div>
+
         </div>
+
+
+        <!-- =========================
+             RIEPILOGO
+             ========================= -->
 
         <div class="stats-grid fines-summary">
 
-            <div class="stat-card">
-                <span>Totale periodo</span>
 
-                <strong>${money(total)}</strong>
+            <div class="stat-card">
+
+                <span>
+                    Totale periodo
+                </span>
+
+                <strong>
+                    ${money(total)}
+                </strong>
 
                 <small>
                     ${fines.length}
-                    ${fines.length === 1 ? "multa" : "multe"}
+                    ${
+                        fines.length === 1
+                            ? "multa"
+                            : "multe"
+                    }
                 </small>
+
             </div>
 
+
             <div class="stat-card">
-                <span>Pagate</span>
+
+                <span>
+                    Pagate
+                </span>
 
                 <strong class="positive">
                     ${money(paid)}
                 </strong>
 
-                <small>Già saldate</small>
+                <small>
+                    Già saldate
+                </small>
+
             </div>
 
-            <div class="stat-card">
-                <span>Da pagare</span>
 
-                <strong class="${
-                    unpaid > 0 ? "negative" : "positive"
-                }">
+            <div class="stat-card">
+
+                <span>
+                    Da pagare
+                </span>
+
+                <strong
+                    class="${
+                        unpaid > 0
+                            ? "negative"
+                            : "positive"
+                    }"
+                >
                     ${money(unpaid)}
                 </strong>
 
                 <small>
-                    ${fines.filter(f => !f.paid).length}
+                    ${
+                        fines.filter(
+                            fine =>
+                                !fine.paid
+                        ).length
+                    }
                     non saldate
                 </small>
+
             </div>
 
+
         </div>
+
+
+        <!-- =========================
+             ELENCO
+             ========================= -->
 
         <div class="section-heading">
 
             <div>
-                <h2>Elenco multe</h2>
+
+                <h2>
+                    Elenco multe
+                </h2>
 
                 <span>
                     ${
@@ -1330,94 +452,16 @@ function renderFines() {
                             : "Nessun elemento"
                     }
                 </span>
+
             </div>
 
         </div>
 
+
         ${finesHtml}
+
     `;
 
-    document
-        .querySelectorAll("[data-month]")
-        .forEach(button => {
-
-            button.addEventListener("click", () => {
-
-                selectedMonth = button.dataset.month;
-
-                render();
-            });
-        });
-
-    document
-        .querySelector("#addFine")
-        ?.addEventListener(
-            "click",
-            () => openFineModal()
-        );
-
-    document
-        .querySelector("#addFineEmpty")
-        ?.addEventListener(
-            "click",
-            () => openFineModal()
-        );
-
-    document
-        .querySelectorAll("[data-toggle-paid]")
-        .forEach(button => {
-
-            button.addEventListener("click", () => {
-
-                const id = button.dataset.togglePaid;
-
-                const fine = state.fines.find(
-                    item => item.id === id
-                );
-
-                if (!fine) return;
-
-                fine.paid = !fine.paid;
-
-                saveState();
-
-                render();
-            });
-        });
-
-    document
-        .querySelectorAll("[data-edit-fine]")
-        .forEach(button => {
-
-            button.addEventListener("click", () => {
-
-                openFineModal(
-                    button.dataset.editFine
-                );
-            });
-        });
-
-    document
-        .querySelectorAll("[data-delete-fine]")
-        .forEach(button => {
-
-            button.addEventListener("click", () => {
-
-                const id = button.dataset.deleteFine;
-
-                if (!confirm("Vuoi eliminare questa multa?")) {
-                    return;
-                }
-
-                state.fines = state.fines.filter(
-                    fine => fine.id !== id
-                );
-
-                saveState();
-
-                render();
-            });
-        });
 }
 
 
@@ -3002,21 +2046,15 @@ function bindPageEvents() {
        ========================= */
 
     document
-        .querySelectorAll(
-            "[data-month]"
-        )
-        .forEach(button => {
+    .getElementById("monthSelector")
+    ?.addEventListener("change", event => {
 
-            button.onclick = () => {
+        selectedMonth =
+            event.target.value;
 
-                selectedMonth =
-                    button.dataset.month;
+        render();
 
-                render();
-
-            };
-
-        });
+    });
 
 
     /* =========================

@@ -276,7 +276,21 @@ function loadState() {
 
         if (saved) {
 
-            return JSON.parse(saved);
+            const loaded =
+                JSON.parse(saved);
+
+
+            /* =========================================
+               AGGIORNA IL MULTARIO
+               ========================================= */
+
+            loaded.rules =
+                structuredClone(
+                    defaultState.rules
+                );
+
+
+            return loaded;
 
         }
 
@@ -289,9 +303,10 @@ function loadState() {
 
     }
 
-    return structuredClone(defaultState);
-}
 
+    return structuredClone(defaultState);
+
+}
 
 function saveState() {
 

@@ -3083,25 +3083,18 @@ function bindPageEvents() {
 
 
     /* =========================
-       MESI
-       ========================= */
+   MESI
+   ========================= */
 
-    document
-        .querySelectorAll(
-            "[data-month]"
-        )
-        .forEach(button => {
+   document
+    .getElementById("monthSelect")
+    ?.addEventListener("change", event => {
 
-            button.onclick = () => {
+        selectedMonth = event.target.value;
 
-                selectedMonth =
-                    button.dataset.month;
+        render();
 
-                render();
-
-            };
-
-        });
+    });
 
 
     /* =========================

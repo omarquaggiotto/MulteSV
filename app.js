@@ -263,6 +263,7 @@ let state = loadState();
 let currentPage = "home";
 let selectedMonth = "all";
 let selectedPaymentMonth = "2026-08";
+let selectedFinePlayer = "all";
 
 
 /* =========================================================
@@ -1533,16 +1534,24 @@ function renderFines() {
        FILTRO
        ===================================================== */
 
-    let fines = allFines;
+   let fines = allFines;
 
-    if (selectedMonth !== "all") {
+if (selectedMonth !== "all") {
 
-        fines = allFines.filter(fine =>
-            fine.date &&
-            fine.date.startsWith(selectedMonth)
-        );
+    fines = fines.filter(fine =>
+        fine.date &&
+        fine.date.startsWith(selectedMonth)
+    );
 
-    }
+}
+
+if (selectedFinePlayer !== "all") {
+
+    fines = fines.filter(fine =>
+        fine.player === selectedFinePlayer
+    );
+
+}
 
 
     /* =====================================================
@@ -1752,6 +1761,69 @@ function renderFines() {
 
         </div>
 
+                 </div>
+
+
+        <!-- QUI VA IL NUOVO FILTRO GIOCATORE -->
+
+        <div class="card month-selector">
+
+            <div class="section-title-row">
+
+                <div>
+
+                    <strong>
+                        Giocatore
+                    </strong>
+
+                    <span class="muted">
+                        Seleziona il giocatore
+                    </span>
+
+                </div>
+
+            </div>
+
+            <div class="field">
+
+                <select
+                    id="finePlayerSelect"
+                    class="month-select"
+                >
+
+                    <option
+                        value="all"
+                        ${
+                            selectedFinePlayer === "all"
+                                ? "selected"
+                                : ""
+                        }
+                    >
+                        Tutti i giocatori
+                    </option>
+
+                    ${state.players
+                        .map(player => `
+
+                            <option
+                                value="${escapeHtml(player)}"
+                                ${
+                                    selectedFinePlayer === player
+                                        ? "selected"
+                                        : ""
+                                }
+                            >
+                                ${escapeHtml(player)}
+                            </option>
+
+                        `)
+                        .join("")}
+
+                </select>
+
+            </div>
+
+        </div>
 
         <!-- ================================================
              RIEPILOGO
@@ -4304,25 +4376,44 @@ function bindPageEvents() {
         });
 
 
-    /* =========================
-       MESI
-       ========================= */
+/* =========================
+   MESI
+   ========================= */
 
-    document
-        .getElementById("monthSelect")
-        ?.addEventListener("change", event => {
+document
+    .getElementById("monthSelect")
+    ?.addEventListener("change", event => {
 
-            selectedMonth =
+        selectedMonth =
+            event.target.value;
+
+        render();
+
+    });
+
+
+/* =========================
+   GIOCATORE MULTE
+   ========================= */
+
+document
+    .getElementById("finePlayerSelect")
+    ?.addEventListener(
+        "change",
+        event => {
+
+            selectedFinePlayer =
                 event.target.value;
 
             render();
 
-        });
+        }
+    );
 
 
-    /* =========================
-       MESE PAGAMENTI
-       ========================= */
+/* =========================
+   MESE PAGAMENTI
+   ========================= */
 
     document
        .getElementById("paymentMonthSelect")

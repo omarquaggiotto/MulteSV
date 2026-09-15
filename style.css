@@ -1256,3 +1256,143 @@ h3 {
         bottom: 20px;
     }
 }
+/* =========================================================
+   PAGAMENTI
+   ========================================================= */
+
+.payment-month-card {
+    margin-bottom: 16px;
+}
+
+.payment-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.payment-summary-card {
+    padding: 18px;
+}
+
+.payment-summary-card span {
+    display: block;
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 8px;
+}
+
+.payment-summary-card strong {
+    display: block;
+    font-size: 24px;
+    font-weight: 800;
+}
+
+.payments-table-card {
+    padding: 0;
+    overflow: hidden;
+}
+
+.payments-table-header,
+.payment-row {
+    display: grid;
+    grid-template-columns:
+        minmax(150px, 2fr)
+        repeat(5, minmax(70px, 1fr));
+    align-items: center;
+    gap: 10px;
+}
+
+.payments-table-header {
+    padding: 14px 16px;
+    background: var(--surface-2);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--muted);
+}
+
+.payment-row {
+    padding: 14px 16px;
+    border-top: 1px solid var(--border);
+}
+
+.payment-player {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
+.payment-player strong {
+    display: block;
+    font-size: 14px;
+}
+
+.player-avatar {
+    width: 36px;
+    height: 36px;
+    flex: 0 0 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: var(--primary);
+    color: white;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.payment-value {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.payment-total {
+    font-weight: 800;
+}
+
+.payment-remaining {
+    color: #dc2626;
+    font-weight: 800;
+}
+
+.payment-ok {
+    color: #16a34a;
+    font-weight: 800;
+}
+
+.payment-arrears {
+    display: block;
+    margin-top: 3px;
+    font-size: 11px;
+    color: #dc2626;
+}
+
+.payments-table-body {
+    width: 100%;
+}
+
+@media (max-width: 700px) {
+
+    .payment-summary-grid {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+
+    .payments-table-card {
+        overflow-x: auto;
+    }
+
+    .payments-table-header,
+    .payment-row {
+        min-width: 720px;
+    }
+
+    .payments-table-header {
+        padding: 12px;
+    }
+
+    .payment-row {
+        padding: 12px;
+    }
+}

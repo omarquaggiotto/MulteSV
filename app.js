@@ -4215,6 +4215,27 @@ function openPlayerModal() {
 
 function bindPageEvents() {
 
+    /* =========================
+       NAVIGAZIONE
+       ========================= */
+
+    document
+        .querySelectorAll(
+            ".nav-button"
+        )
+        .forEach(button => {
+
+            button.onclick = () => {
+
+                currentPage =
+                    button.dataset.page;
+
+                render();
+
+            };
+
+        });
+
 
     /* =========================
        MESI
@@ -4224,7 +4245,8 @@ function bindPageEvents() {
         .getElementById("monthSelect")
         ?.addEventListener("change", event => {
 
-            selectedMonth = event.target.value;
+            selectedMonth =
+                event.target.value;
 
             render();
 
@@ -4976,29 +4998,6 @@ function showToast(message) {
     );
 
 }
-
-
-/* =========================================================
-   NAVIGAZIONE PRINCIPALE
-   ========================================================= */
-
-document
-    .querySelectorAll(
-        ".nav-button"
-    )
-    .forEach(button => {
-
-        button.onclick = () => {
-
-            currentPage =
-                button.dataset.page;
-
-
-            render();
-
-        };
-
-    });
 
 
 /* =========================================================

@@ -1039,54 +1039,40 @@ h3 {
    ========================================================= */
 
 .bottom-navigation {
-
     position: fixed;
 
-    z-index: 50;
-
     left: 50%;
-    bottom: 14px;
+    bottom: max(12px, env(safe-area-inset-bottom));
 
-    transform:
-        translateX(-50%);
+    transform: translateX(-50%);
 
-    width:
-        min(
-            700px,
-            calc(100% - 22px)
-        );
+    width: min(700px, calc(100% - 22px));
 
     display: grid;
-
-    grid-template-columns:
-        repeat(4, 1fr);
-
+    grid-template-columns: repeat(4, 1fr);
     gap: 4px;
 
     padding: 8px;
 
     border-radius: 24px;
 
-    background:
-        rgba(
-            17,
-            24,
-            39,
-            0.94
-        );
+    background: rgba(17, 24, 39, 0.94);
 
     box-shadow:
         0
         18px
         45px
-        rgba(
-            0,
-            0,
-            0,
-            0.20
-        );
+        rgba(0, 0, 0, 0.20);
 
     backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+
+    z-index: 9999;
+
+    box-sizing: border-box;
+
+    /* evita che la barra venga trascinata dal layout */
+    isolation: isolate;
 }
 
 

@@ -4693,7 +4693,58 @@ function bindPageEvents() {
             "click",
             resetData
         );
+/* =========================
+   PAGAMENTI
+   ========================= */
 
+document
+    .querySelectorAll(
+        "[data-payment-player]"
+    )
+    .forEach(input => {
+
+        input.addEventListener(
+            "change",
+            event => {
+
+                const player =
+                    event.target.dataset
+                        .paymentPlayer;
+
+                const month =
+                    selectedPaymentMonth;
+
+                const amount =
+                    Math.max(
+                        0,
+                        Number(
+                            event.target.value
+                        ) || 0
+                    );
+
+                if (
+                    !state.payments
+                ) {
+                    state.payments = {};
+                }
+
+                if (
+                    !state.payments[month]
+                ) {
+                    state.payments[month] = {};
+                }
+
+                state.payments[month][player] =
+                    amount;
+
+                saveState();
+
+                render();
+
+            }
+        );
+
+    });
 }
 
 

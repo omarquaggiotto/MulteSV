@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <meta
+        name="theme-color"
+        content="#111827"
+    >
+
+    <title>MulteFC</title>
+
+    <link
+        rel="stylesheet"
+        href="style.css"
+    >
+
+    <link
+        rel="manifest"
+        href="manifest.json"
+    >
+</head>
+
+<body>
+
+    <div class="app">
+
+        <!-- ========================= -->
+        <!-- HEADER                     -->
+        <!-- ========================= -->
+
+        <header class="topbar">
+
+            <div>
+                <span class="eyebrow">
+                    GESTIONE SQUADRA
+                </span>
+
+                <h1 id="pageTitle">
+                    Home
+                </h1>
+            </div>
+
+            <button
+                id="themeButton"
+                class="icon-button"
+                type="button"
+            >
+                ☀️
+            </button>
+
+        </header>
+
+
+        <!-- ========================= -->
+        <!-- CONTENUTO                  -->
+        <!-- ========================= -->
+
+        <main
+            id="app"
+            class="content"
+        >
+        </main>
+
+
+        <!-- ========================= -->
+        <!-- NAVIGAZIONE                -->
+        <!-- ========================= -->
+
+        <nav class="bottom-navigation">
+
+            <button
+                class="nav-button active"
+                data-page="home"
+                type="button"
+            >
+                <span class="nav-icon">🏠</span>
+                <span class="nav-label">Home</span>
+            </button>
+
+
+            <button
+                class="nav-button"
+                data-page="fines"
+                type="button"
+            >
+                <span class="nav-icon">💸</span>
+                <span class="nav-label">Multe</span>
+            </button>
+
+
+            <button
+                class="nav-button"
+                data-page="rules"
+                type="button"
+            >
+                <span class="nav-icon">📋</span>
+                <span class="nav-label">Multario</span>
+            </button>
+
+
+            <button
+                class="nav-button"
+                data-page="settings"
+                type="button"
+            >
+                <span class="nav-icon">⚙️</span>
+                <span class="nav-label">Impostazioni</span>
+            </button>
+
+        </nav>
+
+    </div>
+
+
+    <!-- ========================= -->
+    <!-- MODALI                     -->
+    <!-- ========================= -->
+
+    <div
+        id="modalRoot"
+        class="modal-root"
+    >
+    </div>
+
+
+    <!-- ========================= -->
+    <!-- NOTIFICHE                  -->
+    <!-- ========================= -->
+
+    <div
+        id="toast"
+        class="toast"
+    >
+    </div>
+
+
+    <!-- ========================= -->
+    <!-- IMPORT BACKUP              -->
+    <!-- ========================= -->
+
+    <input
+        id="importFile"
+        type="file"
+        accept="application/json"
+        hidden
+    >
+
+
+    <script src="app.js"></script>
+
+</body>
+</html>

@@ -1423,6 +1423,7 @@ h3 {
    ========================================================= */
 
 .fines-filters-card {
+    margin-top: 24px !important;
     margin-bottom: 16px;
 }
 

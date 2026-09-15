@@ -1700,130 +1700,119 @@ if (selectedFinePlayer !== "all") {
         </section>
 
 
-        <!-- ================================================
-             MENU MESE
-             ================================================ -->
+<div class="card fines-filters-card">
 
-        <div class="card month-selector">
+    <div class="fines-filters-header">
 
-            <div class="section-title-row">
+        <div>
 
-                <div>
+            <strong>
+                Filtri
+            </strong>
 
-                    <strong>
-                        Periodo
-                    </strong>
-
-                    <span class="muted">
-                        Seleziona il mese da visualizzare
-                    </span>
-
-                </div>
-
-            </div>
-
-
-            <div class="field">
-
-                <select
-                    id="monthSelect"
-                    class="month-select"
-                >
-
-                    <option
-                        value="all"
-                        ${selectedMonth === "all" ? "selected" : ""}
-                    >
-                        Tutte le multe
-                    </option>
-
-
-                    ${seasonMonths
-                        .map(month => `
-
-                            <option
-                                value="${month.id}"
-                                ${
-                                    selectedMonth === month.id
-                                        ? "selected"
-                                        : ""
-                                }
-                            >
-                                ${month.label}
-                            </option>
-
-                        `)
-                        .join("")}
-
-                </select>
-
-            </div>
+            <span class="muted">
+                Personalizza la visualizzazione delle multe
+            </span>
 
         </div>
 
-                 </div>
+    </div>
 
 
-        <!-- QUI VA IL NUOVO FILTRO GIOCATORE -->
+    <div class="fines-filters-grid">
 
-        <div class="card month-selector">
+        <div class="field">
 
-            <div class="section-title-row">
+            <label
+                for="monthSelect"
+                class="form-label"
+            >
+                📅 Mese
+            </label>
 
-                <div>
+            <select
+                id="monthSelect"
+                class="month-select"
+            >
 
-                    <strong>
-                        Giocatore
-                    </strong>
-
-                    <span class="muted">
-                        Seleziona il giocatore
-                    </span>
-
-                </div>
-
-            </div>
-
-            <div class="field">
-
-                <select
-                    id="finePlayerSelect"
-                    class="month-select"
+                <option
+                    value="all"
+                    ${selectedMonth === "all" ? "selected" : ""}
                 >
+                    Tutte le multe
+                </option>
 
-                    <option
-                        value="all"
-                        ${
-                            selectedFinePlayer === "all"
-                                ? "selected"
-                                : ""
-                        }
-                    >
-                        Tutti i giocatori
-                    </option>
+                ${seasonMonths
+                    .map(month => `
 
-                    ${state.players
-                        .map(player => `
+                        <option
+                            value="${month.id}"
+                            ${
+                                selectedMonth === month.id
+                                    ? "selected"
+                                    : ""
+                            }
+                        >
+                            ${month.label}
+                        </option>
 
-                            <option
-                                value="${escapeHtml(player)}"
-                                ${
-                                    selectedFinePlayer === player
-                                        ? "selected"
-                                        : ""
-                                }
-                            >
-                                ${escapeHtml(player)}
-                            </option>
+                    `)
+                    .join("")}
 
-                        `)
-                        .join("")}
-
-                </select>
-
-            </div>
+            </select>
 
         </div>
+
+
+        <div class="field">
+
+            <label
+                for="finePlayerSelect"
+                class="form-label"
+            >
+                👤 Giocatore
+            </label>
+
+            <select
+                id="finePlayerSelect"
+                class="month-select"
+            >
+
+                <option
+                    value="all"
+                    ${
+                        selectedFinePlayer === "all"
+                            ? "selected"
+                            : ""
+                    }
+                >
+                    Tutti i giocatori
+                </option>
+
+                ${state.players
+                    .map(player => `
+
+                        <option
+                            value="${escapeHtml(player)}"
+                            ${
+                                selectedFinePlayer === player
+                                    ? "selected"
+                                    : ""
+                            }
+                        >
+                            ${escapeHtml(player)}
+                        </option>
+
+                    `)
+                    .join("")}
+
+            </select>
+
+        </div>
+
+    </div>
+
+</div>
 
         <!-- ================================================
              RIEPILOGO

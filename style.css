@@ -1053,16 +1053,14 @@ h3 {
 
 .bottom-navigation {
     position: fixed;
-
     left: 50%;
     bottom: max(12px, env(safe-area-inset-bottom));
-
     transform: translateX(-50%);
 
     width: min(700px, calc(100% - 22px));
 
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     gap: 4px;
 
     padding: 8px;
@@ -1083,11 +1081,8 @@ h3 {
     z-index: 9999;
 
     box-sizing: border-box;
-
-    /* evita che la barra venga trascinata dal layout */
     isolation: isolate;
 }
-
 
 .nav-button {
 

@@ -261,8 +261,8 @@ rules: [
 let state = loadState();
 
 let currentPage = "home";
-
 let selectedMonth = "all";
+let selectedPaymentMonth = "2026-08";
 
 
 /* =========================================================
@@ -936,9 +936,11 @@ function renderHome() {
     const now = new Date();
 
     const currentMonth =
-        `${now.getFullYear()}-${String(
-            now.getMonth() + 1
-        ).padStart(2, "0")}`;
+        months.includes(
+        selectedPaymentMonth
+    )
+        ? selectedPaymentMonth
+        : months[0];
 
     const currentMonthFines =
         state.fines.filter(
@@ -4225,14 +4227,15 @@ function bindPageEvents() {
        ========================= */
 
     document
-        .getElementById("paymentMonthSelect")
-        ?.addEventListener("change", event => {
+       .getElementById("paymentMonthSelect")
+       ?.addEventListener("change", event => {
 
-            selectedMonth = event.target.value;
+           selectedPaymentMonth =
+            event.target.value;
 
-            render();
+           render();
 
-        });
+    });
 
 
     /* =========================

@@ -1115,7 +1115,12 @@ function renderHome() {
    MULTE
    ========================================================= */
 
+/* =========================================================
+   MULTE
+   ========================================================= */
+
 function renderFines() {
+
     const allFines = state.fines || [];
 
     const monthNames = [
@@ -1133,58 +1138,93 @@ function renderFines() {
         "Dicembre"
     ];
 
-    // Costruiamo direttamente i 12 mesi della stagione 2026/27
-    const seasonStartYear = Number(state.season?.slice(0, 4)) || new Date().getFullYear();
+
+    /* =====================================================
+       MESI DELLA STAGIONE
+       ===================================================== */
+
+    const seasonStartYear =
+        Number(state.season?.slice(0, 4)) ||
+        new Date().getFullYear();
 
     const seasonMonths = [];
 
     for (let monthIndex = 7; monthIndex <= 11; monthIndex++) {
 
-    	const year = seasonStartYear;
-    	const monthNumber = String(monthIndex + 1).padStart(2, "0");
+        const year = seasonStartYear;
 
-    	seasonMonths.push({
-        	id: `${year}-${monthNumber}`,
-        	label: `${monthNames[monthIndex]} ${year}`
-    	});
+        const monthNumber =
+            String(monthIndex + 1).padStart(2, "0");
+
+        seasonMonths.push({
+            id: `${year}-${monthNumber}`,
+            label: `${monthNames[monthIndex]} ${year}`
+        });
+
     }
 
     for (let monthIndex = 0; monthIndex <= 4; monthIndex++) {
 
-    	const year = seasonStartYear + 1;
-    	const monthNumber = String(monthIndex + 1).padStart(2, "0");
+        const year = seasonStartYear + 1;
 
-    	seasonMonths.push({
-        	id: `${year}-${monthNumber}`,
-        	label: `${monthNames[monthIndex]} ${year}`
-    	});
+        const monthNumber =
+            String(monthIndex + 1).padStart(2, "0");
+
+        seasonMonths.push({
+            id: `${year}-${monthNumber}`,
+            label: `${monthNames[monthIndex]} ${year}`
+        });
+
     }
+
+
+    /* =====================================================
+       FILTRO
+       ===================================================== */
 
     let fines = allFines;
 
     if (selectedMonth !== "all") {
+
         fines = allFines.filter(fine =>
-            fine.date && fine.date.startsWith(selectedMonth)
+            fine.date &&
+            fine.date.startsWith(selectedMonth)
         );
+
     }
 
-    const total = fines.reduce(
-        (sum, fine) => sum + Number(fine.amount || 0),
-        0
-    );
 
-    const unpaid = fines
-        .filter(fine => !fine.paid)
-        .reduce(
-            (sum, fine) => sum + Number(fine.amount || 0),
+    /* =====================================================
+       TOTALI
+       ===================================================== */
+
+    const total =
+        fines.reduce(
+            (sum, fine) =>
+                sum + Number(fine.amount || 0),
             0
         );
 
+    const unpaid =
+        fines
+            .filter(fine => !fine.paid)
+            .reduce(
+                (sum, fine) =>
+                    sum + Number(fine.amount || 0),
+                0
+            );
+
     const paid = total - unpaid;
 
-    const selectedMonthData = seasonMonths.find(
-        month => month.id === selectedMonth
-    );
+
+    /* =====================================================
+       TITOLO
+       ===================================================== */
+
+    const selectedMonthData =
+        seasonMonths.find(
+            month => month.id === selectedMonth
+        );
 
     const title =
         selectedMonth === "all"
@@ -1193,135 +1233,260 @@ function renderFines() {
                 ? selectedMonthData.label
                 : "Multe";
 
+
     const subtitle =
         fines.length === 0
             ? "Nessuna multa registrata"
             : `${fines.length} ${
-                fines.length === 1 ? "multa" : "multe"
+                fines.length === 1
+                    ? "multa"
+                    : "multe"
             } · ${money(total)} totali`;
 
-    const sortedFines = [...fines].sort(
-        (a, b) => new Date(b.date) - new Date(a.date)
-    );
 
-    const finesHtml = sortedFines.length
-        ? `
-            <div class="list fines-list">
-                ${sortedFines.map(renderFineRow).join("")}
-            </div>
-        `
-        : `
-            <div class="card empty-state">
-                <div class="empty-icon">🧾</div>
+    /* =====================================================
+       ORDINAMENTO
+       ===================================================== */
 
-                <h3>Nessuna multa</h3>
+    const sortedFines =
+        [...fines].sort(
+            (a, b) =>
+                new Date(b.date) -
+                new Date(a.date)
+        );
 
-                <p>
-                    Non ci sono multe registrate per questo periodo.
-                </p>
 
-                <button class="primary-btn" id="addFineEmpty">
-                    ＋ Aggiungi multa
-                </button>
-            </div>
-        `;
+    /* =====================================================
+       ELENCO MULTE
+       ===================================================== */
+
+    const finesHtml =
+        sortedFines.length
+
+            ? `
+
+                <div class="list fines-list">
+
+                    ${sortedFines
+                        .map(renderFineRow)
+                        .join("")}
+
+                </div>
+
+            `
+
+            :
+
+            `
+
+                <div class="card empty-state">
+
+                    <div class="empty-icon">
+                        🧾
+                    </div>
+
+                    <h3>
+                        Nessuna multa
+                    </h3>
+
+                    <p>
+                        Non ci sono multe registrate per questo periodo.
+                    </p>
+
+                    <button
+                        class="primary-btn"
+                        id="addFineEmpty"
+                    >
+                        ＋ Aggiungi multa
+                    </button>
+
+                </div>
+
+            `;
+
+
+    /* =====================================================
+       OUTPUT
+       ===================================================== */
 
     return `
+
         <section class="page-header">
+
             <div>
-                <div class="eyebrow">GESTIONE MULTE</div>
 
-                <h1>${escapeHtml(title)}</h1>
+                <div class="eyebrow">
+                    GESTIONE MULTE
+                </div>
 
-                <p>${subtitle}</p>
+                <h1>
+                    ${escapeHtml(title)}
+                </h1>
+
+                <p>
+                    ${subtitle}
+                </p>
+
             </div>
 
-            <button class="primary-btn" id="addFine">
+
+            <button
+                class="primary-btn"
+                id="addFine"
+            >
                 ＋ Nuova multa
             </button>
+
         </section>
+
+
+        <!-- ================================================
+             MENU MESE
+             ================================================ -->
 
         <div class="card month-selector">
 
             <div class="section-title-row">
+
                 <div>
-                    <strong>Periodo</strong>
+
+                    <strong>
+                        Periodo
+                    </strong>
 
                     <span class="muted">
                         Seleziona il mese da visualizzare
                     </span>
+
                 </div>
+
             </div>
 
-            <div class="month-chips">
 
-                <button
-                    class="month-chip ${
-                        selectedMonth === "all" ? "active" : ""
-                    }"
-                    data-month="all"
+            <div class="field">
+
+                <select
+                    id="monthSelect"
+                    class="month-select"
                 >
-                    Tutte
-                </button>
 
-                ${seasonMonths.map(month => `
-                    <button
-                        class="month-chip ${
-                            selectedMonth === month.id ? "active" : ""
-                        }"
-                        data-month="${month.id}"
+                    <option
+                        value="all"
+                        ${selectedMonth === "all" ? "selected" : ""}
                     >
-                        ${month.label}
-                    </button>
-                `).join("")}
+                        Tutte le multe
+                    </option>
+
+
+                    ${seasonMonths
+                        .map(month => `
+
+                            <option
+                                value="${month.id}"
+                                ${
+                                    selectedMonth === month.id
+                                        ? "selected"
+                                        : ""
+                                }
+                            >
+                                ${month.label}
+                            </option>
+
+                        `)
+                        .join("")}
+
+                </select>
 
             </div>
+
         </div>
+
+
+        <!-- ================================================
+             RIEPILOGO
+             ================================================ -->
 
         <div class="stats-grid fines-summary">
 
             <div class="stat-card">
-                <span>Totale periodo</span>
 
-                <strong>${money(total)}</strong>
+                <span>
+                    Totale periodo
+                </span>
+
+                <strong>
+                    ${money(total)}
+                </strong>
 
                 <small>
                     ${fines.length}
                     ${fines.length === 1 ? "multa" : "multe"}
                 </small>
+
             </div>
 
+
             <div class="stat-card">
-                <span>Pagate</span>
+
+                <span>
+                    Pagate
+                </span>
 
                 <strong class="positive">
                     ${money(paid)}
                 </strong>
 
-                <small>Già saldate</small>
+                <small>
+                    Già saldate
+                </small>
+
             </div>
 
+
             <div class="stat-card">
-                <span>Da pagare</span>
+
+                <span>
+                    Da pagare
+                </span>
 
                 <strong class="${
-                    unpaid > 0 ? "negative" : "positive"
+                    unpaid > 0
+                        ? "negative"
+                        : "positive"
                 }">
+
                     ${money(unpaid)}
+
                 </strong>
 
                 <small>
-                    ${fines.filter(f => !f.paid).length}
+
+                    ${
+                        fines.filter(
+                            fine => !fine.paid
+                        ).length
+                    }
+
                     non saldate
+
                 </small>
+
             </div>
 
         </div>
 
+
+        <!-- ================================================
+             ELENCO
+             ================================================ -->
+
         <div class="section-heading">
 
             <div>
-                <h2>Elenco multe</h2>
+
+                <h2>
+                    Elenco multe
+                </h2>
 
                 <span>
                     ${
@@ -1330,96 +1495,16 @@ function renderFines() {
                             : "Nessun elemento"
                     }
                 </span>
+
             </div>
 
         </div>
 
+
         ${finesHtml}
+
     `;
-
-    document
-        .querySelectorAll("[data-month]")
-        .forEach(button => {
-
-            button.addEventListener("click", () => {
-
-                selectedMonth = button.dataset.month;
-
-                render();
-            });
-        });
-
-    document
-        .querySelector("#addFine")
-        ?.addEventListener(
-            "click",
-            () => openFineModal()
-        );
-
-    document
-        .querySelector("#addFineEmpty")
-        ?.addEventListener(
-            "click",
-            () => openFineModal()
-        );
-
-    document
-        .querySelectorAll("[data-toggle-paid]")
-        .forEach(button => {
-
-            button.addEventListener("click", () => {
-
-                const id = button.dataset.togglePaid;
-
-                const fine = state.fines.find(
-                    item => item.id === id
-                );
-
-                if (!fine) return;
-
-                fine.paid = !fine.paid;
-
-                saveState();
-
-                render();
-            });
-        });
-
-    document
-        .querySelectorAll("[data-edit-fine]")
-        .forEach(button => {
-
-            button.addEventListener("click", () => {
-
-                openFineModal(
-                    button.dataset.editFine
-                );
-            });
-        });
-
-    document
-        .querySelectorAll("[data-delete-fine]")
-        .forEach(button => {
-
-            button.addEventListener("click", () => {
-
-                const id = button.dataset.deleteFine;
-
-                if (!confirm("Vuoi eliminare questa multa?")) {
-                    return;
-                }
-
-                state.fines = state.fines.filter(
-                    fine => fine.id !== id
-                );
-
-                saveState();
-
-                render();
-            });
-        });
 }
-
 
 /* =========================================================
    RIGA MULTA

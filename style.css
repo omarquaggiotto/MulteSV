@@ -1618,9 +1618,9 @@ h3 {
         background 0.15s ease !important;
 }
 .page-header {
-    margin-bottom: 0 !important;
+    padding-bottom: 18px !important;
 }
 
 .page-header + .fines-filters-card {
-    margin-top: 18px !important;
+    margin-top: 0 !important;
 }

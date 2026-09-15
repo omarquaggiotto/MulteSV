@@ -63,56 +63,191 @@ const defaultState = {
 
     rules: [
 
-        {
-            id: 1,
-            category: "Allenamento",
-            type: "Ritardo allenamento",
-            amount: 5
-        },
+    {
+        id: 1,
+        category: "Allenamento",
+        type: "Ritardo all'allenamento senza aver avvisato almeno un'ora prima il mister",
+        amount: 2,
+        calculation: "per_minute",
+        baseAmount: 2,
+        perMinute: 1
+    },
 
-        {
-            id: 2,
-            category: "Allenamento",
-            type: "Ritardo oltre 15 minuti",
-            amount: 10
-        },
+    {
+        id: 2,
+        category: "Allenamento",
+        type: "Assenza all'allenamento senza avvisare il mister",
+        amount: 10,
+        calculation: "fixed"
+    },
 
-        {
-            id: 3,
-            category: "Allenamento",
-            type: "Assenza ingiustificata",
-            amount: 20
-        },
+    {
+        id: 3,
+        category: "Partita",
+        type: "Ritardo rispetto all'orario di convocazione senza aver avvisato almeno un'ora prima il mister",
+        amount: 5,
+        calculation: "per_minute",
+        baseAmount: 5,
+        perMinute: 1
+    },
 
-        {
-            id: 4,
-            category: "Partita",
-            type: "Ammonizione",
-            amount: 5
-        },
+    {
+        id: 4,
+        category: "Partita",
+        type: "Assenza alla partita senza avvisare il mister",
+        amount: 50,
+        calculation: "fixed"
+    },
 
-        {
-            id: 5,
-            category: "Partita",
-            type: "Ammonizione per proteste",
-            amount: 10
-        },
+    {
+        id: 5,
+        category: "Partita",
+        type: "Assenza birra post partita",
+        amount: 2,
+        calculation: "fixed"
+    },
 
-        {
-            id: 6,
-            category: "Partita",
-            type: "Espulsione",
-            amount: 20
-        },
+    {
+        id: 6,
+        category: "Materiale",
+        type: "Dimenticanza materiale per allenamento/partita",
+        amount: 2,
+        calculation: "per_piece",
+        perPiece: 2
+    },
 
-        {
-            id: 7,
-            category: "Materiale",
-            type: "Dimenticanza materiale",
-            amount: 5
-        }
+    {
+        id: 7,
+        category: "Partita",
+        type: "Dimenticanza tuta di rappresentanza alla partita",
+        amount: 10,
+        calculation: "fixed"
+    },
 
-    ]
+    {
+        id: 8,
+        category: "Partita",
+        type: "Dimenticanza documento alla partita",
+        amount: 10,
+        calculation: "fixed"
+    },
+
+    {
+        id: 9,
+        category: "Materiale",
+        type: "Dimenticanza materiale personale per doccia",
+        amount: 2,
+        calculation: "per_piece",
+        perPiece: 2
+    },
+
+    {
+        id: 10,
+        category: "Materiale",
+        type: "Dimenticanza materiale in spogliatoio",
+        amount: 2,
+        calculation: "fixed"
+    },
+
+    {
+        id: 11,
+        category: "Materiale",
+        type: "Mancato rispetto del turno di raccolta materiale post allenamento",
+        amount: 2,
+        calculation: "fixed"
+    },
+
+    {
+        id: 12,
+        category: "Spogliatoio",
+        type: "Pisciata in doccia",
+        amount: 5,
+        calculation: "fixed"
+    },
+
+    {
+        id: 13,
+        category: "Spogliatoio",
+        type: "Utilizzo/squillo cellulare durante riunioni",
+        amount: 5,
+        calculation: "fixed"
+    },
+
+    {
+        id: 14,
+        category: "Partita",
+        type: "Pallone calciato fuori dal campo",
+        amount: 5,
+        calculation: "fixed"
+    },
+
+    {
+        id: 15,
+        category: "Comportamento",
+        type: "Mancanza di rispetto verso compagni/mister/dirigenti",
+        amount: 15,
+        calculation: "fixed"
+    },
+
+    {
+        id: 16,
+        category: "Allenamento",
+        type: "Squadra perdente la partitella del giovedì",
+        amount: 1,
+        calculation: "fixed"
+    },
+
+    {
+        id: 17,
+        category: "Allenamento",
+        type: "Torello: 20 passaggi / errore al 19° passaggio",
+        amount: 1,
+        calculation: "fixed"
+    },
+
+    {
+        id: 18,
+        category: "Partita",
+        type: "Ammonizione per protesta e/o reazione",
+        amount: 10,
+        calculation: "fixed"
+    },
+
+    {
+        id: 19,
+        category: "Partita",
+        type: "Espulsione per protesta e/o reazione",
+        amount: 20,
+        calculation: "fixed"
+    },
+
+    {
+        id: 20,
+        category: "Allenamento",
+        type: "Allenamento svolto con svogliatezza/senza impegno",
+        amount: 2,
+        calculation: "custom_min",
+        minAmount: 2
+    },
+
+    {
+        id: 21,
+        category: "Partita",
+        type: "Impiego di troppo tempo per farsi la doccia",
+        amount: 5,
+        calculation: "custom_min",
+        minAmount: 5
+    },
+
+    {
+        id: 22,
+        category: "Squadra",
+        type: "Mancanza di condivisione compleanni (cibo, birra/bevande)",
+        amount: 20,
+        calculation: "fixed"
+    }
+
+]
 
 };
 

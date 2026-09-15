@@ -4206,19 +4206,48 @@ function bindPageEvents() {
 
 
     /* =========================
-   MESI
-   ========================= */
+       MESI
+       ========================= */
 
-   document
-    .getElementById("monthSelect")
-    ?.addEventListener("change", event => {
+    document
+        .getElementById("monthSelect")
+        ?.addEventListener("change", event => {
 
-        selectedMonth = event.target.value;
+            selectedMonth = event.target.value;
 
-        render();
+            render();
 
-    });
+        });
 
+
+    /* =========================
+       MESE PAGAMENTI
+       ========================= */
+
+    document
+        .getElementById("paymentMonthSelect")
+        ?.addEventListener("change", event => {
+
+            selectedMonth = event.target.value;
+
+            render();
+
+        });
+
+
+    /* =========================
+       NUOVA MULTA
+       ========================= */
+
+    document
+        .getElementById(
+            "addFine"
+        )
+        ?.addEventListener(
+            "click",
+            () =>
+                openFineModal()
+        );
 
     /* =========================
        NUOVA MULTA

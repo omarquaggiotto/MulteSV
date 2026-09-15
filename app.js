@@ -464,6 +464,87 @@ function renderFines() {
 
 }
 
+/* =========================================================
+   RENDER PRINCIPALE
+   ========================================================= */
+
+function render() {
+
+    applyTheme();
+
+    const app =
+        document.getElementById("app");
+
+    if (!app) {
+        return;
+    }
+
+
+    /* =========================
+       PAGINA CORRENTE
+       ========================= */
+
+    switch (currentPage) {
+
+        case "home":
+
+            app.innerHTML =
+                renderHome();
+
+            break;
+
+
+        case "fines":
+
+            app.innerHTML =
+                renderFines();
+
+            break;
+
+
+        case "rules":
+
+            app.innerHTML =
+                renderRules();
+
+            break;
+
+
+        case "settings":
+
+            app.innerHTML =
+                renderSettings();
+
+            break;
+
+
+        default:
+
+            currentPage =
+                "home";
+
+            app.innerHTML =
+                renderHome();
+
+            break;
+
+    }
+
+
+    /* =========================
+       NAVIGAZIONE
+       ========================= */
+
+    updateNavigation();
+
+
+    /* =========================
+       EVENTI
+       ========================= */
+
+    bindPageEvents();
+
+}
 
 /* =========================================================
    RIGA MULTA

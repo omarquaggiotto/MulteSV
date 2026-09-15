@@ -847,11 +847,16 @@ h3 {
 
     display: grid;
 
-    align-items: end;
+    align-items: center;
 
     justify-items: center;
 
-    padding: 14px;
+    padding:
+        20px
+        14px
+        120px;
+
+    overflow-y: auto;
 
     background:
         rgba(
@@ -871,7 +876,7 @@ h3 {
             100%
         );
 
-    max-height: 90vh;
+    max-height: calc(100vh - 140px);
 
     overflow-y: auto;
 

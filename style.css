@@ -1584,3 +1584,61 @@ h3 {
     }
 
 }
+/* =========================================================
+   NUOVA MULTA - STILE
+   ========================================================= */
+
+.page-header #addFine {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    min-width: 190px !important;
+    min-height: 54px !important;
+
+    padding: 14px 24px !important;
+
+    border: 0 !important;
+    border-radius: 18px !important;
+
+    background: var(--primary) !important;
+    color: white !important;
+
+    font-size: 16px !important;
+    font-weight: 800 !important;
+
+    box-shadow:
+        0 8px 22px rgba(37, 99, 235, 0.25) !important;
+
+    transition:
+        transform 0.15s ease,
+        box-shadow 0.15s ease,
+        background 0.15s ease !important;
+}
+
+.page-header #addFine:hover {
+    background: var(--primary-dark) !important;
+
+    transform: translateY(-2px) !important;
+
+    box-shadow:
+        0 12px 28px rgba(37, 99, 235, 0.32) !important;
+}
+
+.page-header #addFine:active {
+    transform: translateY(0) !important;
+}
+
+
+/* TELEFONO */
+
+@media (max-width: 600px) {
+
+    .page-header #addFine {
+        width: 100% !important;
+        min-height: 54px !important;
+        margin-top: 12px !important;
+        font-size: 16px !important;
+    }
+
+}

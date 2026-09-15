@@ -1,89 +1,125 @@
 /* =========================================================
-   MulteSV - APP.JS
+   MulteFC
+   APP.JS
    ========================================================= */
+
+const STORAGE_KEY = "multefc_v1";
 
 
 /* =========================================================
-   STATO DEFAULT
+   DATI INIZIALI
    ========================================================= */
 
 const defaultState = {
 
-    teamName: "MulteSV",
+    team: "Multe FC",
 
     season: "2026/27",
 
     theme: "light",
 
     players: [
-        "Giocatore 1",
-        "Giocatore 2",
-        "Giocatore 3"
+        "Marco",
+        "Luca",
+        "Andrea",
+        "Matteo",
+        "Davide",
+        "Simone"
+    ],
+
+    fines: [
+
+        {
+            id: 1,
+            date: "2026-09-12",
+            player: "Marco",
+            category: "Allenamento",
+            type: "Ritardo allenamento",
+            amount: 5,
+            paid: true
+        },
+
+        {
+            id: 2,
+            date: "2026-09-11",
+            player: "Luca",
+            category: "Partita",
+            type: "Ammonizione per proteste",
+            amount: 10,
+            paid: false
+        },
+
+        {
+            id: 3,
+            date: "2026-09-08",
+            player: "Andrea",
+            category: "Allenamento",
+            type: "Assenza ingiustificata",
+            amount: 20,
+            paid: true
+        }
+
     ],
 
     rules: [
 
         {
-            id: "rule-1",
+            id: 1,
             category: "Allenamento",
             type: "Ritardo allenamento",
             amount: 5
         },
 
         {
-            id: "rule-2",
+            id: 2,
             category: "Allenamento",
             type: "Ritardo oltre 15 minuti",
             amount: 10
         },
 
         {
-            id: "rule-3",
+            id: 3,
             category: "Allenamento",
             type: "Assenza ingiustificata",
             amount: 20
         },
 
         {
-            id: "rule-4",
+            id: 4,
             category: "Partita",
             type: "Ammonizione",
             amount: 5
         },
 
         {
-            id: "rule-5",
+            id: 5,
             category: "Partita",
             type: "Ammonizione per proteste",
             amount: 10
         },
 
         {
-            id: "rule-6",
+            id: 6,
             category: "Partita",
             type: "Espulsione",
             amount: 20
         },
 
         {
-            id: "rule-7",
+            id: 7,
             category: "Materiale",
             type: "Dimenticanza materiale",
             amount: 5
         }
 
-    ],
-
-    fines: []
+    ]
 
 };
 
 
 /* =========================================================
-   CARICAMENTO STATO
+   STATO APP
    ========================================================= */
-
-const STORAGE_KEY = "multeSV_state";
 
 let state = loadState();
 
@@ -93,147 +129,84 @@ let selectedMonth = "all";
 
 
 /* =========================================================
-   UTILITÀ
+   STORAGE
    ========================================================= */
-
-function clone(value) {
-
-    return JSON.parse(
-        JSON.stringify(value)
-    );
-
-}
-
 
 function loadState() {
 
     try {
 
         const saved =
-            localStorage.getItem(
-                STORAGE_KEY
-            );
+            localStorage.getItem(STORAGE_KEY);
 
-        if (!saved) {
+        if (saved) {
 
-            return clone(
-                defaultState
-            );
+            return JSON.parse(saved);
 
         }
 
-        const parsed =
-            JSON.parse(saved);
-
-        return {
-
-            ...clone(defaultState),
-
-            ...parsed,
-
-            players:
-                Array.isArray(parsed.players)
-                    ? parsed.players
-                    : clone(defaultState.players),
-
-            rules:
-                Array.isArray(parsed.rules)
-                    ? parsed.rules
-                    : clone(defaultState.rules),
-
-            fines:
-                Array.isArray(parsed.fines)
-                    ? parsed.fines
-                    : []
-
-        };
-
-    }
-
-    catch (error) {
+    } catch (error) {
 
         console.error(
-            "Errore caricamento stato:",
+            "Errore caricamento dati:",
             error
         );
 
-        return clone(
-            defaultState
-        );
-
     }
 
+    return structuredClone(defaultState);
 }
 
 
 function saveState() {
 
-    try {
-
-        localStorage.setItem(
-            STORAGE_KEY,
-            JSON.stringify(state)
-        );
-
-    }
-
-    catch (error) {
-
-        console.error(
-            "Errore salvataggio stato:",
-            error
-        );
-
-        showToast(
-            "Errore nel salvataggio"
-        );
-
-    }
+    localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify(state)
+    );
 
 }
 
 
+/* =========================================================
+   UTILITY
+   ========================================================= */
+
 function money(value) {
 
-    return Number(
-        value || 0
-    ).toLocaleString(
+    return new Intl.NumberFormat(
         "it-IT",
         {
             style: "currency",
             currency: "EUR",
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 2
+            maximumFractionDigits: 0
+        }
+    ).format(value);
+
+}
+
+
+function formatDate(date) {
+
+    return new Date(
+        date + "T12:00:00"
+    ).toLocaleDateString(
+        "it-IT",
+        {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric"
         }
     );
 
 }
 
 
-function escapeHtml(value) {
+function generateId() {
 
-    return String(
-        value ?? ""
-    )
-        .replace(
-            /&/g,
-            "&amp;"
-        )
-        .replace(
-            /</g,
-            "&lt;"
-        )
-        .replace(
-            />/g,
-            "&gt;"
-        )
-        .replace(
-            /"/g,
-            "&quot;"
-        )
-        .replace(
-            /'/g,
-            "&#039;"
+    return Date.now() +
+        Math.floor(
+            Math.random() * 1000
         );
 
 }
@@ -241,104 +214,133 @@ function escapeHtml(value) {
 
 function initials(name) {
 
-    const parts =
-        String(name || "")
-            .trim()
-            .split(/\s+/)
-            .filter(Boolean);
-
-    if (!parts.length) {
-
-        return "?";
-
-    }
-
-    if (parts.length === 1) {
-
-        return parts[0]
-            .slice(0, 2)
-            .toUpperCase();
-
-    }
-
-    return (
-        parts[0][0] +
-        parts[parts.length - 1][0]
-    ).toUpperCase();
+    return name
+        .split(/\s+/)
+        .map(word => word[0])
+        .join("")
+        .slice(0, 2)
+        .toUpperCase();
 
 }
 
 
-function formatDate(date) {
+function escapeHtml(value) {
 
-    if (!date) {
+    return String(value ?? "")
+        .replace(
+            /[&<>"']/g,
+            character => {
 
-        return "";
+                const map = {
 
-    }
+                    "&": "&amp;",
+                    "<": "&lt;",
+                    ">": "&gt;",
+                    '"': "&quot;",
+                    "'": "&#039;"
 
-    const d =
-        new Date(
-            date + (
-                date.length === 10
-                    ? "T00:00:00"
-                    : ""
-            )
+                };
+
+                return map[character];
+
+            }
         );
 
-    if (Number.isNaN(d.getTime())) {
+}
 
-        return date;
+
+/* =========================================================
+   STAGIONE / MESI
+   ========================================================= */
+
+function getSeasonStartYear() {
+
+    const match =
+        String(state.season)
+            .match(/^(\d{4})/);
+
+    if (match) {
+
+        return Number(match[1]);
 
     }
 
-    return d.toLocaleDateString(
-        "it-IT"
+    return new Date()
+        .getFullYear();
+
+}
+
+
+function getYearForMonth(month) {
+
+    const startYear =
+        getSeasonStartYear();
+
+    /*
+       Luglio → Dicembre
+       = anno di inizio stagione
+
+       Gennaio → Giugno
+       = anno successivo
+    */
+
+    if (month >= 7) {
+
+        return startYear;
+
+    }
+
+    return startYear + 1;
+
+}
+
+
+function getMonthName(month) {
+
+    return new Date(
+        2000,
+        month - 1,
+        1
+    ).toLocaleDateString(
+        "it-IT",
+        {
+            month: "long"
+        }
     );
 
 }
 
 
-function todayString() {
+function getSeasonMonths() {
 
-    const now =
-        new Date();
+    const months = [];
 
-    const year =
-        now.getFullYear();
+    for (
+        let month = 1;
+        month <= 12;
+        month++
+    ) {
 
-    const month =
-        String(
-            now.getMonth() + 1
-        ).padStart(
-            2,
-            "0"
-        );
+        const year =
+            getYearForMonth(month);
 
-    const day =
-        String(
-            now.getDate()
-        ).padStart(
-            2,
-            "0"
-        );
+        const monthNumber =
+            String(month)
+                .padStart(2, "0");
 
-    return `${year}-${month}-${day}`;
+        months.push({
 
-}
+            id:
+                `${year}-${monthNumber}`,
 
+            label:
+                `${getMonthName(month)} ${year}`
 
-function generateId(prefix) {
+        });
 
-    return (
-        prefix +
-        "-" +
-        Date.now() +
-        "-" +
-        Math.random()
-            .toString(36)
-            .slice(2, 8)
-    );
+    }
+
+    return months;
 
 }
 
@@ -349,17 +351,16 @@ function generateId(prefix) {
 
 function applyTheme() {
 
-    document.documentElement.dataset.theme =
-        state.theme === "dark"
-            ? "dark"
-            : "light";
-
+    document.documentElement
+        .dataset.theme =
+            state.theme === "dark"
+                ? "dark"
+                : "light";
 
     const button =
         document.getElementById(
             "themeButton"
         );
-
 
     if (button) {
 
@@ -385,16 +386,86 @@ function updateNavigation() {
         )
         .forEach(button => {
 
-            const active =
-                button.dataset.page ===
-                currentPage;
-
             button.classList.toggle(
                 "active",
-                active
+                button.dataset.page ===
+                    currentPage
             );
 
         });
+
+
+    const titles = {
+
+        home: "Home",
+
+        fines: "Multe",
+
+        rules: "Multario",
+
+        settings: "Impostazioni"
+
+    };
+
+
+    document.getElementById(
+        "pageTitle"
+    ).textContent =
+        titles[currentPage];
+
+}
+
+
+/* =========================================================
+   RENDER GENERALE
+   ========================================================= */
+
+function render() {
+
+    applyTheme();
+
+    updateNavigation();
+
+
+    const app =
+        document.getElementById(
+            "app"
+        );
+
+
+    if (currentPage === "home") {
+
+        app.innerHTML =
+            renderHome();
+
+    }
+
+
+    if (currentPage === "fines") {
+
+        app.innerHTML =
+            renderFines();
+
+    }
+
+
+    if (currentPage === "rules") {
+
+        app.innerHTML =
+            renderRules();
+
+    }
+
+
+    if (currentPage === "settings") {
+
+        app.innerHTML =
+            renderSettings();
+
+    }
+
+
+    bindPageEvents();
 
 }
 
@@ -405,425 +476,635 @@ function updateNavigation() {
 
 function renderHome() {
 
-    const fines =
-        state.fines || [];
+    /* =====================================================
+       CALCOLO STATISTICHE
+       ===================================================== */
+
+    const total = state.fines.reduce(
+        (sum, fine) => sum + Number(fine.amount),
+        0
+    );
+
+    const paid = state.fines
+        .filter(fine => fine.paid)
+        .reduce(
+            (sum, fine) => sum + Number(fine.amount),
+            0
+        );
+
+    const unpaid = total - paid;
+
+    const fineCount = state.fines.length;
+
+    const finedPlayers = new Set(
+        state.fines.map(fine => fine.player)
+    ).size;
+
+    const paymentPercentage =
+        total > 0
+            ? Math.round((paid / total) * 100)
+            : 0;
+
+    const averageFine =
+        fineCount > 0
+            ? total / fineCount
+            : 0;
+
+    const highestFine =
+        state.fines.length
+            ? Math.max(
+                ...state.fines.map(
+                    fine => Number(fine.amount)
+                )
+            )
+            : 0;
 
 
-    const total =
-        fines.reduce(
+    /* =====================================================
+       CLASSIFICA
+       ===================================================== */
+
+    const ranking = state.players
+        .map(player => {
+
+            const playerFines =
+                state.fines.filter(
+                    fine => fine.player === player
+                );
+
+            const amount =
+                playerFines.reduce(
+                    (sum, fine) =>
+                        sum + Number(fine.amount),
+                    0
+                );
+
+            const paidAmount =
+                playerFines
+                    .filter(fine => fine.paid)
+                    .reduce(
+                        (sum, fine) =>
+                            sum + Number(fine.amount),
+                        0
+                    );
+
+            return {
+                player,
+                fines: playerFines.length,
+                amount,
+                paidAmount
+            };
+
+        })
+        .filter(player => player.fines > 0)
+        .sort(
+            (a, b) =>
+                b.amount - a.amount
+        );
+
+
+    const podium =
+        ranking.slice(0, 3);
+
+
+    /* =====================================================
+       ULTIME MULTE
+       ===================================================== */
+
+    const latest =
+        [...state.fines]
+            .sort(
+                (a, b) =>
+                    b.date.localeCompare(a.date)
+            )
+            .slice(0, 5);
+
+
+    /* =====================================================
+       MESE CORRENTE
+       ===================================================== */
+
+    const now = new Date();
+
+    const currentMonth =
+        `${now.getFullYear()}-${String(
+            now.getMonth() + 1
+        ).padStart(2, "0")}`;
+
+    const currentMonthFines =
+        state.fines.filter(
+            fine =>
+                fine.date.slice(0, 7) ===
+                currentMonth
+        );
+
+    const currentMonthTotal =
+        currentMonthFines.reduce(
             (sum, fine) =>
-                sum +
-                Number(
-                    fine.amount || 0
-                ),
+                sum + Number(fine.amount),
             0
         );
 
 
-    const paid =
-        fines
-            .filter(
-                fine => fine.paid
-            )
-            .reduce(
-                (sum, fine) =>
-                    sum +
-                    Number(
-                        fine.amount || 0
-                    ),
-                0
-            );
-
-
-    const unpaid =
-        total - paid;
-
-
-    const playersWithFines =
-        new Set(
-            fines.map(
-                fine =>
-                    fine.player
-            )
-        ).size;
-
-
-    const ranking = {};
-
-
-    fines.forEach(
-        fine => {
-
-            const player =
-                fine.player;
-
-            if (!ranking[player]) {
-
-                ranking[player] = {
-
-                    player,
-
-                    total: 0,
-
-                    count: 0
-
-                };
-
-            }
-
-            ranking[player].total +=
-                Number(
-                    fine.amount || 0
-                );
-
-            ranking[player].count++;
-
-        }
-    );
-
-
-    const rankingList =
-        Object.values(
-            ranking
-        )
-        .sort(
-            (a, b) =>
-                b.total - a.total
-        )
-        .slice(
-            0,
-            5
-        );
-
-
-    const recent =
-        [...fines]
-            .sort(
-                (a, b) =>
-                    new Date(b.date) -
-                    new Date(a.date)
-            )
-            .slice(
-                0,
-                5
-            );
-
-
-    return `
-
-        <section class="page-header">
-
-            <div>
-
-                <div class="eyebrow">
-                    ${escapeHtml(
-                        state.season || "STAGIONE"
-                    )}
-                </div>
-
-                <h1>
-                    ${escapeHtml(
-                        state.teamName ||
-                        "MulteSV"
-                    )}
-                </h1>
-
-                <p>
-                    Riepilogo della stagione
-                </p>
-
-            </div>
-
-
-            <button
-                class="primary-btn"
-                id="homeAddFine"
-                type="button"
-            >
-                ＋ Nuova multa
-            </button>
-
-        </section>
-
-
-        <div class="stats-grid">
-
-            <div class="stat-card">
-
-                <span>
-                    Totale multe
-                </span>
-
-                <strong>
-                    ${money(total)}
-                </strong>
-
-                <small>
-                    ${fines.length}
-                    ${
-                        fines.length === 1
-                            ? "multa"
-                            : "multe"
-                    }
-                </small>
-
-            </div>
-
-
-            <div class="stat-card">
-
-                <span>
-                    Pagate
-                </span>
-
-                <strong class="positive">
-                    ${money(paid)}
-                </strong>
-
-                <small>
-                    Già saldate
-                </small>
-
-            </div>
-
-
-            <div class="stat-card">
-
-                <span>
-                    Da pagare
-                </span>
-
-                <strong
-                    class="${
-                        unpaid > 0
-                            ? "negative"
-                            : "positive"
-                    }"
-                >
-                    ${money(unpaid)}
-                </strong>
-
-                <small>
-                    ${
-                        fines.filter(
-                            fine => !fine.paid
-                        ).length
-                    }
-                    non saldate
-                </small>
-
-            </div>
-
-
-            <div class="stat-card">
-
-                <span>
-                    Giocatori multati
-                </span>
-
-                <strong>
-                    ${playersWithFines}
-                </strong>
-
-                <small>
-                    Giocatori coinvolti
-                </small>
-
-            </div>
-
-        </div>
-
-
-        <div class="section-heading">
-
-            <div>
-
-                <h2>
-                    Classifica multe
-                </h2>
-
-                <span>
-                    Chi ha accumulato più multe
-                </span>
-
-            </div>
-
-        </div>
-
-
-        ${
-            rankingList.length
-
-                ?
-
+    /* =====================================================
+       PODIO
+       ===================================================== */
+
+    const podiumHtml =
+        podium.length
+            ? podium
+                .map((player, index) => {
+
+                    const positions = [
+                        "🥇",
+                        "🥈",
+                        "🥉"
+                    ];
+
+                    return `
+
+                        <div class="rank">
+
+                            <div class="rank-number">
+                                ${positions[index]}
+                            </div>
+
+                            <div class="avatar">
+                                ${initials(player.player)}
+                            </div>
+
+                            <div
+                                style="
+                                    flex:1;
+                                    min-width:0;
+                                "
+                            >
+
+                                <div class="row">
+
+                                    <strong>
+                                        ${escapeHtml(
+                                            player.player
+                                        )}
+                                    </strong>
+
+                                    <strong>
+                                        ${money(
+                                            player.amount
+                                        )}
+                                    </strong>
+
+                                </div>
+
+                                <div
+                                    class="small muted"
+                                    style="
+                                        margin-top:4px;
+                                    "
+                                >
+                                    ${player.fines}
+                                    ${
+                                        player.fines === 1
+                                            ? "multa"
+                                            : "multe"
+                                    }
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    `;
+
+                })
+                .join("")
+            :
             `
-                <div class="card ranking-card">
-
-                    ${
-                        rankingList
-                            .map(
-                                (item, index) => `
-
-                                    <div class="ranking-row">
-
-                                        <div class="ranking-position">
-
-                                            ${
-                                                index === 0
-                                                    ? "🥇"
-                                                    : index === 1
-                                                        ? "🥈"
-                                                        : index === 2
-                                                            ? "🥉"
-                                                            : index + 1
-                                            }
-
-                                        </div>
+                <div class="empty">
+                    Nessuna multa registrata.
+                </div>
+            `;
 
 
-                                        <div class="avatar">
+    /* =====================================================
+       CLASSIFICA COMPLETA
+       ===================================================== */
 
-                                            ${initials(
-                                                item.player
+    const rankingHtml =
+        ranking.length
+            ? ranking
+                .map(
+                    (player, index) => {
+
+                        const percentage =
+                            total > 0
+                                ?
+                            Math.min(
+                                100,
+                                (
+                                    player.amount /
+                                    total
+                                ) * 100
+                            )
+                                :
+                            0;
+
+                        return `
+
+                            <div class="rank">
+
+                                <div class="rank-number">
+                                    ${index + 1}
+                                </div>
+
+                                <div class="avatar">
+                                    ${initials(
+                                        player.player
+                                    )}
+                                </div>
+
+                                <div
+                                    style="
+                                        flex:1;
+                                        min-width:0;
+                                    "
+                                >
+
+                                    <div class="row">
+
+                                        <strong>
+                                            ${escapeHtml(
+                                                player.player
                                             )}
-
-                                        </div>
-
-
-                                        <div class="ranking-name">
-
-                                            <strong>
-                                                ${escapeHtml(
-                                                    item.player
-                                                )}
-                                            </strong>
-
-                                            <span class="muted small">
-
-                                                ${item.count}
-                                                ${
-                                                    item.count === 1
-                                                        ? "multa"
-                                                        : "multe"
-                                                }
-
-                                            </span>
-
-                                        </div>
-
+                                        </strong>
 
                                         <strong>
                                             ${money(
-                                                item.total
+                                                player.amount
                                             )}
                                         </strong>
 
                                     </div>
 
-                                `
-                            )
-                            .join("")
+                                    <div
+                                        class="progress"
+                                    >
+
+                                        <i
+                                            style="
+                                                width:
+                                                ${percentage}%;
+                                            "
+                                        ></i>
+
+                                    </div>
+
+                                    <div
+                                        class="small muted"
+                                        style="
+                                            margin-top:5px;
+                                        "
+                                    >
+
+                                        ${player.fines}
+                                        ${
+                                            player.fines === 1
+                                                ? "multa"
+                                                : "multe"
+                                        }
+
+                                        ·
+
+                                        ${money(
+                                            player.paidAmount
+                                        )}
+                                        pagati
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                        `;
+
                     }
-
+                )
+                .join("")
+            :
+            `
+                <div class="empty">
+                    Nessuna multa ancora.
                 </div>
-            `
+            `;
 
-                :
 
-            `
-                <div class="card empty-state">
+    /* =====================================================
+       OUTPUT HOME
+       ===================================================== */
 
-                    <div class="empty-icon">
-                        🏆
-                    </div>
+    return `
 
-                    <h3>
-                        Nessuna multa
-                    </h3>
+        <!-- ================================================
+             HERO
+             ================================================ -->
 
-                    <p>
-                        La classifica comparirà
-                        quando verrà registrata
-                        la prima multa.
-                    </p>
+        <section class="card hero">
 
+            <div class="small">
+
+                ${escapeHtml(state.team)}
+
+                ·
+
+                Stagione
+                ${escapeHtml(state.season)}
+
+            </div>
+
+            <h2>
+                Situazione multe
+            </h2>
+
+            <div class="hero-total">
+                ${money(total)}
+            </div>
+
+            <div class="hero-subtitle">
+                Totale multe della stagione
+            </div>
+
+        </section>
+
+
+        <!-- ================================================
+             STATISTICHE PRINCIPALI
+             ================================================ -->
+
+        <div
+            class="grid stats"
+            style="margin-top:14px"
+        >
+
+            <div class="card stat">
+
+                <div class="stat-label">
+                    PAGATO
                 </div>
-            `
-        }
 
-
-        <div class="section-heading">
-
-            <div>
-
-                <h2>
-                    Multe recenti
-                </h2>
-
-                <span>
-                    Ultime registrazioni
-                </span>
+                <div
+                    class="stat-value"
+                    style="color:var(--green)"
+                >
+                    ${money(paid)}
+                </div>
 
             </div>
 
 
-            ${
-                recent.length
-                    ? `
-                        <button
-                            class="btn secondary"
-                            id="goToFines"
-                            type="button"
-                        >
-                            Vedi tutte
-                        </button>
-                    `
-                    : ""
-            }
+            <div class="card stat">
+
+                <div class="stat-label">
+                    DA PAGARE
+                </div>
+
+                <div
+                    class="stat-value"
+                    style="color:var(--red)"
+                >
+                    ${money(unpaid)}
+                </div>
+
+            </div>
+
+
+            <div class="card stat">
+
+                <div class="stat-label">
+                    MULTE
+                </div>
+
+                <div class="stat-value">
+                    ${fineCount}
+                </div>
+
+            </div>
+
+
+            <div class="card stat">
+
+                <div class="stat-label">
+                    GIOCATORI
+                </div>
+
+                <div class="stat-value">
+                    ${finedPlayers}
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- ================================================
+             STATISTICHE EXTRA
+             ================================================ -->
+
+        <div class="grid stats">
+
+            <div class="card stat">
+
+                <div class="stat-label">
+                    INCASSATO
+                </div>
+
+                <div class="stat-value">
+                    ${paymentPercentage}%
+                </div>
+
+            </div>
+
+
+            <div class="card stat">
+
+                <div class="stat-label">
+                    MEDIA MULTA
+                </div>
+
+                <div class="stat-value">
+                    ${money(averageFine)}
+                </div>
+
+            </div>
+
+
+            <div class="card stat">
+
+                <div class="stat-label">
+                    PIÙ ALTA
+                </div>
+
+                <div
+                    class="stat-value"
+                    style="color:var(--red)"
+                >
+                    ${money(highestFine)}
+                </div>
+
+            </div>
+
+
+            <div class="card stat">
+
+                <div class="stat-label">
+                    MESE
+                </div>
+
+                <div class="stat-value">
+                    ${money(currentMonthTotal)}
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- ================================================
+             BARRA INCASSI
+             ================================================ -->
+
+        <div class="card">
+
+            <div class="row">
+
+                <div>
+
+                    <strong>
+                        💰 Incasso multe
+                    </strong>
+
+                    <div class="small muted">
+                        ${money(paid)}
+                        di
+                        ${money(total)}
+                    </div>
+
+                </div>
+
+                <strong>
+                    ${paymentPercentage}%
+                </strong>
+
+            </div>
+
+
+            <div
+                class="progress"
+                style="
+                    margin-top:12px;
+                    height:10px;
+                "
+            >
+
+                <i
+                    style="
+                        width:${paymentPercentage}%;
+                    "
+                ></i>
+
+            </div>
+
+        </div>
+
+
+        <!-- ================================================
+             CLASSIFICA
+             ================================================ -->
+
+        <div class="section-head">
+
+            <h2>
+                🏆 Classifica
+            </h2>
+
+            <button
+                class="btn secondary"
+                id="goToFines"
+                type="button"
+            >
+                Vedi multe
+            </button>
+
+        </div>
+
+
+        <div class="card list">
+
+            ${podiumHtml}
 
         </div>
 
 
         ${
-            recent.length
-
+            ranking.length > 3
                 ?
 
             `
-                <div class="list">
 
-                    ${
-                        recent
-                            .map(
-                                renderFineRow
-                            )
-                            .join("")
-                    }
+                <div class="section-head">
+
+                    <h2>
+                        📊 Classifica completa
+                    </h2>
 
                 </div>
+
+
+                <div class="card list">
+
+                    ${rankingHtml}
+
+                </div>
+
             `
 
                 :
 
-            `
-                <div class="card empty-state">
+            ""
 
-                    <div class="empty-icon">
-                        🧾
-                    </div>
-
-                    <h3>
-                        Nessuna registrazione
-                    </h3>
-
-                    <p>
-                        Aggiungi la prima multa
-                        della stagione.
-                    </p>
-
-                </div>
-            `
         }
+
+
+        <!-- ================================================
+             ULTIME MULTE
+             ================================================ -->
+
+        <div class="section-head">
+
+            <h2>
+                🕘 Ultime multe
+            </h2>
+
+        </div>
+
+
+        <div class="card list">
+
+            ${
+                latest.length
+                    ?
+                latest
+                    .map(renderFineRow)
+                    .join("")
+                    :
+                `
+                    <div class="empty">
+                        Non ci sono multe.
+                    </div>
+                `
+            }
+
+        </div>
 
     `;
 
@@ -835,13 +1116,9 @@ function renderHome() {
    ========================================================= */
 
 function renderFines() {
-
-    const allFines =
-        state.fines || [];
-
+    const allFines = state.fines || [];
 
     const monthNames = [
-
         "Gennaio",
         "Febbraio",
         "Marzo",
@@ -854,435 +1131,197 @@ function renderFines() {
         "Ottobre",
         "Novembre",
         "Dicembre"
-
     ];
 
-
-    const seasonStartYear =
-        Number(
-            state.season?.slice(0, 4)
-        ) ||
-        new Date().getFullYear();
-
+    // Costruiamo direttamente i 12 mesi della stagione 2026/27
+    const seasonStartYear = Number(state.season?.slice(0, 4)) || new Date().getFullYear();
 
     const seasonMonths = [];
 
+    for (let monthIndex = 7; monthIndex <= 11; monthIndex++) {
 
-    /* =========================
-       AGOSTO → DICEMBRE
-       ========================= */
+    	const year = seasonStartYear;
+    	const monthNumber = String(monthIndex + 1).padStart(2, "0");
 
-    for (
-        let monthIndex = 7;
-        monthIndex <= 11;
-        monthIndex++
-    ) {
-
-        const year =
-            seasonStartYear;
-
-        const monthNumber =
-            String(
-                monthIndex + 1
-            ).padStart(
-                2,
-                "0"
-            );
-
-
-        seasonMonths.push({
-
-            id:
-                `${year}-${monthNumber}`,
-
-            label:
-                `${monthNames[monthIndex]} ${year}`
-
-        });
-
+    	seasonMonths.push({
+        	id: `${year}-${monthNumber}`,
+        	label: `${monthNames[monthIndex]} ${year}`
+    	});
     }
 
+    for (let monthIndex = 0; monthIndex <= 4; monthIndex++) {
 
-    /* =========================
-       GENNAIO → MAGGIO
-       ========================= */
+    	const year = seasonStartYear + 1;
+    	const monthNumber = String(monthIndex + 1).padStart(2, "0");
 
-    for (
-        let monthIndex = 0;
-        monthIndex <= 4;
-        monthIndex++
-    ) {
-
-        const year =
-            seasonStartYear + 1;
-
-        const monthNumber =
-            String(
-                monthIndex + 1
-            ).padStart(
-                2,
-                "0"
-            );
-
-
-        seasonMonths.push({
-
-            id:
-                `${year}-${monthNumber}`,
-
-            label:
-                `${monthNames[monthIndex]} ${year}`
-
-        });
-
+    	seasonMonths.push({
+        	id: `${year}-${monthNumber}`,
+        	label: `${monthNames[monthIndex]} ${year}`
+    	});
     }
 
+    let fines = allFines;
 
-    /* =========================
-       FILTRO
-       ========================= */
-
-    let fines =
-        allFines;
-
-
-    if (
-        selectedMonth !== "all"
-    ) {
-
-        fines =
-            allFines.filter(
-                fine =>
-                    fine.date &&
-                    fine.date.startsWith(
-                        selectedMonth
-                    )
-            );
-
+    if (selectedMonth !== "all") {
+        fines = allFines.filter(fine =>
+            fine.date && fine.date.startsWith(selectedMonth)
+        );
     }
 
+    const total = fines.reduce(
+        (sum, fine) => sum + Number(fine.amount || 0),
+        0
+    );
 
-    /* =========================
-       TOTALI
-       ========================= */
-
-    const total =
-        fines.reduce(
-            (sum, fine) =>
-                sum +
-                Number(
-                    fine.amount || 0
-                ),
+    const unpaid = fines
+        .filter(fine => !fine.paid)
+        .reduce(
+            (sum, fine) => sum + Number(fine.amount || 0),
             0
         );
 
+    const paid = total - unpaid;
 
-    const unpaid =
-        fines
-            .filter(
-                fine =>
-                    !fine.paid
-            )
-            .reduce(
-                (sum, fine) =>
-                    sum +
-                    Number(
-                        fine.amount || 0
-                    ),
-                0
-            );
-
-
-    const paid =
-        total - unpaid;
-
-
-    /* =========================
-       TITOLO
-       ========================= */
-
-    const selectedMonthData =
-        seasonMonths.find(
-            month =>
-                month.id ===
-                selectedMonth
-        );
-
+    const selectedMonthData = seasonMonths.find(
+        month => month.id === selectedMonth
+    );
 
     const title =
         selectedMonth === "all"
-
             ? "Tutte le multe"
-
             : selectedMonthData
                 ? selectedMonthData.label
                 : "Multe";
 
-
     const subtitle =
         fines.length === 0
-
             ? "Nessuna multa registrata"
-
             : `${fines.length} ${
-                fines.length === 1
-                    ? "multa"
-                    : "multe"
+                fines.length === 1 ? "multa" : "multe"
             } · ${money(total)} totali`;
 
+    const sortedFines = [...fines].sort(
+        (a, b) => new Date(b.date) - new Date(a.date)
+    );
 
-    /* =========================
-       ORDINAMENTO
-       ========================= */
-
-    const sortedFines =
-        [...fines].sort(
-            (a, b) =>
-                new Date(b.date) -
-                new Date(a.date)
-        );
-
-
-    /* =========================
-       ELENCO
-       ========================= */
-
-    const finesHtml =
-        sortedFines.length
-
-            ?
-
-        `
+    const finesHtml = sortedFines.length
+        ? `
             <div class="list fines-list">
-
-                ${
-                    sortedFines
-                        .map(
-                            renderFineRow
-                        )
-                        .join("")
-                }
-
+                ${sortedFines.map(renderFineRow).join("")}
             </div>
         `
-
-            :
-
-        `
+        : `
             <div class="card empty-state">
+                <div class="empty-icon">🧾</div>
 
-                <div class="empty-icon">
-                    🧾
-                </div>
-
-                <h3>
-                    Nessuna multa
-                </h3>
+                <h3>Nessuna multa</h3>
 
                 <p>
-                    Non ci sono multe
-                    registrate per questo periodo.
+                    Non ci sono multe registrate per questo periodo.
                 </p>
 
-                <button
-                    class="primary-btn"
-                    id="addFineEmpty"
-                    type="button"
-                >
+                <button class="primary-btn" id="addFineEmpty">
                     ＋ Aggiungi multa
                 </button>
-
             </div>
         `;
 
-
     return `
-
         <section class="page-header">
-
             <div>
+                <div class="eyebrow">GESTIONE MULTE</div>
 
-                <div class="eyebrow">
-                    GESTIONE MULTE
-                </div>
+                <h1>${escapeHtml(title)}</h1>
 
-                <h1>
-                    ${escapeHtml(title)}
-                </h1>
-
-                <p>
-                    ${subtitle}
-                </p>
-
+                <p>${subtitle}</p>
             </div>
 
-
-            <button
-                class="primary-btn"
-                id="addFine"
-                type="button"
-            >
+            <button class="primary-btn" id="addFine">
                 ＋ Nuova multa
             </button>
-
         </section>
-
 
         <div class="card month-selector">
 
             <div class="section-title-row">
-
                 <div>
-
-                    <strong>
-                        Periodo
-                    </strong>
+                    <strong>Periodo</strong>
 
                     <span class="muted">
                         Seleziona il mese da visualizzare
                     </span>
-
                 </div>
-
             </div>
 
+            <div class="month-chips">
 
-            <div class="month-select-wrapper">
-
-                <select
-                    id="monthSelector"
-                    class="month-select"
+                <button
+                    class="month-chip ${
+                        selectedMonth === "all" ? "active" : ""
+                    }"
+                    data-month="all"
                 >
+                    Tutte
+                </button>
 
-                    <option
-                        value="all"
-                        ${
-                            selectedMonth === "all"
-                                ? "selected"
-                                : ""
-                        }
+                ${seasonMonths.map(month => `
+                    <button
+                        class="month-chip ${
+                            selectedMonth === month.id ? "active" : ""
+                        }"
+                        data-month="${month.id}"
                     >
-                        Tutte le multe
-                    </option>
-
-
-                    ${
-                        seasonMonths
-                            .map(
-                                month => `
-
-                                    <option
-                                        value="${month.id}"
-                                        ${
-                                            selectedMonth ===
-                                            month.id
-                                                ? "selected"
-                                                : ""
-                                        }
-                                    >
-                                        ${month.label}
-                                    </option>
-
-                                `
-                            )
-                            .join("")
-                    }
-
-                </select>
-
-
-                <span
-                    class="month-select-arrow"
-                >
-                    ⌄
-                </span>
+                        ${month.label}
+                    </button>
+                `).join("")}
 
             </div>
-
         </div>
-
 
         <div class="stats-grid fines-summary">
 
-
             <div class="stat-card">
+                <span>Totale periodo</span>
 
-                <span>
-                    Totale periodo
-                </span>
-
-                <strong>
-                    ${money(total)}
-                </strong>
+                <strong>${money(total)}</strong>
 
                 <small>
                     ${fines.length}
-                    ${
-                        fines.length === 1
-                            ? "multa"
-                            : "multe"
-                    }
+                    ${fines.length === 1 ? "multa" : "multe"}
                 </small>
-
             </div>
 
-
             <div class="stat-card">
-
-                <span>
-                    Pagate
-                </span>
+                <span>Pagate</span>
 
                 <strong class="positive">
                     ${money(paid)}
                 </strong>
 
-                <small>
-                    Già saldate
-                </small>
-
+                <small>Già saldate</small>
             </div>
 
-
             <div class="stat-card">
+                <span>Da pagare</span>
 
-                <span>
-                    Da pagare
-                </span>
-
-                <strong
-                    class="${
-                        unpaid > 0
-                            ? "negative"
-                            : "positive"
-                    }"
-                >
+                <strong class="${
+                    unpaid > 0 ? "negative" : "positive"
+                }">
                     ${money(unpaid)}
                 </strong>
 
                 <small>
-                    ${
-                        fines.filter(
-                            fine =>
-                                !fine.paid
-                        ).length
-                    }
+                    ${fines.filter(f => !f.paid).length}
                     non saldate
                 </small>
-
             </div>
 
-
         </div>
-
 
         <div class="section-heading">
 
             <div>
-
-                <h2>
-                    Elenco multe
-                </h2>
+                <h2>Elenco multe</h2>
 
                 <span>
                     ${
@@ -1291,16 +1330,94 @@ function renderFines() {
                             : "Nessun elemento"
                     }
                 </span>
-
             </div>
 
         </div>
 
-
         ${finesHtml}
-
     `;
 
+    document
+        .querySelectorAll("[data-month]")
+        .forEach(button => {
+
+            button.addEventListener("click", () => {
+
+                selectedMonth = button.dataset.month;
+
+                render();
+            });
+        });
+
+    document
+        .querySelector("#addFine")
+        ?.addEventListener(
+            "click",
+            () => openFineModal()
+        );
+
+    document
+        .querySelector("#addFineEmpty")
+        ?.addEventListener(
+            "click",
+            () => openFineModal()
+        );
+
+    document
+        .querySelectorAll("[data-toggle-paid]")
+        .forEach(button => {
+
+            button.addEventListener("click", () => {
+
+                const id = button.dataset.togglePaid;
+
+                const fine = state.fines.find(
+                    item => item.id === id
+                );
+
+                if (!fine) return;
+
+                fine.paid = !fine.paid;
+
+                saveState();
+
+                render();
+            });
+        });
+
+    document
+        .querySelectorAll("[data-edit-fine]")
+        .forEach(button => {
+
+            button.addEventListener("click", () => {
+
+                openFineModal(
+                    button.dataset.editFine
+                );
+            });
+        });
+
+    document
+        .querySelectorAll("[data-delete-fine]")
+        .forEach(button => {
+
+            button.addEventListener("click", () => {
+
+                const id = button.dataset.deleteFine;
+
+                if (!confirm("Vuoi eliminare questa multa?")) {
+                    return;
+                }
+
+                state.fines = state.fines.filter(
+                    fine => fine.id !== id
+                );
+
+                saveState();
+
+                render();
+            });
+        });
 }
 
 
@@ -1336,18 +1453,13 @@ function renderFineRow(fine) {
                         <div class="small muted">
 
                             ${escapeHtml(
-                                fine.category || ""
+                                fine.category
                             )}
 
-                            ${
-                                fine.category &&
-                                fine.type
-                                    ? " · "
-                                    : ""
-                            }
+                            ·
 
                             ${escapeHtml(
-                                fine.type || ""
+                                fine.type
                             )}
 
                         </div>
@@ -1406,7 +1518,6 @@ function renderFineRow(fine) {
                 style="
                     justify-content:flex-end;
                     margin-top:10px;
-                    flex-wrap:wrap;
                 "
             >
 
@@ -1455,173 +1566,145 @@ function renderFineRow(fine) {
 
 function renderRules() {
 
-    const categories = {};
+    const groups = {};
 
 
-    state.rules.forEach(
-        rule => {
+    state.rules.forEach(rule => {
 
-            if (!categories[rule.category]) {
+        if (!groups[rule.category]) {
 
-                categories[rule.category] = [];
-
-            }
-
-            categories[rule.category]
-                .push(rule);
+            groups[rule.category] = [];
 
         }
-    );
 
+        groups[rule.category].push(rule);
 
-    const categoryOrder = [
-
-        "Allenamento",
-        "Partita",
-        "Materiale"
-
-    ];
-
-
-    const orderedCategories = [
-
-        ...categoryOrder
-            .filter(
-                category =>
-                    categories[category]
-            ),
-
-        ...Object.keys(
-            categories
-        )
-            .filter(
-                category =>
-                    !categoryOrder.includes(
-                        category
-                    )
-            )
-
-    ];
+    });
 
 
     return `
 
-        <section class="page-header">
+        <div class="row wrap">
 
             <div>
 
-                <div class="eyebrow">
-                    MULTARIO
+                <div class="small muted">
+                    Regolamento personalizzabile
                 </div>
 
-                <h1>
-                    Regole multe
-                </h1>
-
-                <p>
-                    Gestisci le regole
-                    della squadra.
-                </p>
+                <h2
+                    style="
+                        margin:
+                        4px
+                        0;
+                    "
+                >
+                    Multario
+                </h2>
 
             </div>
 
 
             <button
-                class="primary-btn"
+                class="btn"
                 id="addRule"
                 type="button"
             >
-                ＋ Nuova regola
+                + Nuova regola
             </button>
 
-        </section>
+        </div>
+
+
+        <p class="muted small">
+
+            Crea liberamente categorie,
+            tipologie e importi.
+
+            Le regole saranno disponibili
+            quando inserisci una multa.
+
+        </p>
 
 
         ${
-            orderedCategories.length
+            Object.keys(groups).length
 
                 ?
 
-            orderedCategories
+            Object.entries(groups)
                 .map(
-                    category => `
+                    ([category, rules]) => `
 
-                        <div class="section-heading">
+                        <div
+                            class="section-head"
+                        >
 
-                            <div>
+                            <h2>
+                                ${escapeHtml(
+                                    category
+                                )}
+                            </h2>
 
-                                <h2>
-                                    ${escapeHtml(
-                                        category
-                                    )}
-                                </h2>
-
-                            </div>
+                            <span
+                                class="badge neutral"
+                            >
+                                ${rules.length}
+                            </span>
 
                         </div>
 
 
-                        <div class="list">
+                        <div
+                            class="card table-like"
+                        >
 
                             ${
-                                categories[category]
+                                rules
                                     .map(
                                         rule => `
 
-                                            <div class="list-item">
+                                            <div
+                                                class="rule-row"
+                                            >
 
-                                                <div class="row">
+                                                <div>
 
-                                                    <div>
-
-                                                        <strong>
-                                                            ${escapeHtml(
-                                                                rule.type
-                                                            )}
-                                                        </strong>
-
-                                                        <div class="small muted">
-                                                            ${escapeHtml(
-                                                                rule.category
-                                                            )}
-                                                        </div>
-
-                                                    </div>
-
-
-                                                    <strong class="amount">
-                                                        ${money(
-                                                            rule.amount
+                                                    <strong>
+                                                        ${escapeHtml(
+                                                            rule.type
                                                         )}
                                                     </strong>
 
                                                 </div>
 
 
+                                                <strong>
+                                                    ${money(
+                                                        rule.amount
+                                                    )}
+                                                </strong>
+
+
                                                 <div
                                                     class="row"
-                                                    style="
-                                                        justify-content:flex-end;
-                                                        margin-top:10px;
-                                                        flex-wrap:wrap;
-                                                    "
                                                 >
 
                                                     <button
-                                                        class="btn secondary"
+                                                        class="icon-mini"
                                                         data-edit-rule="${rule.id}"
                                                         type="button"
                                                     >
-                                                        Modifica
+                                                        ✏️
                                                     </button>
 
 
                                                     <button
-                                                        class="btn danger"
+                                                        class="icon-mini"
                                                         data-delete-rule="${rule.id}"
                                                         type="button"
                                                     >
-                                                        Elimina
+                                                        🗑️
                                                     </button>
 
                                                 </div>
@@ -1642,20 +1725,9 @@ function renderRules() {
                 :
 
             `
-                <div class="card empty-state">
+                <div class="card empty">
 
-                    <div class="empty-icon">
-                        📋
-                    </div>
-
-                    <h3>
-                        Nessuna regola
-                    </h3>
-
-                    <p>
-                        Aggiungi una regola
-                        al multario.
-                    </p>
+                    Il multario è vuoto.
 
                 </div>
             `
@@ -1674,242 +1746,157 @@ function renderSettings() {
 
     return `
 
-        <section class="page-header">
-
-            <div>
-
-                <div class="eyebrow">
-                    IMPOSTAZIONI
-                </div>
-
-                <h1>
-                    Impostazioni
-                </h1>
-
-                <p>
-                    Personalizza la gestione
-                    della squadra.
-                </p>
-
-            </div>
-
-        </section>
-
+        <!-- SQUADRA -->
 
         <div class="card">
 
-            <div class="section-title-row">
+            <h2>
+                ⚙️ Squadra
+            </h2>
 
-                <div>
 
-                    <strong>
-                        Squadra
-                    </strong>
+            <div class="form">
 
-                    <span class="muted">
-                        Informazioni principali
-                    </span>
+                <div class="field">
+
+                    <label>
+                        NOME SQUADRA
+                    </label>
+
+                    <input
+                        id="teamName"
+                        type="text"
+                        value="${escapeHtml(
+                            state.team
+                        )}"
+                    >
 
                 </div>
 
+
+                <div class="field">
+
+                    <label>
+                        STAGIONE
+                    </label>
+
+                    <input
+                        id="season"
+                        type="text"
+                        value="${escapeHtml(
+                            state.season
+                        )}"
+                        placeholder="2026/27"
+                    >
+
+                </div>
+
+
+                <button
+                    class="btn"
+                    id="saveSettings"
+                    type="button"
+                >
+                    Salva impostazioni
+                </button>
+
             </div>
 
-
-            <label class="form-label">
-                Nome squadra
-            </label>
-
-            <input
-                id="teamNameInput"
-                class="form-input"
-                type="text"
-                value="${escapeHtml(
-                    state.teamName
-                )}"
-            />
+        </div>
 
 
-            <label class="form-label">
-                Stagione
-            </label>
+        <!-- GIOCATORI -->
 
-            <input
-                id="seasonInput"
-                class="form-input"
-                type="text"
-                value="${escapeHtml(
-                    state.season
-                )}"
-                placeholder="2026/27"
-            />
+        <div class="section-head">
 
+            <h2>
+                👥 Giocatori
+            </h2>
 
             <button
-                class="primary-btn"
-                id="saveSettings"
+                class="btn"
+                id="addPlayer"
                 type="button"
             >
-                Salva impostazioni
+                + Giocatore
             </button>
 
         </div>
 
 
-        <div class="card">
+        <div class="card player-list">
 
-            <div class="section-title-row">
+            ${
+                state.players.length
 
-                <div>
+                    ?
 
-                    <strong>
-                        Giocatori
-                    </strong>
+                state.players
+                    .map(
+                        (player, index) => `
 
-                    <span class="muted">
-                        ${state.players.length}
-                        giocatori
-                    </span>
+                            <span
+                                class="player-chip"
+                            >
 
-                </div>
+                                ${escapeHtml(
+                                    player
+                                )}
 
+                                <button
+                                    type="button"
+                                    data-delete-player="${index}"
+                                    title="Rimuovi"
+                                >
+                                    ×
+                                </button>
 
-                <button
-                    class="btn secondary"
-                    id="addPlayer"
-                    type="button"
-                >
-                    ＋ Aggiungi
-                </button>
+                            </span>
 
-            </div>
+                        `
+                    )
+                    .join("")
 
+                    :
 
-            <div class="list">
+                `
+                    <div class="empty">
+                        Nessun giocatore.
+                    </div>
+                `
+            }
 
-                ${
-                    state.players.length
-
-                        ?
-
-                    state.players
-                        .map(
-                            (player, index) => `
-
-                                <div class="list-item">
-
-                                    <div class="row">
-
-                                        <div class="row-left">
-
-                                            <div class="avatar">
-                                                ${initials(
-                                                    player
-                                                )}
-                                            </div>
-
-                                            <strong>
-                                                ${escapeHtml(
-                                                    player
-                                                )}
-                                            </strong>
-
-                                        </div>
+        </div>
 
 
-                                        <button
-                                            class="btn danger"
-                                            data-delete-player="${index}"
-                                            type="button"
-                                        >
-                                            Elimina
-                                        </button>
+        <!-- DATI -->
 
-                                    </div>
+        <div class="section-head">
 
-                                </div>
-
-                            `
-                        )
-                        .join("")
-
-                        :
-
-                    `
-                        <div class="empty-state">
-
-                            <p>
-                                Nessun giocatore
-                                inserito.
-                            </p>
-
-                        </div>
-                    `
-                }
-
-            </div>
+            <h2>
+                💾 Dati
+            </h2>
 
         </div>
 
 
         <div class="card">
 
-            <div class="section-title-row">
+            <div class="row wrap">
 
                 <div>
 
                     <strong>
-                        Aspetto
+                        Backup squadra
                     </strong>
 
-                    <span class="muted">
-                        Tema dell'applicazione
-                    </span>
+                    <div class="small muted">
+                        Esporta tutte le impostazioni,
+                        regole e multe.
+                    </div>
 
                 </div>
 
-
-                <button
-                    class="btn secondary"
-                    id="settingsThemeButton"
-                    type="button"
-                >
-                    ${
-                        state.theme === "dark"
-                            ? "🌙 Scuro"
-                            : "☀️ Chiaro"
-                    }
-                </button>
-
-            </div>
-
-        </div>
-
-
-        <div class="card">
-
-            <div class="section-title-row">
-
-                <div>
-
-                    <strong>
-                        Backup
-                    </strong>
-
-                    <span class="muted">
-                        Salva o ripristina i dati
-                    </span>
-
-                </div>
-
-            </div>
-
-
-            <div
-                class="row"
-                style="
-                    flex-wrap:wrap;
-                "
-            >
 
                 <button
                     class="btn secondary"
@@ -1919,54 +1906,67 @@ function renderSettings() {
                     Esporta backup
                 </button>
 
+            </div>
+
+
+            <div class="divider"></div>
+
+
+            <div class="row wrap">
+
+                <div>
+
+                    <strong>
+                        Ripristina backup
+                    </strong>
+
+                    <div class="small muted">
+                        Importa un file JSON
+                        precedentemente esportato.
+                    </div>
+
+                </div>
+
 
                 <button
                     class="btn secondary"
                     id="importData"
                     type="button"
                 >
-                    Importa backup
+                    Importa
                 </button>
 
             </div>
 
 
-            <input
-                type="file"
-                id="importFile"
-                accept=".json,application/json"
-                style="display:none;"
-            />
-
-        </div>
+            <div class="divider"></div>
 
 
-        <div class="card">
-
-            <div class="section-title-row">
+            <div class="row wrap">
 
                 <div>
 
                     <strong>
-                        Zona pericolosa
+                        Ripristina demo
                     </strong>
 
-                    <span class="muted">
-                        Cancella tutti i dati
-                    </span>
+                    <div class="small muted">
+                        Cancella i dati attuali
+                        e torna ai dati di esempio.
+                    </div>
 
                 </div>
 
+
+                <button
+                    class="btn danger"
+                    id="resetData"
+                    type="button"
+                >
+                    Reset
+                </button>
+
             </div>
-
-
-            <button
-                class="btn danger"
-                id="resetData"
-                type="button"
-            >
-                Ripristina dati iniziali
-            </button>
 
         </div>
 
@@ -1976,7 +1976,7 @@ function renderSettings() {
 
 
 /* =========================================================
-   MODAL
+   MODALE GENERICA
    ========================================================= */
 
 function openModal(title, content) {
@@ -1985,13 +1985,6 @@ function openModal(title, content) {
         document.getElementById(
             "modalRoot"
         );
-
-
-    if (!root) {
-
-        return;
-
-    }
 
 
     root.innerHTML = `
@@ -2033,115 +2026,77 @@ function openModal(title, content) {
         .getElementById(
             "closeModal"
         )
-        ?.addEventListener(
-            "click",
-            closeModal
-        );
+        .onclick = closeModal;
 
 
     document
         .getElementById(
             "modalBackdrop"
         )
-        ?.addEventListener(
-            "click",
-            event => {
+        .onclick = event => {
 
-                if (
-                    event.target.id ===
-                    "modalBackdrop"
-                ) {
+            if (
+                event.target.id ===
+                "modalBackdrop"
+            ) {
 
-                    closeModal();
-
-                }
+                closeModal();
 
             }
-        );
+
+        };
 
 }
 
 
 function closeModal() {
 
-    const root =
-        document.getElementById(
-            "modalRoot"
-        );
-
-
-    if (root) {
-
-        root.innerHTML = "";
-
-    }
+    document.getElementById(
+        "modalRoot"
+    ).innerHTML = "";
 
 }
 
 
 /* =========================================================
-   MODAL MULTA
+   MODALE MULTA
    ========================================================= */
 
-function openFineModal(fineId = null) {
+function openFineModal(id = null) {
 
-    const existing =
-        state.fines.find(
-            fine =>
-                String(fine.id) ===
-                String(fineId)
-        );
+    const fine = id
+        ? state.fines.find(item => item.id === id)
+        : null;
+
+    const isEdit = Boolean(fine);
 
 
-    const isEdit =
-        Boolean(existing);
-
+    /* =========================
+       CATEGORIE
+       ========================= */
 
     const categories = [
         ...new Set(
             state.rules.map(
-                rule =>
-                    rule.category
+                rule => rule.category
             )
         )
     ];
 
 
-    let initialRule =
-        existing
-            ? state.rules.find(
-                rule =>
-                    String(rule.id) ===
-                    String(existing.ruleId)
-            )
-            : null;
+    /* =========================
+       REGOLA INIZIALE
+       ========================= */
 
-
-    if (!initialRule && existing) {
-
-        initialRule =
-            state.rules.find(
-                rule =>
-                    rule.category ===
-                    existing.category &&
-                    rule.type ===
-                    existing.type
-            );
-
-    }
-
-
-    if (!initialRule) {
-
-        initialRule =
-            state.rules[0] ||
-            null;
-
-    }
+    const initialRule = fine
+        ? state.rules.find(
+            rule =>
+                rule.id === fine.ruleId
+        )
+        : state.rules[0];
 
 
     const initialCategory =
-        existing?.category ||
         initialRule?.category ||
         categories[0] ||
         "";
@@ -2155,6 +2110,10 @@ function openFineModal(fineId = null) {
         );
 
 
+    /* =========================
+       MODALE
+       ========================= */
+
     openModal(
 
         isEdit
@@ -2163,45 +2122,48 @@ function openFineModal(fineId = null) {
 
         `
 
-            <div class="form-group">
+        <div class="form">
 
-                <label class="form-label">
-                    Giocatore
+            <!-- GIOCATORE -->
+
+            <div class="field">
+
+                <label>
+                    GIOCATORE
                 </label>
 
-                <select
-                    id="finePlayer"
-                    class="form-input"
-                >
-
-                    <option value="">
-                        Seleziona giocatore
-                    </option>
+                <select id="finePlayer">
 
                     ${
+                        state.players.length
+                            ?
+
                         state.players
                             .map(
                                 player => `
 
                                     <option
-                                        value="${escapeHtml(
-                                            player
-                                        )}"
+                                        value="${escapeHtml(player)}"
                                         ${
-                                            existing?.player ===
-                                            player
+                                            fine?.player === player
                                                 ? "selected"
                                                 : ""
                                         }
                                     >
-                                        ${escapeHtml(
-                                            player
-                                        )}
+                                        ${escapeHtml(player)}
                                     </option>
 
                                 `
                             )
                             .join("")
+
+                            :
+
+                        `
+                            <option value="">
+                                Nessun giocatore
+                            </option>
+                        `
                     }
 
                 </select>
@@ -2209,16 +2171,15 @@ function openFineModal(fineId = null) {
             </div>
 
 
-            <div class="form-group">
+            <!-- CATEGORIA -->
 
-                <label class="form-label">
-                    Categoria
+            <div class="field">
+
+                <label>
+                    CATEGORIA
                 </label>
 
-                <select
-                    id="fineCategory"
-                    class="form-input"
-                >
+                <select id="fineCategory">
 
                     ${
                         categories
@@ -2226,9 +2187,7 @@ function openFineModal(fineId = null) {
                                 category => `
 
                                     <option
-                                        value="${escapeHtml(
-                                            category
-                                        )}"
+                                        value="${escapeHtml(category)}"
                                         ${
                                             category ===
                                             initialCategory
@@ -2236,9 +2195,7 @@ function openFineModal(fineId = null) {
                                                 : ""
                                         }
                                     >
-                                        ${escapeHtml(
-                                            category
-                                        )}
+                                        ${escapeHtml(category)}
                                     </option>
 
                                 `
@@ -2251,16 +2208,15 @@ function openFineModal(fineId = null) {
             </div>
 
 
-            <div class="form-group">
+            <!-- TIPO -->
 
-                <label class="form-label">
-                    Regola
+            <div class="field">
+
+                <label>
+                    TIPO DI MULTA
                 </label>
 
-                <select
-                    id="fineRule"
-                    class="form-input"
-                >
+                <select id="fineRule">
 
                     ${
                         initialRules
@@ -2270,24 +2226,15 @@ function openFineModal(fineId = null) {
                                     <option
                                         value="${rule.id}"
                                         ${
-                                            initialRule &&
-                                            String(
-                                                initialRule.id
-                                            ) ===
-                                            String(
-                                                rule.id
-                                            )
+                                            fine?.ruleId ===
+                                            rule.id
                                                 ? "selected"
                                                 : ""
                                         }
                                     >
-                                        ${escapeHtml(
-                                            rule.type
-                                        )}
-                                        -
-                                        ${money(
-                                            rule.amount
-                                        )}
+                                        ${escapeHtml(rule.type)}
+                                        ·
+                                        ${money(rule.amount)}
                                     </option>
 
                                 `
@@ -2300,60 +2247,71 @@ function openFineModal(fineId = null) {
             </div>
 
 
-            <div class="form-group">
+            <!-- DATA -->
 
-                <label class="form-label">
-                    Data
+            <div class="field">
+
+                <label>
+                    DATA
                 </label>
 
                 <input
                     id="fineDate"
-                    class="form-input"
                     type="date"
                     value="${
-                        existing?.date ||
-                        todayString()
+                        fine?.date ||
+                        new Date()
+                            .toISOString()
+                            .slice(0, 10)
                     }"
-                />
+                >
 
             </div>
 
 
-            <div class="form-group">
+            <!-- IMPORTO -->
 
-                <label class="form-label">
-                    Importo
+            <div class="field">
+
+                <label>
+                    IMPORTO (€)
                 </label>
 
                 <input
                     id="fineAmount"
-                    class="form-input"
                     type="number"
                     min="0"
-                    step="0.01"
+                    step="1"
                     value="${
-                        existing?.amount ??
+                        fine?.amount ??
                         initialRule?.amount ??
                         0
                     }"
-                />
+                >
 
             </div>
 
 
+            <!-- PAGATA -->
+
             <label
-                class="checkbox-row"
+                style="
+                    display:flex;
+                    align-items:center;
+                    gap:10px;
+                    cursor:pointer;
+                "
             >
 
                 <input
                     id="finePaid"
                     type="checkbox"
                     ${
-                        existing?.paid
+                        fine?.paid
                             ? "checked"
                             : ""
                     }
-                />
+                >
 
                 <span>
                     Multa già pagata
@@ -2362,22 +2320,43 @@ function openFineModal(fineId = null) {
             </label>
 
 
-            <button
-                class="primary-btn"
-                id="saveFine"
-                type="button"
-            >
-                ${
-                    isEdit
-                        ? "Salva modifiche"
-                        : "Aggiungi multa"
-                }
-            </button>
+            <!-- AZIONI -->
+
+            <div class="modal-actions">
+
+                <button
+                    class="btn secondary"
+                    id="cancelFine"
+                    type="button"
+                >
+                    Annulla
+                </button>
+
+
+                <button
+                    class="btn"
+                    id="saveFine"
+                    type="button"
+                >
+                    ${
+                        isEdit
+                            ? "Salva modifiche"
+                            : "Aggiungi multa"
+                    }
+                </button>
+
+            </div>
+
+        </div>
 
         `
 
     );
 
+
+    /* =========================
+       ELEMENTI
+       ========================= */
 
     const categorySelect =
         document.getElementById(
@@ -2394,6 +2373,10 @@ function openFineModal(fineId = null) {
             "fineAmount"
         );
 
+
+    /* =========================
+       AGGIORNA REGOLE
+       ========================= */
 
     function updateRules() {
 
@@ -2420,7 +2403,7 @@ function openFineModal(fineId = null) {
                             ${escapeHtml(
                                 rule.type
                             )}
-                            -
+                            ·
                             ${money(
                                 rule.amount
                             )}
@@ -2433,309 +2416,343 @@ function openFineModal(fineId = null) {
 
         if (rules.length) {
 
+            ruleSelect.value =
+                String(
+                    rules[0].id
+                );
+
             amountInput.value =
                 rules[0].amount;
+
+        } else {
+
+            amountInput.value = 0;
 
         }
 
     }
 
 
-    categorySelect
-        ?.addEventListener(
-            "change",
-            updateRules
-        );
+    /* =========================
+       CAMBIO CATEGORIA
+       ========================= */
+
+    categorySelect.addEventListener(
+        "change",
+        updateRules
+    );
 
 
-    ruleSelect
-        ?.addEventListener(
-            "change",
-            () => {
+    /* =========================
+       CAMBIO TIPO
+       ========================= */
 
-                const rule =
-                    state.rules.find(
-                        item =>
-                            String(item.id) ===
-                            String(
-                                ruleSelect.value
-                            )
-                    );
+    ruleSelect.addEventListener(
+        "change",
+        () => {
+
+            const rule =
+                state.rules.find(
+                    item =>
+                        String(item.id) ===
+                        String(
+                            ruleSelect.value
+                        )
+                );
 
 
-                if (rule) {
+            if (rule) {
 
-                    amountInput.value =
-                        rule.amount;
-
-                }
+                amountInput.value =
+                    rule.amount;
 
             }
-        );
 
+        }
+    );
+
+
+    /* =========================
+       ANNULLA
+       ========================= */
+
+    document
+        .getElementById(
+            "cancelFine"
+        )
+        .onclick =
+            closeModal;
+
+
+    /* =========================
+       SALVA
+       ========================= */
 
     document
         .getElementById(
             "saveFine"
         )
-        ?.addEventListener(
-            "click",
-            () => {
+        .onclick = () => {
 
-                const player =
-                    document.getElementById(
+            const player =
+                document
+                    .getElementById(
                         "finePlayer"
-                    ).value;
+                    )
+                    .value;
 
 
-                const category =
-                    document.getElementById(
-                        "fineCategory"
-                    ).value;
+            const ruleId =
+                Number(
+                    document
+                        .getElementById(
+                            "fineRule"
+                        )
+                        .value
+                );
 
 
-                const ruleId =
-                    document.getElementById(
-                        "fineRule"
-                    ).value;
-
-
-                const date =
-                    document.getElementById(
+            const date =
+                document
+                    .getElementById(
                         "fineDate"
-                    ).value;
+                    )
+                    .value;
 
 
-                const amount =
-                    Number(
-                        document.getElementById(
+            const amount =
+                Number(
+                    document
+                        .getElementById(
                             "fineAmount"
-                        ).value
-                    );
+                        )
+                        .value
+                );
 
 
-                const paid =
-                    document.getElementById(
+            const paid =
+                document
+                    .getElementById(
                         "finePaid"
-                    ).checked;
+                    )
+                    .checked;
 
 
-                if (!player) {
+            if (
+                !player ||
+                !ruleId ||
+                !date ||
+                amount < 0
+            ) {
 
-                    showToast(
-                        "Seleziona un giocatore"
-                    );
+                showToast(
+                    "Controlla i dati inseriti."
+                );
 
-                    return;
+                return;
 
-                }
-
-
-                if (!date) {
-
-                    showToast(
-                        "Inserisci la data"
-                    );
-
-                    return;
-
-                }
+            }
 
 
-                if (
-                    !Number.isFinite(amount) ||
-                    amount < 0
-                ) {
+            /* =====================
+               MODIFICA
+               ===================== */
 
-                    showToast(
-                        "Importo non valido"
-                    );
+            if (isEdit) {
 
-                    return;
+                fine.player =
+                    player;
 
-                }
+                fine.ruleId =
+                    ruleId;
 
+                fine.category =
+                    state.rules.find(
+                        rule =>
+                            rule.id ===
+                            ruleId
+                    )?.category || "";
+
+                fine.type =
+                    state.rules.find(
+                        rule =>
+                            rule.id ===
+                            ruleId
+                    )?.type || "";
+
+                fine.date =
+                    date;
+
+                fine.amount =
+                    amount;
+
+                fine.paid =
+                    paid;
+
+            }
+
+
+            /* =====================
+               NUOVA MULTA
+               ===================== */
+
+            else {
 
                 const rule =
                     state.rules.find(
                         item =>
-                            String(item.id) ===
-                            String(ruleId)
+                            item.id ===
+                            ruleId
                     );
 
 
-                if (isEdit) {
+                state.fines.push({
 
-                    existing.player =
-                        player;
+                    id:
+                        generateId(),
 
-                    existing.category =
-                        category;
+                    date,
 
-                    existing.type =
+                    player,
+
+                    category:
+                        rule?.category ||
+                        "",
+
+                    type:
                         rule?.type ||
-                        existing.type;
+                        "",
 
-                    existing.ruleId =
-                        ruleId;
+                    ruleId,
 
-                    existing.date =
-                        date;
+                    amount,
 
-                    existing.amount =
-                        amount;
+                    paid
 
-                    existing.paid =
-                        paid;
-
-                }
-
-                else {
-
-                    state.fines.push({
-
-                        id:
-                            generateId(
-                                "fine"
-                            ),
-
-                        player,
-
-                        category,
-
-                        type:
-                            rule?.type ||
-                            "Multa",
-
-                        ruleId,
-
-                        date,
-
-                        amount,
-
-                        paid
-
-                    });
-
-                }
-
-
-                saveState();
-
-                closeModal();
-
-                render();
-
-                showToast(
-                    isEdit
-                        ? "Multa modificata"
-                        : "Multa aggiunta"
-                );
+                });
 
             }
-        );
+
+
+            saveState();
+
+            closeModal();
+
+            render();
+
+            showToast(
+                isEdit
+                    ? "Multa modificata"
+                    : "Multa aggiunta"
+            );
+
+        };
 
 }
 
-
 /* =========================================================
-   MODAL REGOLA
+   MODALE REGOLA
    ========================================================= */
 
-function openRuleModal(ruleId = null) {
+function openRuleModal(id = null) {
 
-    const existing =
-        state.rules.find(
-            rule =>
-                String(rule.id) ===
-                String(ruleId)
-        );
-
-
-    const isEdit =
-        Boolean(existing);
+    const rule =
+        id
+            ? state.rules.find(
+                item =>
+                    item.id === id
+            )
+            : null;
 
 
     openModal(
 
-        isEdit
+        id
             ? "Modifica regola"
             : "Nuova regola",
 
         `
 
-            <div class="form-group">
+        <div class="form">
 
-                <label class="form-label">
-                    Categoria
+            <div class="field">
+
+                <label>
+                    CATEGORIA
                 </label>
 
                 <input
                     id="ruleCategory"
-                    class="form-input"
                     type="text"
                     value="${escapeHtml(
-                        existing?.category ||
-                        ""
+                        rule?.category || ""
                     )}"
                     placeholder="Es. Allenamento"
-                />
+                >
 
             </div>
 
 
-            <div class="form-group">
+            <div class="field">
 
-                <label class="form-label">
-                    Nome regola
+                <label>
+                    TIPOLOGIA
                 </label>
 
                 <input
                     id="ruleType"
-                    class="form-input"
                     type="text"
                     value="${escapeHtml(
-                        existing?.type ||
-                        ""
+                        rule?.type || ""
                     )}"
                     placeholder="Es. Ritardo allenamento"
-                />
+                >
 
             </div>
 
 
-            <div class="form-group">
+            <div class="field">
 
-                <label class="form-label">
-                    Importo
+                <label>
+                    IMPORTO (€)
                 </label>
 
                 <input
                     id="ruleAmount"
-                    class="form-input"
                     type="number"
                     min="0"
-                    step="0.01"
+                    step="1"
                     value="${
-                        existing?.amount ??
-                        0
+                        rule?.amount ??
+                        5
                     }"
-                />
+                >
 
             </div>
 
 
-            <button
-                class="primary-btn"
-                id="saveRule"
-                type="button"
-            >
-                ${
-                    isEdit
-                        ? "Salva modifiche"
-                        : "Aggiungi regola"
-                }
-            </button>
+            <div class="modal-actions">
+
+                <button
+                    class="btn secondary"
+                    id="cancelRule"
+                    type="button"
+                >
+                    Annulla
+                </button>
+
+
+                <button
+                    class="btn"
+                    id="saveRule"
+                    type="button"
+                >
+                    Salva
+                </button>
+
+            </div>
+
+        </div>
 
         `
 
@@ -2744,110 +2761,112 @@ function openRuleModal(ruleId = null) {
 
     document
         .getElementById(
+            "cancelRule"
+        )
+        .onclick = closeModal;
+
+
+    document
+        .getElementById(
             "saveRule"
         )
-        ?.addEventListener(
-            "click",
-            () => {
+        .onclick = () => {
 
-                const category =
-                    document.getElementById(
+            const category =
+                document
+                    .getElementById(
                         "ruleCategory"
-                    ).value.trim();
+                    )
+                    .value
+                    .trim();
 
 
-                const type =
-                    document.getElementById(
+            const type =
+                document
+                    .getElementById(
                         "ruleType"
-                    ).value.trim();
+                    )
+                    .value
+                    .trim();
 
 
-                const amount =
-                    Number(
-                        document.getElementById(
+            const amount =
+                Number(
+                    document
+                        .getElementById(
                             "ruleAmount"
-                        ).value
-                    );
+                        )
+                        .value
+                ) || 0;
 
 
-                if (!category || !type) {
-
-                    showToast(
-                        "Compila tutti i campi"
-                    );
-
-                    return;
-
-                }
-
-
-                if (
-                    !Number.isFinite(amount) ||
-                    amount < 0
-                ) {
-
-                    showToast(
-                        "Importo non valido"
-                    );
-
-                    return;
-
-                }
-
-
-                if (isEdit) {
-
-                    existing.category =
-                        category;
-
-                    existing.type =
-                        type;
-
-                    existing.amount =
-                        amount;
-
-                }
-
-                else {
-
-                    state.rules.push({
-
-                        id:
-                            generateId(
-                                "rule"
-                            ),
-
-                        category,
-
-                        type,
-
-                        amount
-
-                    });
-
-                }
-
-
-                saveState();
-
-                closeModal();
-
-                render();
+            if (
+                !category ||
+                !type
+            ) {
 
                 showToast(
-                    isEdit
-                        ? "Regola modificata"
-                        : "Regola aggiunta"
+                    "Compila categoria e tipologia."
+                );
+
+                return;
+
+            }
+
+
+            const newRule = {
+
+                id:
+                    id ||
+                    generateId(),
+
+                category,
+
+                type,
+
+                amount
+
+            };
+
+
+            if (id) {
+
+                const index =
+                    state.rules.findIndex(
+                        item =>
+                            item.id === id
+                    );
+
+
+                state.rules[index] =
+                    newRule;
+
+            } else {
+
+                state.rules.push(
+                    newRule
                 );
 
             }
-        );
+
+
+            saveState();
+
+            closeModal();
+
+            render();
+
+            showToast(
+                "Regola salvata"
+            );
+
+        };
 
 }
 
 
 /* =========================================================
-   MODAL GIOCATORE
+   MODALE GIOCATORE
    ========================================================= */
 
 function openPlayerModal() {
@@ -2858,30 +2877,45 @@ function openPlayerModal() {
 
         `
 
-            <div class="form-group">
+        <div class="form">
 
-                <label class="form-label">
-                    Nome giocatore
+            <div class="field">
+
+                <label>
+                    NOME
                 </label>
 
                 <input
                     id="playerName"
-                    class="form-input"
                     type="text"
-                    placeholder="Nome e cognome"
-                    autocomplete="off"
-                />
+                    placeholder="Nome giocatore"
+                >
 
             </div>
 
 
-            <button
-                class="primary-btn"
-                id="savePlayer"
-                type="button"
-            >
-                Aggiungi giocatore
-            </button>
+            <div class="modal-actions">
+
+                <button
+                    class="btn secondary"
+                    id="cancelPlayer"
+                    type="button"
+                >
+                    Annulla
+                </button>
+
+
+                <button
+                    class="btn"
+                    id="savePlayer"
+                    type="button"
+                >
+                    Aggiungi
+                </button>
+
+            </div>
+
+        </div>
 
         `
 
@@ -2890,78 +2924,542 @@ function openPlayerModal() {
 
     document
         .getElementById(
+            "cancelPlayer"
+        )
+        .onclick = closeModal;
+
+
+    document
+        .getElementById(
             "savePlayer"
+        )
+        .onclick = () => {
+
+            const name =
+                document
+                    .getElementById(
+                        "playerName"
+                    )
+                    .value
+                    .trim();
+
+
+            if (!name) {
+
+                showToast(
+                    "Inserisci il nome."
+                );
+
+                return;
+
+            }
+
+
+            if (
+                state.players.includes(
+                    name
+                )
+            ) {
+
+                showToast(
+                    "Giocatore già presente."
+                );
+
+                return;
+
+            }
+
+
+            state.players.push(
+                name
+            );
+
+
+            saveState();
+
+            closeModal();
+
+            render();
+
+            showToast(
+                "Giocatore aggiunto"
+            );
+
+        };
+
+}
+
+
+/* =========================================================
+   EVENTI PAGINA
+   ========================================================= */
+
+function bindPageEvents() {
+
+
+    /* =========================
+       MESI
+       ========================= */
+
+    document
+        .querySelectorAll(
+            "[data-month]"
+        )
+        .forEach(button => {
+
+            button.onclick = () => {
+
+                selectedMonth =
+                    button.dataset.month;
+
+                render();
+
+            };
+
+        });
+
+
+    /* =========================
+       NUOVA MULTA
+       ========================= */
+
+    document
+        .getElementById(
+            "addFine"
+        )
+        ?.addEventListener(
+            "click",
+            () =>
+                openFineModal()
+        );
+
+
+    document
+        .getElementById(
+            "addFineEmpty"
+        )
+        ?.addEventListener(
+            "click",
+            () =>
+                openFineModal()
+        );
+
+
+    /* =========================
+       HOME → MULTE
+       ========================= */
+
+    document
+        .getElementById(
+            "goToFines"
         )
         ?.addEventListener(
             "click",
             () => {
 
-                const input =
-                    document.getElementById(
-                        "playerName"
+                currentPage =
+                    "fines";
+
+                render();
+
+            }
+        );
+
+
+    /* =========================
+       PAGATA / NON PAGATA
+       ========================= */
+
+    document
+        .querySelectorAll(
+            "[data-toggle-paid]"
+        )
+        .forEach(button => {
+
+            button.onclick = () => {
+
+                const id =
+                    Number(
+                        button.dataset
+                            .togglePaid
                     );
 
 
-                const name =
-                    input.value.trim();
-
-
-                if (!name) {
-
-                    showToast(
-                        "Inserisci il nome"
+                const fine =
+                    state.fines.find(
+                        item =>
+                            item.id === id
                     );
+
+
+                if (!fine) {
 
                     return;
 
                 }
 
 
-                const exists =
-                    state.players.some(
-                        player =>
-                            player.toLowerCase() ===
-                            name.toLowerCase()
+                fine.paid =
+                    !fine.paid;
+
+
+                saveState();
+
+                render();
+
+                showToast(
+                    fine.paid
+                        ? "Multa segnata come pagata"
+                        : "Multa segnata come non pagata"
+                );
+
+            };
+
+        });
+
+
+    /* =========================
+       MODIFICA MULTA
+       ========================= */
+
+    document
+        .querySelectorAll(
+            "[data-edit-fine]"
+        )
+        .forEach(button => {
+
+            button.onclick = () => {
+
+                openFineModal(
+                    Number(
+                        button.dataset
+                            .editFine
+                    )
+                );
+
+            };
+
+        });
+
+
+    /* =========================
+       ELIMINA MULTA
+       ========================= */
+
+    document
+        .querySelectorAll(
+            "[data-delete-fine]"
+        )
+        .forEach(button => {
+
+            button.onclick = () => {
+
+                const id =
+                    Number(
+                        button.dataset
+                            .deleteFine
                     );
 
 
-                if (exists) {
-
-                    showToast(
-                        "Giocatore già presente"
-                    );
+                if (
+                    !confirm(
+                        "Eliminare questa multa?"
+                    )
+                ) {
 
                     return;
 
                 }
 
 
-                state.players.push(
-                    name
+                state.fines =
+                    state.fines.filter(
+                        fine =>
+                            fine.id !== id
+                    );
+
+
+                saveState();
+
+                render();
+
+                showToast(
+                    "Multa eliminata"
+                );
+
+            };
+
+        });
+
+
+    /* =========================
+       NUOVA REGOLA
+       ========================= */
+
+    document
+        .getElementById(
+            "addRule"
+        )
+        ?.addEventListener(
+            "click",
+            () =>
+                openRuleModal()
+        );
+
+
+    /* =========================
+       MODIFICA REGOLA
+       ========================= */
+
+    document
+        .querySelectorAll(
+            "[data-edit-rule]"
+        )
+        .forEach(button => {
+
+            button.onclick = () => {
+
+                openRuleModal(
+                    Number(
+                        button.dataset
+                            .editRule
+                    )
+                );
+
+            };
+
+        });
+
+
+    /* =========================
+       ELIMINA REGOLA
+       ========================= */
+
+    document
+        .querySelectorAll(
+            "[data-delete-rule]"
+        )
+        .forEach(button => {
+
+            button.onclick = () => {
+
+                const id =
+                    Number(
+                        button.dataset
+                            .deleteRule
+                    );
+
+
+                if (
+                    !confirm(
+                        "Eliminare questa regola?"
+                    )
+                ) {
+
+                    return;
+
+                }
+
+
+                state.rules =
+                    state.rules.filter(
+                        rule =>
+                            rule.id !== id
+                    );
+
+
+                saveState();
+
+                render();
+
+                showToast(
+                    "Regola eliminata"
+                );
+
+            };
+
+        });
+
+
+    /* =========================
+       GIOCATORE
+       ========================= */
+
+    document
+        .getElementById(
+            "addPlayer"
+        )
+        ?.addEventListener(
+            "click",
+            openPlayerModal
+        );
+
+
+    /* =========================
+       ELIMINA GIOCATORE
+       ========================= */
+
+    document
+        .querySelectorAll(
+            "[data-delete-player]"
+        )
+        .forEach(button => {
+
+            button.onclick = () => {
+
+                const index =
+                    Number(
+                        button.dataset
+                            .deletePlayer
+                    );
+
+
+                const player =
+                    state.players[index];
+
+
+                if (!player) {
+
+                    return;
+
+                }
+
+
+                if (
+                    !confirm(
+                        `Rimuovere ${player} dalla rosa?`
+                    )
+                ) {
+
+                    return;
+
+                }
+
+
+                state.players.splice(
+                    index,
+                    1
                 );
 
 
                 saveState();
 
-                closeModal();
+                render();
+
+            };
+
+        });
+
+
+    /* =========================
+       SALVA IMPOSTAZIONI
+       ========================= */
+
+    document
+        .getElementById(
+            "saveSettings"
+        )
+        ?.addEventListener(
+            "click",
+            () => {
+
+                const team =
+                    document
+                        .getElementById(
+                            "teamName"
+                        )
+                        .value
+                        .trim();
+
+
+                const season =
+                    document
+                        .getElementById(
+                            "season"
+                        )
+                        .value
+                        .trim();
+
+
+                state.team =
+                    team ||
+                    "Multe FC";
+
+
+                state.season =
+                    season ||
+                    "2026/27";
+
+
+                saveState();
 
                 render();
 
                 showToast(
-                    "Giocatore aggiunto"
+                    "Impostazioni salvate"
                 );
 
             }
+        );
+
+
+    /* =========================
+       BACKUP
+       ========================= */
+
+    document
+        .getElementById(
+            "exportData"
+        )
+        ?.addEventListener(
+            "click",
+            exportBackup
+        );
+
+
+    /* =========================
+       IMPORT
+       ========================= */
+
+    document
+        .getElementById(
+            "importData"
+        )
+        ?.addEventListener(
+            "click",
+            () => {
+
+                document
+                    .getElementById(
+                        "importFile"
+                    )
+                    .click();
+
+            }
+        );
+
+
+    /* =========================
+       RESET
+       ========================= */
+
+    document
+        .getElementById(
+            "resetData"
+        )
+        ?.addEventListener(
+            "click",
+            resetData
         );
 
 }
 
 
 /* =========================================================
-   BACKUP
+   BACKUP EXPORT
    ========================================================= */
 
-function exportData() {
+function exportBackup() {
 
     const data =
         JSON.stringify(
@@ -2993,18 +3491,22 @@ function exportData() {
         );
 
 
-    link.href =
-        url;
+    link.href = url;
+
 
     link.download =
-        `MulteSV-backup-${todayString()}.json`;
+        `multefc-backup-${new Date()
+            .toISOString()
+            .slice(0, 10)}.json`;
 
 
     document.body.appendChild(
         link
     );
 
+
     link.click();
+
 
     link.remove();
 
@@ -3021,125 +3523,92 @@ function exportData() {
 }
 
 
-function importData() {
+/* =========================================================
+   BACKUP IMPORT
+   ========================================================= */
 
-    document
-        .getElementById(
-            "importFile"
-        )
-        ?.click();
+document
+    .getElementById(
+        "importFile"
+    )
+    .addEventListener(
+        "change",
+        event => {
 
-}
-
-
-function handleImportFile(event) {
-
-    const file =
-        event.target.files?.[0];
-
-
-    if (!file) {
-
-        return;
-
-    }
+            const file =
+                event.target.files[0];
 
 
-    const reader =
-        new FileReader();
+            if (!file) {
+
+                return;
+
+            }
 
 
-    reader.onload =
-        () => {
+            const reader =
+                new FileReader();
 
-            try {
 
-                const imported =
-                    JSON.parse(
-                        reader.result
+            reader.onload = () => {
+
+                try {
+
+                    const imported =
+                        JSON.parse(
+                            reader.result
+                        );
+
+
+                    if (
+                        !imported.players ||
+                        !imported.fines ||
+                        !imported.rules
+                    ) {
+
+                        throw new Error(
+                            "Backup non valido"
+                        );
+
+                    }
+
+
+                    state =
+                        imported;
+
+
+                    saveState();
+
+                    render();
+
+                    showToast(
+                        "Backup importato"
                     );
 
+                } catch (error) {
 
-                if (
-                    !imported ||
-                    typeof imported !==
-                    "object"
-                ) {
+                    console.error(
+                        error
+                    );
 
-                    throw new Error(
-                        "Formato non valido"
+                    showToast(
+                        "Backup non valido"
                     );
 
                 }
 
-
-                state = {
-
-                    ...clone(
-                        defaultState
-                    ),
-
-                    ...imported,
-
-                    players:
-                        Array.isArray(
-                            imported.players
-                        )
-                            ? imported.players
-                            : [],
-
-                    rules:
-                        Array.isArray(
-                            imported.rules
-                        )
-                            ? imported.rules
-                            : [],
-
-                    fines:
-                        Array.isArray(
-                            imported.fines
-                        )
-                            ? imported.fines
-                            : []
-
-                };
+            };
 
 
-                saveState();
+            reader.readAsText(
+                file
+            );
 
-                selectedMonth =
-                    "all";
-
-                render();
-
-                showToast(
-                    "Backup importato"
-                );
-
-            }
-
-            catch (error) {
-
-                console.error(
-                    error
-                );
-
-                showToast(
-                    "Backup non valido"
-                );
-
-            }
 
             event.target.value = "";
 
-        };
-
-
-    reader.readAsText(
-        file
+        }
     );
-
-}
 
 
 /* =========================================================
@@ -3150,7 +3619,10 @@ function resetData() {
 
     const confirmed =
         confirm(
-            "Sei sicuro di voler cancellare tutti i dati e ripristinare le impostazioni iniziali?"
+            "Sei sicuro?\n\n" +
+            "Tutti i dati attuali " +
+            "verranno sostituiti " +
+            "dai dati demo."
         );
 
 
@@ -3162,13 +3634,9 @@ function resetData() {
 
 
     state =
-        clone(
+        structuredClone(
             defaultState
         );
-
-
-    selectedMonth =
-        "all";
 
 
     saveState();
@@ -3192,13 +3660,6 @@ function showToast(message) {
         document.getElementById(
             "toast"
         );
-
-
-    if (!toast) {
-
-        return;
-
-    }
 
 
     toast.textContent =
@@ -3225,723 +3686,68 @@ function showToast(message) {
 
 
 /* =========================================================
-   EVENTI PAGINA
+   NAVIGAZIONE PRINCIPALE
    ========================================================= */
 
-function bindPageEvents() {
+document
+    .querySelectorAll(
+        ".nav-button"
+    )
+    .forEach(button => {
 
+        button.onclick = () => {
 
-    /* =========================
-       NAVIGAZIONE
-       ========================= */
+            currentPage =
+                button.dataset.page;
 
-    document
-        .querySelectorAll(
-            ".nav-button"
-        )
-        .forEach(
-            button => {
 
-                button.onclick =
-                    () => {
+            render();
 
-                        currentPage =
-                            button.dataset.page;
+        };
 
-                        render();
-
-                    };
-
-            }
-        );
-
-
-    /* =========================
-       HOME
-       ========================= */
-
-    document
-        .getElementById(
-            "homeAddFine"
-        )
-        ?.addEventListener(
-            "click",
-            () => {
-
-                openFineModal();
-
-            }
-        );
-
-
-    document
-        .getElementById(
-            "goToFines"
-        )
-        ?.addEventListener(
-            "click",
-            () => {
-
-                currentPage =
-                    "fines";
-
-                render();
-
-            }
-        );
-
-
-    /* =========================
-       MULTE
-       ========================= */
-
-    document
-        .getElementById(
-            "addFine"
-        )
-        ?.addEventListener(
-            "click",
-            () => {
-
-                openFineModal();
-
-            }
-        );
-
-
-    document
-        .getElementById(
-            "addFineEmpty"
-        )
-        ?.addEventListener(
-            "click",
-            () => {
-
-                openFineModal();
-
-            }
-        );
-
-
-    document
-        .getElementById(
-            "monthSelector"
-        )
-        ?.addEventListener(
-            "change",
-            event => {
-
-                selectedMonth =
-                    event.target.value;
-
-                render();
-
-            }
-        );
-
-
-    document
-        .querySelectorAll(
-            "[data-toggle-paid]"
-        )
-        .forEach(
-            button => {
-
-                button.addEventListener(
-                    "click",
-                    () => {
-
-                        const id =
-                            button.dataset
-                                .togglePaid;
-
-
-                        const fine =
-                            state.fines.find(
-                                item =>
-                                    String(
-                                        item.id
-                                    ) ===
-                                    String(id)
-                            );
-
-
-                        if (!fine) {
-
-                            return;
-
-                        }
-
-
-                        fine.paid =
-                            !fine.paid;
-
-
-                        saveState();
-
-                        render();
-
-                        showToast(
-                            fine.paid
-                                ? "Multa segnata come pagata"
-                                : "Multa segnata da pagare"
-                        );
-
-                    }
-                );
-
-            }
-        );
-
-
-    document
-        .querySelectorAll(
-            "[data-edit-fine]"
-        )
-        .forEach(
-            button => {
-
-                button.addEventListener(
-                    "click",
-                    () => {
-
-                        openFineModal(
-                            button.dataset
-                                .editFine
-                        );
-
-                    }
-                );
-
-            }
-        );
-
-
-    document
-        .querySelectorAll(
-            "[data-delete-fine]"
-        )
-        .forEach(
-            button => {
-
-                button.addEventListener(
-                    "click",
-                    () => {
-
-                        const id =
-                            button.dataset
-                                .deleteFine;
-
-
-                        const confirmed =
-                            confirm(
-                                "Vuoi eliminare questa multa?"
-                            );
-
-
-                        if (!confirmed) {
-
-                            return;
-
-                        }
-
-
-                        state.fines =
-                            state.fines.filter(
-                                fine =>
-                                    String(
-                                        fine.id
-                                    ) !==
-                                    String(id)
-                            );
-
-
-                        saveState();
-
-                        render();
-
-                        showToast(
-                            "Multa eliminata"
-                        );
-
-                    }
-                );
-
-            }
-        );
-
-
-    /* =========================
-       MULTARIO
-       ========================= */
-
-    document
-        .getElementById(
-            "addRule"
-        )
-        ?.addEventListener(
-            "click",
-            () => {
-
-                openRuleModal();
-
-            }
-        );
-
-
-    document
-        .querySelectorAll(
-            "[data-edit-rule]"
-        )
-        .forEach(
-            button => {
-
-                button.addEventListener(
-                    "click",
-                    () => {
-
-                        openRuleModal(
-                            button.dataset
-                                .editRule
-                        );
-
-                    }
-                );
-
-            }
-        );
-
-
-    document
-        .querySelectorAll(
-            "[data-delete-rule]"
-        )
-        .forEach(
-            button => {
-
-                button.addEventListener(
-                    "click",
-                    () => {
-
-                        const id =
-                            button.dataset
-                                .deleteRule;
-
-
-                        const confirmed =
-                            confirm(
-                                "Vuoi eliminare questa regola?"
-                            );
-
-
-                        if (!confirmed) {
-
-                            return;
-
-                        }
-
-
-                        state.rules =
-                            state.rules.filter(
-                                rule =>
-                                    String(
-                                        rule.id
-                                    ) !==
-                                    String(id)
-                            );
-
-
-                        saveState();
-
-                        render();
-
-                        showToast(
-                            "Regola eliminata"
-                        );
-
-                    }
-                );
-
-            }
-        );
-
-
-    /* =========================
-       IMPOSTAZIONI
-       ========================= */
-
-    document
-        .getElementById(
-            "saveSettings"
-        )
-        ?.addEventListener(
-            "click",
-            () => {
-
-                const teamName =
-                    document.getElementById(
-                        "teamNameInput"
-                    ).value.trim();
-
-
-                const season =
-                    document.getElementById(
-                        "seasonInput"
-                    ).value.trim();
-
-
-                if (!teamName) {
-
-                    showToast(
-                        "Inserisci il nome della squadra"
-                    );
-
-                    return;
-
-                }
-
-
-                state.teamName =
-                    teamName;
-
-
-                state.season =
-                    season ||
-                    "2026/27";
-
-
-                saveState();
-
-                render();
-
-                showToast(
-                    "Impostazioni salvate"
-                );
-
-            }
-        );
-
-
-    document
-        .getElementById(
-            "settingsThemeButton"
-        )
-        ?.addEventListener(
-            "click",
-            () => {
-
-                state.theme =
-                    state.theme === "dark"
-                        ? "light"
-                        : "dark";
-
-
-                saveState();
-
-                applyTheme();
-
-                render();
-
-            }
-        );
-
-
-    document
-        .getElementById(
-            "addPlayer"
-        )
-        ?.addEventListener(
-            "click",
-            () => {
-
-                openPlayerModal();
-
-            }
-        );
-
-
-    document
-        .querySelectorAll(
-            "[data-delete-player]"
-        )
-        .forEach(
-            button => {
-
-                button.addEventListener(
-                    "click",
-                    () => {
-
-                        const index =
-                            Number(
-                                button.dataset
-                                    .deletePlayer
-                            );
-
-
-                        const player =
-                            state.players[index];
-
-
-                        if (!player) {
-
-                            return;
-
-                        }
-
-
-                        const used =
-                            state.fines.some(
-                                fine =>
-                                    fine.player ===
-                                    player
-                            );
-
-
-                        if (used) {
-
-                            const confirmed =
-                                confirm(
-                                    `${player} ha delle multe associate. Vuoi comunque eliminarlo dalla lista dei giocatori?`
-                                );
-
-
-                            if (!confirmed) {
-
-                                return;
-
-                            }
-
-                        }
-
-
-                        state.players.splice(
-                            index,
-                            1
-                        );
-
-
-                        saveState();
-
-                        render();
-
-                        showToast(
-                            "Giocatore eliminato"
-                        );
-
-                    }
-                );
-
-            }
-        );
-
-
-    /* =========================
-       BACKUP
-       ========================= */
-
-    document
-        .getElementById(
-            "exportData"
-        )
-        ?.addEventListener(
-            "click",
-            exportData
-        );
-
-
-    document
-        .getElementById(
-            "importData"
-        )
-        ?.addEventListener(
-            "click",
-            importData
-        );
-
-
-    document
-        .getElementById(
-            "importFile"
-        )
-        ?.addEventListener(
-            "change",
-            handleImportFile
-        );
-
-
-    document
-        .getElementById(
-            "resetData"
-        )
-        ?.addEventListener(
-            "click",
-            resetData
-        );
-
-
-    /* =========================
-       TEMA HEADER
-       ========================= */
-
-    document
-        .getElementById(
-            "themeButton"
-        )
-        ?.addEventListener(
-            "click",
-            () => {
-
-                state.theme =
-                    state.theme === "dark"
-                        ? "light"
-                        : "dark";
-
-
-                saveState();
-
-                applyTheme();
-
-                render();
-
-            }
-        );
-
-}
+    });
 
 
 /* =========================================================
-   RENDER PRINCIPALE
+   TEMA
    ========================================================= */
 
-function render() {
+document
+    .getElementById(
+        "themeButton"
+    )
+    .addEventListener(
+        "click",
+        () => {
 
-    applyTheme();
-
-
-    const app =
-        document.getElementById(
-            "app"
-        );
-
-
-    if (!app) {
-
-        console.error(
-            "Elemento #app non trovato"
-        );
-
-        return;
-
-    }
+            state.theme =
+                state.theme === "dark"
+                    ? "light"
+                    : "dark";
 
 
-    updateNavigation();
+            saveState();
 
+            applyTheme();
 
-    if (
-        currentPage ===
-        "home"
-    ) {
-
-        app.innerHTML =
-            renderHome();
-
-    }
-
-    else if (
-        currentPage ===
-        "fines"
-    ) {
-
-        app.innerHTML =
-            renderFines();
-
-    }
-
-    else if (
-        currentPage ===
-        "rules"
-    ) {
-
-        app.innerHTML =
-            renderRules();
-
-    }
-
-    else if (
-        currentPage ===
-        "settings"
-    ) {
-
-        app.innerHTML =
-            renderSettings();
-
-    }
-
-    else {
-
-        currentPage =
-            "home";
-
-        app.innerHTML =
-            renderHome();
-
-    }
-
-
-    bindPageEvents();
-
-}
+        }
+    );
 
 
 /* =========================================================
    AVVIO
    ========================================================= */
 
-document.addEventListener(
-    "DOMContentLoaded",
-    () => {
-
-        render();
-
-
-        if (
-            "serviceWorker" in
-            navigator
-        ) {
-
-            window.addEventListener(
-                "load",
-                () => {
-
-                    navigator.serviceWorker
-                        .register(
-                            "./service-worker.js"
-                        )
-                        .then(
-                            () => {
-
-                                console.log(
-                                    "MulteSV: Service Worker attivo"
-                                );
-
-                            }
-                        )
-                        .catch(
-                            error => {
-
-                                console.error(
-                                    "MulteSV: errore Service Worker",
-                                    error
-                                );
-
-                            }
-                        );
-
-                }
-            );
-
-        }
-
-    }
-);
+render();
+if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+        navigator.serviceWorker
+            .register("./service-worker.js")
+            .then(() => {
+                console.log("MulteFC: Service Worker attivo");
+            })
+            .catch(error => {
+                console.error("MulteFC: errore Service Worker", error);
+            });
+    });
+}

@@ -1,4 +1,4 @@
-const CACHE_NAME = "multefc-v1";
+const CACHE_NAME = "multefc-v2";
 
 const FILES_TO_CACHE = [
     "./",

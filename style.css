@@ -1396,3 +1396,25 @@ h3 {
         padding: 12px;
     }
 }
+.payment-paid-cell {
+    display: flex;
+    align-items: center;
+}
+
+.payment-paid-input {
+    width: 80px;
+    box-sizing: border-box;
+    padding: 7px 8px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 600;
+    text-align: right;
+}
+
+.payment-paid-input:focus {
+    outline: 2px solid var(--primary);
+    outline-offset: 1px;
+}

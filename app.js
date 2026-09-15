@@ -2055,7 +2055,10 @@ function renderPayments() {
 
         </div>
 
-        <div class="card payments-table-card">
+                <div
+            id="paymentsTableExport"
+            class="card payments-table-card"
+        >
 
             <div class="payments-table-header">
                 <div>Giocatore</div>
@@ -2071,7 +2074,70 @@ function renderPayments() {
             </div>
 
         </div>
+
+        <button
+            id="exportPaymentsImage"
+            class="primary-button"
+            type="button"
+            style="width: 100%; margin-top: 14px;"
+        >
+            🖼️ Esporta tabella come immagine
+        </button>
     `;
+}
+
+async function exportPaymentsImage() {
+
+    const table =
+        document.getElementById(
+            "paymentsTableExport"
+        );
+
+    if (!table) {
+        showToast(
+            "Tabella non trovata"
+        );
+        return;
+    }
+
+    try {
+
+        const canvas =
+            await html2canvas(
+                table,
+                {
+                    backgroundColor:
+                        getComputedStyle(
+                            document.body
+                        ).backgroundColor,
+                    scale: 2
+                }
+            );
+
+        const link =
+            document.createElement("a");
+
+        link.download =
+            "pagamenti.png";
+
+        link.href =
+            canvas.toDataURL(
+                "image/png"
+            );
+
+        link.click();
+
+    } catch (error) {
+
+        console.error(
+            "Errore esportazione immagine:",
+            error
+        );
+
+        showToast(
+            "Errore durante l'esportazione"
+        );
+    }
 }
 
 /* =========================================================

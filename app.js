@@ -29,7 +29,7 @@ const defaultState = {
 
     fines: [
 
-        {
+       {
             id: 1,
             date: "2026-09-12",
             player: "Marco",
@@ -49,19 +49,21 @@ const defaultState = {
             paid: false
         },
 
-        {
-            id: 3,
-            date: "2026-09-08",
-            player: "Andrea",
-            category: "Allenamento",
-            type: "Assenza ingiustificata",
-            amount: 20,
-            paid: true
-        }
+         {
+              id: 3,
+              date: "2026-09-08",
+              player: "Andrea",
+              category: "Allenamento",
+              type: "Assenza ingiustificata",
+              amount: 20,
+              paid: true
+       }
 
-    ],
+],
 
-    rules: [
+payments: {},
+
+rules: [
 
     {
         id: 1,
@@ -288,7 +290,8 @@ function loadState() {
                 structuredClone(
                     defaultState.rules
                 );
-
+             loaded.payments =
+                loaded.payments || {};
 
             /* =========================================
                SALVA IL NUOVO MULTARIO
@@ -504,6 +507,208 @@ function getSeasonMonths() {
 
 }
 
+function getPaymentMonths() {
+    const startYear =
+        getSeasonStartYear();
+
+    const months = [];
+
+    // Agosto → Dicembre
+    for (
+        let month = 8;
+        month <= 12;
+        month++
+    ) {
+        const monthNumber =
+            String(month)
+                .padStart(2, "0");
+
+        months.push(
+            `${startYear}-${monthNumber}`
+        );
+    }
+
+    // Gennaio → Maggio
+    for (
+        let month = 1;
+        month <= 5;
+        month++
+    ) {
+        const monthNumber =
+            String(month)
+                .padStart(2, "0");
+
+        months.push(
+            `${startYear + 1}-${monthNumber}`
+        );
+    }
+
+    return months;
+}
+
+
+function getMonthlyBase(monthId) {
+    const startYear =
+        getSeasonStartYear();
+
+    const augustId =
+        `${startYear}-08`;
+
+    // Agosto = 10 €
+    if (monthId === augustId) {
+        return 10;
+    }
+
+    // Tutti gli altri mesi della stagione = 5 €
+    return 5;
+}
+
+
+function getPlayerMonthFines(
+    player,
+    monthId
+) {
+    return state.fines
+        .filter(fine =>
+            fine.player === player &&
+            fine.date &&
+            fine.date.startsWith(monthId)
+        )
+        .reduce(
+            (total, fine) =>
+                total + Number(fine.amount || 0),
+            0
+        );
+}
+
+
+function getPlayerMonthPayment(
+    player,
+    monthId
+) {
+    return Number(
+        state.payments?.[monthId]?.[player] || 0
+    );
+}
+
+
+function getPlayerArrears(
+    player,
+    monthId
+) {
+    const months =
+        getPaymentMonths();
+
+    const currentIndex =
+        months.indexOf(monthId);
+
+    if (currentIndex <= 0) {
+        return 0;
+    }
+
+    let arrears = 0;
+
+    for (
+        let index = 0;
+        index < currentIndex;
+        index++
+    ) {
+        const previousMonth =
+            months[index];
+
+        const base =
+            getMonthlyBase(
+                previousMonth
+            );
+
+        const fines =
+            getPlayerMonthFines(
+                player,
+                previousMonth
+            );
+
+        const due =
+            base +
+            fines +
+            arrears;
+
+        const paid =
+            getPlayerMonthPayment(
+                player,
+                previousMonth
+            );
+
+        // Se paga meno del dovuto,
+        // la differenza diventa arretrato.
+        //
+        // Se paga più del dovuto,
+        // l'eccedenza NON viene trasferita.
+        arrears =
+            Math.max(
+                0,
+                due - paid
+            );
+    }
+
+    return arrears;
+}
+
+
+function getPlayerMonthSummary(
+    player,
+    monthId
+) {
+    const base =
+        getMonthlyBase(
+            monthId
+        );
+
+    const fines =
+        getPlayerMonthFines(
+            player,
+            monthId
+        );
+
+    const arrears =
+        getPlayerArrears(
+            player,
+            monthId
+        );
+
+    const total =
+        base +
+        fines +
+        arrears;
+
+    const paid =
+        getPlayerMonthPayment(
+            player,
+            monthId
+        );
+
+    const remaining =
+        Math.max(
+            0,
+            total - paid
+        );
+
+    const overpayment =
+        Math.max(
+            0,
+            paid - total
+        );
+
+    return {
+        base,
+        fines,
+        arrears,
+        total,
+        paid,
+        remaining,
+        overpayment
+    };
+}
+
 
 /* =========================================================
    TEMA
@@ -556,15 +761,11 @@ function updateNavigation() {
 
 
     const titles = {
-
-        home: "Home",
-
-        fines: "Multe",
-
-        rules: "Multario",
-
-        settings: "Impostazioni"
-
+       home: "Home",
+       fines: "Multe",
+       payments: "Pagamenti",
+       rules: "Multario",
+       settings: "Impostazioni"
     };
 
 
@@ -594,36 +795,24 @@ function render() {
 
 
     if (currentPage === "home") {
+    app.innerHTML = renderHome();
+   }
 
-        app.innerHTML =
-            renderHome();
+   if (currentPage === "fines") {
+    app.innerHTML = renderFines();
+   }
 
-    }
+   if (currentPage === "payments") {
+    app.innerHTML = renderPayments();
+   }
 
+   if (currentPage === "rules") {
+    app.innerHTML = renderRules();
+   }
 
-    if (currentPage === "fines") {
-
-        app.innerHTML =
-            renderFines();
-
-    }
-
-
-    if (currentPage === "rules") {
-
-        app.innerHTML =
-            renderRules();
-
-    }
-
-
-    if (currentPage === "settings") {
-
-        app.innerHTML =
-            renderSettings();
-
-    }
-
+   if (currentPage === "settings") {
+    app.innerHTML = renderSettings();
+   }
 
     bindPageEvents();
 
@@ -1663,6 +1852,213 @@ function renderFines() {
 
         ${finesHtml}
 
+    `;
+}
+
+function renderPayments() {
+    const months =
+        getPaymentMonths();
+
+    const currentMonth =
+        selectedMonth !== "all" &&
+        months.includes(selectedMonth)
+            ? selectedMonth
+            : months[0];
+
+    const monthLabel =
+        new Date(
+            currentMonth + "-01T12:00:00"
+        ).toLocaleDateString(
+            "it-IT",
+            {
+                month: "long",
+                year: "numeric"
+            }
+        );
+
+    let totalDue = 0;
+    let totalPaid = 0;
+    let totalRemaining = 0;
+
+    const rows =
+        state.players.map(player => {
+            const summary =
+                getPlayerMonthSummary(
+                    player,
+                    currentMonth
+                );
+
+            totalDue += summary.total;
+            totalPaid += summary.paid;
+            totalRemaining +=
+                summary.remaining;
+
+            return `
+                <div class="payment-row">
+                    <div class="payment-player">
+                        <div class="player-avatar">
+                            ${escapeHtml(
+                                initials(player)
+                            )}
+                        </div>
+
+                        <div>
+                            <strong>
+                                ${escapeHtml(player)}
+                            </strong>
+
+                            ${
+                                summary.arrears > 0
+                                    ? `
+                                        <small class="payment-arrears">
+                                            Arretrato:
+                                            ${money(summary.arrears)}
+                                        </small>
+                                    `
+                                    : ""
+                            }
+                        </div>
+                    </div>
+
+                    <div class="payment-value">
+                        ${money(summary.base)}
+                    </div>
+
+                    <div class="payment-value">
+                        ${money(summary.fines)}
+                    </div>
+
+                    <div class="payment-value payment-total">
+                        ${money(summary.total)}
+                    </div>
+
+                    <div class="payment-value">
+                        ${money(summary.paid)}
+                    </div>
+
+                    <div class="
+                        payment-value
+                        ${
+                            summary.remaining > 0
+                                ? "payment-remaining"
+                                : "payment-ok"
+                        }
+                    ">
+                        ${money(summary.remaining)}
+                    </div>
+                </div>
+            `;
+        })
+        .join("");
+
+    return `
+        <div class="page-header">
+            <div>
+                <h1>Pagamenti</h1>
+                <p>
+                    Riepilogo quote e multe
+                </p>
+            </div>
+        </div>
+
+        <div class="card payment-month-card">
+            <label
+                for="paymentMonthSelect"
+                class="form-label"
+            >
+                Mese
+            </label>
+
+            <select
+                id="paymentMonthSelect"
+                class="form-input"
+            >
+                ${months
+                    .map(month => {
+                        const label =
+                            new Date(
+                                month +
+                                "-01T12:00:00"
+                            ).toLocaleDateString(
+                                "it-IT",
+                                {
+                                    month: "long",
+                                    year: "numeric"
+                                }
+                            );
+
+                        return `
+                            <option
+                                value="${month}"
+                                ${
+                                    month === currentMonth
+                                        ? "selected"
+                                        : ""
+                                }
+                            >
+                                ${
+                                    label
+                                        .charAt(0)
+                                        .toUpperCase() +
+                                    label.slice(1)
+                                }
+                            </option>
+                        `;
+                    })
+                    .join("")}
+            </select>
+        </div>
+
+        <div class="payment-summary-grid">
+
+            <div class="card payment-summary-card">
+                <span>
+                    Totale da incassare
+                </span>
+
+                <strong>
+                    ${money(totalDue)}
+                </strong>
+            </div>
+
+            <div class="card payment-summary-card">
+                <span>
+                    Incassato
+                </span>
+
+                <strong>
+                    ${money(totalPaid)}
+                </strong>
+            </div>
+
+            <div class="card payment-summary-card">
+                <span>
+                    Da incassare
+                </span>
+
+                <strong>
+                    ${money(totalRemaining)}
+                </strong>
+            </div>
+
+        </div>
+
+        <div class="card payments-table-card">
+
+            <div class="payments-table-header">
+                <div>Giocatore</div>
+                <div>Base</div>
+                <div>Multe</div>
+                <div>Totale</div>
+                <div>Versato</div>
+                <div>Rimanente</div>
+            </div>
+
+            <div class="payments-table-body">
+                ${rows}
+            </div>
+
+        </div>
     `;
 }
 

@@ -1741,69 +1741,28 @@ h3 {
 
 
 /* =========================================================
-   CORREZIONE DATA SU MOBILE
+   DATA NEL MODULO MULTA
    ========================================================= */
 
 @media (max-width: 720px) {
     .modal,
     .modal .form,
-    .modal .field {
+    .modal .field,
+    .modal .date-field,
+    .modal .date-input-wrapper {
         min-width: 0;
         max-width: 100%;
+        box-sizing: border-box;
     }
 
     .modal {
         overflow-x: hidden;
     }
 
-    .modal input[type="date"]#fineDate {
-        display: block;
-        width: 100% !important;
-        max-width: 100% !important;
-        min-width: 0 !important;
-        min-inline-size: 0 !important;
-        box-sizing: border-box !important;
-        padding: 12px !important;
-        font-size: 16px;
-    }
-
-    .modal input[type="date"]#fineDate::-webkit-date-and-time-value {
-        min-width: 0;
-        text-align: left;
-    }
-}
-
-/* Il contenitore impedisce l'overflow senza alterare il controllo data nativo. */
-@media (max-width: 720px) {
-    .modal .form,
-    .modal .field,
-    .modal .date-field {
+    .modal .date-input-wrapper input {
         width: 100%;
         max-width: 100%;
         min-width: 0;
         box-sizing: border-box;
-    }
-
-    .modal .date-field,
-    .modal .date-input-wrapper {
-        overflow: hidden;
-    }
-
-    .modal .date-input-wrapper {
-        display: block;
-        width: 100%;
-        max-width: 100%;
-        min-width: 0;
-        box-sizing: border-box;
-    }
-
-    .modal .date-input-wrapper input[type="date"] {
-        width: 100% !important;
-        max-width: 100% !important;
-        min-width: 0 !important;
-        min-inline-size: 0 !important;
-        min-height: 0 !important;
-        height: auto !important;
-        box-sizing: border-box !important;
     }
 }

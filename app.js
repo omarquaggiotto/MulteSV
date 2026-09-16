@@ -3013,7 +3013,8 @@ function openFineModal(id = null) {
                     CATEGORIA
                 </label>
 
-                <select id="fineCategory">
+                <div class="fine-select-control" id="fineCategoryControl">
+<select id="fineCategory">
 
                     ${
                         categories
@@ -3038,6 +3039,9 @@ function openFineModal(id = null) {
                     }
 
                 </select>
+                    <button class="fine-select-trigger" id="fineCategoryTrigger" type="button" aria-haspopup="listbox" aria-expanded="false">Seleziona una categoria</button>
+                    <div class="fine-select-menu" id="fineCategoryMenu" role="listbox" hidden></div>
+                </div>
 
             </div>
 
@@ -3050,7 +3054,8 @@ function openFineModal(id = null) {
                     TIPO DI MULTA
                 </label>
 
-                <select id="fineRule">
+                <div class="fine-select-control" id="fineRuleControl">
+<select id="fineRule">
 
                     ${
                         initialRules
@@ -3081,6 +3086,9 @@ function openFineModal(id = null) {
                     </option>
 
                 </select>
+                    <button class="fine-select-trigger" id="fineRuleTrigger" type="button" aria-haspopup="listbox" aria-expanded="false">Seleziona il tipo di multa</button>
+                    <div class="fine-select-menu" id="fineRuleMenu" role="listbox" hidden></div>
+                </div>
 
             </div>
 
@@ -3325,6 +3333,68 @@ function openFineModal(id = null) {
     fineDateInput.addEventListener("input", updateFineDateValue);
     fineDateInput.addEventListener("change", updateFineDateValue);
     updateFineDateValue();
+
+
+    let refreshRuleMenu = () => {};
+    const customFineMenus = [];
+
+    function setupFineMenu(select, trigger, menu) {
+        function render() {
+            const selected = select.options[select.selectedIndex];
+            trigger.textContent = selected
+                ? selected.textContent.trim()
+                : "Seleziona";
+
+            menu.innerHTML = Array.from(select.options)
+                .map(option =>                     `<button type="button" class="fine-select-option${option.value === select.value ? " is-selected" : ""}" data-value="${escapeHtml(option.value)}" role="option" aria-selected="${option.value === select.value}">${escapeHtml(option.textContent.trim())}</button>`                )
+                .join("");
+        }
+
+        function close() {
+            menu.hidden = true;
+            trigger.setAttribute("aria-expanded", "false");
+        }
+
+        trigger.addEventListener("click", event => {
+            event.preventDefault();
+            event.stopPropagation();
+            const isOpening = menu.hidden;
+            customFineMenus.forEach(item => item.close());
+            if (isOpening) {
+                menu.hidden = false;
+                trigger.setAttribute("aria-expanded", "true");
+            }
+        });
+
+        menu.addEventListener("click", event => {
+            const optionButton = event.target.closest(".fine-select-option");
+            if (!optionButton) return;
+            event.preventDefault();
+            event.stopPropagation();
+            select.value = optionButton.dataset.value;
+            select.dispatchEvent(new Event("change", { bubbles: true }));
+            render();
+            close();
+        });
+
+        select.addEventListener("change", render);
+        customFineMenus.push({ close, render });
+        render();
+        return { close, render };
+    }
+
+    setupFineMenu(
+        categorySelect,
+        document.getElementById("fineCategoryTrigger"),
+        document.getElementById("fineCategoryMenu")
+    );
+
+    const ruleMenu = setupFineMenu(
+        ruleSelect,
+        document.getElementById("fineRuleTrigger"),
+        document.getElementById("fineRuleMenu")
+    );
+    refreshRuleMenu = ruleMenu.render;
 
     [categorySelect, ruleSelect, document.getElementById("finePlayer")]
         .filter(Boolean)
@@ -3694,6 +3764,7 @@ if (
             `;
 
         ruleSelect.value = "";
+        refreshRuleMenu();
         updateFineInterface();
 
     }

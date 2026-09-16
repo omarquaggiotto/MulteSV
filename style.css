@@ -1767,21 +1767,43 @@ h3 {
     }
 }
 
-/* Campo data nativo: il tocco apre direttamente il calendario del telefono. */
+/* Campo data nativo allineato agli altri controlli del modulo. */
+.modal .date-field,
 .modal .date-input-wrapper {
-    display: block;
     width: 100%;
+    max-width: 100%;
     min-width: 0;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
 }
 
-.modal input[type="date"]#fineDate {
+.modal .date-input-wrapper {
+    display: block;
+}
+
+.modal .date-input-wrapper input[type="date"]#fineDate {
     display: block;
     width: 100%;
     max-width: 100%;
     min-width: 0;
-    min-height: 48px;
-    height: 48px;
+    height: 48px !important;
+    min-height: 48px !important;
     margin: 0;
-    padding: 0 12px;
+    padding: 0 13px !important;
+    border: 1px solid var(--border);
+    border-radius: 13px;
+    background: var(--surface);
+    color: var(--text);
     box-sizing: border-box;
+    font-size: 16px;
+    line-height: 46px;
+    vertical-align: middle;
+}
+
+.modal .date-input-wrapper input[type="date"]#fineDate::-webkit-date-and-time-value {
+    min-height: 46px;
+    height: 46px;
+    line-height: 46px;
+    text-align: left;
 }

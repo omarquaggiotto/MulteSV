@@ -1772,3 +1772,53 @@ h3 {
         text-align: left;
     }
 }
+
+/* Il controllo data nativo resta contenuto anche su schermi stretti. */
+@media (max-width: 720px) {
+    .modal .form,
+    .modal .field,
+    .modal .date-field {
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+        box-sizing: border-box;
+    }
+
+    .modal .date-field,
+    .modal .date-input-wrapper {
+        overflow: hidden;
+    }
+
+    .modal .date-input-wrapper {
+        display: block;
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+        box-sizing: border-box;
+    }
+
+    .modal .date-input-wrapper input[type="date"] {
+        display: block;
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        min-inline-size: 0 !important;
+        height: 48px;
+        margin: 0;
+        padding: 0 10px !important;
+        box-sizing: border-box !important;
+        font-family: inherit;
+        font-size: 15px;
+        line-height: normal;
+        -webkit-appearance: auto;
+        appearance: auto;
+        text-align: left;
+    }
+}
+
+@media (max-width: 360px) {
+    .modal .date-input-wrapper input[type="date"] {
+        padding: 0 6px !important;
+        font-size: 13px;
+    }
+}

@@ -3430,6 +3430,14 @@ if (
 
         }
 
+       if (
+          isTeamFine
+         ) {
+
+          quantityField.style.display =
+           "none";
+
+      }
 
         /* =========================
            RITARDO AL MINUTO

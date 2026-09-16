@@ -35,8 +35,7 @@ const defaultState = {
             player: "Marco",
             category: "Allenamento",
             type: "Ritardo allenamento",
-            amount: 5,
-            paid: true
+            amount: 5
         },
 
         {
@@ -45,8 +44,7 @@ const defaultState = {
             player: "Luca",
             category: "Partita",
             type: "Ammonizione per proteste",
-            amount: 10,
-            paid: false
+            amount: 10
         },
 
          {
@@ -55,8 +53,7 @@ const defaultState = {
               player: "Andrea",
               category: "Allenamento",
               type: "Assenza ingiustificata",
-              amount: 20,
-              paid: true
+              amount: 20
        }
 
 ],
@@ -283,20 +280,21 @@ function loadState() {
                 JSON.parse(saved);
 
 
-            /* =========================================
-               AGGIORNA IL MULTARIO
-               ========================================= */
-
             loaded.rules =
-                structuredClone(
-                    defaultState.rules
-                );
-             loaded.payments =
+                Array.isArray(loaded.rules) &&
+                loaded.rules.length
+                    ? loaded.rules
+                    : structuredClone(defaultState.rules);
+
+            loaded.payments =
                 loaded.payments || {};
 
-            /* =========================================
-               SALVA IL NUOVO MULTARIO
-               ========================================= */
+            // Migrazione: il pagamento è registrato solo
+            // nella sezione Pagamenti, non nella singola multa.
+            loaded.fines =
+                Array.isArray(loaded.fines)
+                    ? loaded.fines.map(({ paid, ...fine }) => fine)
+                    : [];
 
             localStorage.setItem(
                 STORAGE_KEY,
@@ -830,59 +828,65 @@ function renderHome() {
        CALCOLO STATISTICHE
        ===================================================== */
 
-    const totalFines = state.fines.reduce(
-    (sum, fine) =>
-        sum + Number(fine.amount),
-    0
-);
+    const paymentMonths =
+        getPaymentMonths();
 
+    const today =
+        new Date();
 
-/* =====================================================
-   QUOTE MENSILI MATURATE
-   ===================================================== */
+    const realCurrentMonth =
+        `${today.getFullYear()}-${String(
+            today.getMonth() + 1
+        ).padStart(2, "0")}`;
 
-const paymentMonths =
-    getPaymentMonths();
+    const currentMonth =
+        paymentMonths.includes(realCurrentMonth)
+            ? realCurrentMonth
+            : realCurrentMonth < paymentMonths[0]
+                ? paymentMonths[0]
+                : paymentMonths[paymentMonths.length - 1];
 
-const today =
-    new Date();
+    const currentMonthIndex =
+        paymentMonths.indexOf(currentMonth);
 
-const currentMonth =
-    `${today.getFullYear()}-${String(
-        today.getMonth() + 1
-    ).padStart(2, "0")}`;
+    const dueMonths =
+        paymentMonths.slice(0, currentMonthIndex + 1);
 
-const currentMonthIndex =
-    paymentMonths.indexOf(
-        currentMonth
-    );
-
-const totalBase =
-    paymentMonths
-        .slice(
-            0,
-            currentMonthIndex + 1
+    const totalFines = state.fines
+        .filter(fine =>
+            fine.date &&
+            fine.date.slice(0, 7) <= currentMonth
         )
         .reduce(
-            (sum, month) =>
-                sum +
-                getMonthlyBase(month),
+            (sum, fine) => sum + Number(fine.amount || 0),
             0
         );
 
+    const totalBase = dueMonths.reduce(
+        (sum, month) =>
+            sum + getMonthlyBase(month) * state.players.length,
+        0
+    );
 
-const total =
-    totalFines +
-    totalBase;
+    const total =
+        totalFines + totalBase;
 
-    const paid = state.fines
-        .filter(fine => fine.paid)
-        .reduce(
-            (sum, fine) => sum + Number(fine.amount),
-            0
-        );
+    const totalPaid = dueMonths.reduce(
+        (sum, month) =>
+            sum + state.players.reduce(
+                (monthTotal, player) =>
+                    monthTotal + getPlayerMonthPayment(player, month),
+                0
+            ),
+        0
+    );
 
-    const unpaid = total - paid;
+    const unpaid = Math.max(0, total - totalPaid);
+
+    const paymentPercentage =
+        total > 0
+            ? Math.round((totalPaid / total) * 100)
+            : 0;
 
     const fineCount = state.fines.length;
 
@@ -929,20 +933,10 @@ const total =
                     0
                 );
 
-            const paidAmount =
-                playerFines
-                    .filter(fine => fine.paid)
-                    .reduce(
-                        (sum, fine) =>
-                            sum + Number(fine.amount),
-                        0
-                    );
-
             return {
                 player,
                 fines: playerFines.length,
-                amount,
-                paidAmount
+                amount
             };
 
         })
@@ -976,15 +970,12 @@ const total =
 
     const currentMonthFines =
         state.fines.filter(
-            fine =>
-                fine.date.slice(0, 7) ===
-                currentMonth
+            fine => fine.date?.slice(0, 7) === currentMonth
         );
 
     const currentMonthTotal =
         currentMonthFines.reduce(
-            (sum, fine) =>
-                sum + Number(fine.amount),
+            (sum, fine) => sum + Number(fine.amount || 0),
             0
         );
 
@@ -1156,13 +1147,6 @@ const total =
                                                 : "multe"
                                         }
 
-                                        ·
-
-                                        ${money(
-                                            player.paidAmount
-                                        )}
-                                        pagati
-
                                     </div>
 
                                 </div>
@@ -1239,7 +1223,7 @@ const total =
                     class="stat-value"
                     style="color:var(--green)"
                 >
-                    ${money(paid)}
+                    ${money(totalPaid)}
                 </div>
 
             </div>
@@ -1367,7 +1351,7 @@ const total =
                     </strong>
 
                     <div class="small muted">
-                        ${money(paid)}
+                        ${money(totalPaid)}
                         di
                         ${money(total)}
                     </div>
@@ -3130,34 +3114,6 @@ function openFineModal(id = null) {
             </div>
 
 
-            <!-- PAGATA -->
-
-            <label
-                style="
-                    display:flex;
-                    align-items:center;
-                    gap:10px;
-                    cursor:pointer;
-                "
-            >
-
-                <input
-                    id="finePaid"
-                    type="checkbox"
-                    ${
-                        fine?.paid
-                            ? "checked"
-                            : ""
-                    }
-                >
-
-                <span>
-                    Multa già pagata
-                </span>
-
-            </label>
-
-
             <!-- AZIONI -->
 
             <div class="modal-actions">
@@ -3729,13 +3685,6 @@ document
                 )
                 .value;
 
-        const paid =
-            document
-                .getElementById(
-                    "finePaid"
-                )
-                .checked;
-
         const selectedRule =
             ruleSelect.value;
 
@@ -3812,9 +3761,6 @@ document
                 fine.amount =
                     customAmount;
 
-                fine.paid =
-                    paid;
-
             } else {
 
                 state.fines.push({
@@ -3842,9 +3788,7 @@ document
                         null,
 
                     amount:
-                        customAmount,
-
-                    paid
+                        customAmount
 
                 });
 
@@ -3930,9 +3874,7 @@ document
                             false,
 
                         amount:
-                            1,
-
-                        paid
+                            1
 
                     });
 
@@ -4111,9 +4053,6 @@ document
             fine.custom =
                 false;
 
-            fine.paid =
-                paid;
-
         }
 
 
@@ -4145,9 +4084,7 @@ document
                 custom:
                     false,
 
-                amount,
-
-                paid
+                amount
 
             });
 
@@ -4643,56 +4580,6 @@ document
         );
 
 
-    /* =========================
-       PAGATA / NON PAGATA
-       ========================= */
-
-    document
-        .querySelectorAll(
-            "[data-toggle-paid]"
-        )
-        .forEach(button => {
-
-            button.onclick = () => {
-
-                const id =
-                    Number(
-                        button.dataset
-                            .togglePaid
-                    );
-
-
-                const fine =
-                    state.fines.find(
-                        item =>
-                            item.id === id
-                    );
-
-
-                if (!fine) {
-
-                    return;
-
-                }
-
-
-                fine.paid =
-                    !fine.paid;
-
-
-                saveState();
-
-                render();
-
-                showToast(
-                    fine.paid
-                        ? "Multa segnata come pagata"
-                        : "Multa segnata come non pagata"
-                );
-
-            };
-
-        });
 
 
     /* =========================

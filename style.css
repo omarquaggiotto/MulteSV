@@ -1807,3 +1807,49 @@ h3 {
     line-height: 46px;
     text-align: left;
 }
+
+/* Rifiniture iPhone: campo data e barra di navigazione. */
+@media (max-width: 720px) {
+    html,
+    body {
+        min-height: 100%;
+    }
+
+    .bottom-navigation {
+        position: fixed !important;
+        left: 8px !important;
+        right: 8px !important;
+        width: auto !important;
+        bottom: calc(8px + env(safe-area-inset-bottom)) !important;
+        transform: none !important;
+        z-index: 100001 !important;
+    }
+
+    .modal .date-field,
+    .modal .date-input-wrapper {
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    .modal .date-input-wrapper input[type="date"]#fineDate {
+        height: 48px !important;
+        min-height: 48px !important;
+        padding: 0 13px !important;
+        line-height: normal !important;
+        text-align: left !important;
+        vertical-align: middle !important;
+    }
+
+    .modal .date-input-wrapper input[type="date"]#fineDate::-webkit-datetime-edit,
+    .modal .date-input-wrapper input[type="date"]#fineDate::-webkit-date-and-time-value {
+        display: flex;
+        align-items: center;
+        height: 46px;
+        min-height: 46px;
+        margin: 0;
+        padding: 0;
+        line-height: normal !important;
+        text-align: left;
+    }
+}

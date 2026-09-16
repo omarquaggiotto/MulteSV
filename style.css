@@ -1773,7 +1773,7 @@ h3 {
     }
 }
 
-/* Il controllo data nativo resta contenuto anche su schermi stretti. */
+/* Il contenitore impedisce l'overflow senza alterare il controllo data nativo. */
 @media (max-width: 720px) {
     .modal .form,
     .modal .field,
@@ -1798,27 +1798,12 @@ h3 {
     }
 
     .modal .date-input-wrapper input[type="date"] {
-        display: block;
         width: 100% !important;
         max-width: 100% !important;
         min-width: 0 !important;
         min-inline-size: 0 !important;
-        height: 48px;
-        margin: 0;
-        padding: 0 10px !important;
+        min-height: 0 !important;
+        height: auto !important;
         box-sizing: border-box !important;
-        font-family: inherit;
-        font-size: 15px;
-        line-height: normal;
-        -webkit-appearance: auto;
-        appearance: auto;
-        text-align: left;
-    }
-}
-
-@media (max-width: 360px) {
-    .modal .date-input-wrapper input[type="date"] {
-        padding: 0 6px !important;
-        font-size: 13px;
     }
 }

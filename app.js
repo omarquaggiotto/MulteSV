@@ -3157,6 +3157,12 @@ function openFineModal(id = null) {
                         }"
                     >
 
+                    <span
+                        class="date-value"
+                        id="fineDateValue"
+                        aria-hidden="true"
+                    ></span>
+
                 </div>
 
             </div>
@@ -3290,6 +3296,45 @@ function openFineModal(id = null) {
         document.getElementById("fineDate").value = "";
         amountInput.value = "";
     }
+
+
+    /* Data nativa con testo allineato e tocchi dei menu isolati. */
+    const fineDateInput = document.getElementById("fineDate");
+    const fineDateValue = document.getElementById("fineDateValue");
+
+    function updateFineDateValue() {
+        if (!fineDateInput.value) {
+            fineDateValue.textContent = "Seleziona una data";
+            return;
+        }
+
+        const [year, month, day] = fineDateInput.value.split("-");
+        const label = new Date(
+            Number(year),
+            Number(month) - 1,
+            Number(day)
+        ).toLocaleDateString("it-IT", {
+            day: "2-digit",
+            month: "short",
+            year: "numeric"
+        });
+
+        fineDateValue.textContent = label;
+    }
+
+    fineDateInput.addEventListener("input", updateFineDateValue);
+    fineDateInput.addEventListener("change", updateFineDateValue);
+    updateFineDateValue();
+
+    [categorySelect, ruleSelect, document.getElementById("finePlayer")]
+        .filter(Boolean)
+        .forEach(select => {
+            ["touchstart", "touchend", "click"].forEach(eventName => {
+                select.addEventListener(eventName, event => {
+                    event.stopPropagation();
+                });
+            });
+        });
 
 
     /* =========================

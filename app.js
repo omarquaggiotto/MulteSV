@@ -3256,16 +3256,7 @@ function openFineModal(id = null) {
 
         const selectedValue =
             ruleSelect.value;
-       const selectedRule =
-    state.rules.find(
-        item =>
-            String(item.id) ===
-            String(selectedValue)
-    );
 
-const isTeamFine =
-    selectedRule?.type ===
-    "Squadra perdente la partitella del giovedì";
 
 if (
     !isEdit &&
@@ -3429,23 +3420,6 @@ if (
             return;
 
         }
-
-       if (
-    isTeamFine
-) {
-
-    quantityField.style.display =
-        "none";
-
-    amountInput.disabled =
-        true;
-
-    amountInput.value =
-        selectedRule.amount;
-
-    return;
-
-}
 
         /* =========================
            RITARDO AL MINUTO

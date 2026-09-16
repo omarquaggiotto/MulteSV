@@ -844,12 +844,13 @@ function renderHome() {
 const paymentMonths =
     getPaymentMonths();
 
+const today =
+    new Date();
+
 const currentMonth =
-    paymentMonths.includes(
-        selectedPaymentMonth
-    )
-        ? selectedPaymentMonth
-        : paymentMonths[0];
+    `${today.getFullYear()}-${String(
+        today.getMonth() + 1
+    ).padStart(2, "0")}`;
 
 const currentMonthIndex =
     paymentMonths.indexOf(

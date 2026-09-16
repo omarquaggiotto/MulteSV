@@ -3283,6 +3283,30 @@ function openFineModal(id = null) {
     );
 
 
+    /* Nuova multa: nessun valore precompilato. */
+    if (!isEdit) {
+        const initialPlayerSelect = document.getElementById("finePlayer");
+
+        initialPlayerSelect.insertAdjacentHTML(
+            "afterbegin",
+            '<option value="">Seleziona un giocatore</option>'
+        );
+        initialPlayerSelect.value = "";
+
+        categorySelect.insertAdjacentHTML(
+            "afterbegin",
+            '<option value="">Seleziona una categoria</option>'
+        );
+        categorySelect.value = "";
+
+        ruleSelect.innerHTML =
+            '<option value="">Seleziona prima una categoria</option>';
+
+        document.getElementById("fineDate").value = "";
+        amountInput.value = "";
+    }
+
+
     /* =========================
        AGGIORNA INTERFACCIA
        ========================= */
@@ -3307,9 +3331,19 @@ const isTeamFine =
    SELEZIONE GIOCATORI
    ========================= */
 
+const rememberedPlayer =
+    document.getElementById("finePlayer")?.value ||
+    finePlayerContainer.dataset.selectedPlayer ||
+    "";
+
+if (rememberedPlayer) {
+    finePlayerContainer.dataset.selectedPlayer = rememberedPlayer;
+}
+
 if (
     !isEdit &&
-    isTeamFine
+    isTeamFine &&
+    !document.getElementById("finePlayers")
 ) {
 
     finePlayerContainer.innerHTML = `
@@ -3341,7 +3375,9 @@ if (
 
     `;
 
-} else {
+} else if (
+    !document.getElementById("finePlayer")
+) {
 
     finePlayerContainer.innerHTML = `
 
@@ -3358,7 +3394,10 @@ if (
                             <option
                                 value="${escapeHtml(player)}"
                                 ${
-                                    fine?.player === player
+                                    (
+                                    fine?.player === player ||
+                                    finePlayerContainer.dataset.selectedPlayer === player
+                                )
                                         ? "selected"
                                         : ""
                                 }
@@ -3442,7 +3481,7 @@ if (
                 false;
 
             amountInput.value =
-                0;
+                "";
 
             return;
 
@@ -3588,7 +3627,6 @@ if (
         const category =
             categorySelect.value;
 
-
         const rules =
             state.rules.filter(
                 rule =>
@@ -3596,9 +3634,8 @@ if (
                     category
             );
 
-
         ruleSelect.innerHTML =
-
+            '<option value="">Seleziona il tipo di multa</option>' +
             rules
                 .map(
                     rule => `
@@ -3617,28 +3654,16 @@ if (
 
                     `
                 )
-                .join("");
+                .join("") +
+            `
 
+                <option value="${CUSTOM_RULE_ID}">
+                    ✏️ Multa personalizzata
+                </option>
 
-        ruleSelect.innerHTML += `
+            `;
 
-            <option value="${CUSTOM_RULE_ID}">
-                ✏️ Multa personalizzata
-            </option>
-
-        `;
-
-
-        if (rules.length) {
-
-            ruleSelect.value =
-                String(
-                    rules[0].id
-                );
-
-        }
-
-
+        ruleSelect.value = "";
         updateFineInterface();
 
     }

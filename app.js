@@ -2913,50 +2913,53 @@ function openFineModal(id = null) {
 
             <!-- GIOCATORE -->
 
-            <div class="field">
+<div class="field">
 
-                <label>
-                    GIOCATORE
-                </label>
+    <label>
+        GIOCATORE
+    </label>
 
-                <select id="finePlayer">
+    <div id="finePlayerContainer">
 
-                    ${
-                        state.players.length
-                            ?
+        <select id="finePlayer">
 
-                        state.players
-                            .map(
-                                player => `
+            ${
+                state.players.length
+                    ?
 
-                                    <option
-                                        value="${escapeHtml(player)}"
-                                        ${
-                                            fine?.player === player
-                                                ? "selected"
-                                                : ""
-                                        }
-                                    >
-                                        ${escapeHtml(player)}
-                                    </option>
+                state.players
+                    .map(
+                        player => `
 
-                                `
-                            )
-                            .join("")
-
-                            :
-
-                        `
-                            <option value="">
-                                Nessun giocatore
+                            <option
+                                value="${escapeHtml(player)}"
+                                ${
+                                    fine?.player === player
+                                        ? "selected"
+                                        : ""
+                                }
+                            >
+                                ${escapeHtml(player)}
                             </option>
+
                         `
-                    }
+                    )
+                    .join("")
 
-                </select>
+                    :
 
-            </div>
+                `
+                    <option value="">
+                        Nessun giocatore
+                    </option>
+                `
+            }
 
+        </select>
+
+    </div>
+
+</div>
 
             <!-- CATEGORIA -->
 
@@ -3239,6 +3242,10 @@ function openFineModal(id = null) {
         document.getElementById(
             "customDescription"
         );
+   const finePlayerContainer =
+    document.getElementById(
+        "finePlayerContainer"
+    );
 
 
     /* =========================
@@ -3249,6 +3256,95 @@ function openFineModal(id = null) {
 
         const selectedValue =
             ruleSelect.value;
+       const selectedRule =
+    state.rules.find(
+        item =>
+            String(item.id) ===
+            String(selectedValue)
+    );
+
+const isTeamFine =
+    selectedRule?.type ===
+    "Squadra perdente la partitella del giovedì";
+
+if (
+    !isEdit &&
+    isTeamFine
+) {
+
+    finePlayerContainer.innerHTML = `
+
+        <div class="multi-player-list">
+
+            ${state.players
+                .map(
+                    player => `
+
+                        <label class="multi-player-item">
+
+                            <input
+                                type="checkbox"
+                                value="${escapeHtml(player)}"
+                                data-team-player
+                            >
+
+                            <span>
+                                ${escapeHtml(player)}
+                            </span>
+
+                        </label>
+
+                    `
+                )
+                .join("")}
+
+        </div>
+
+    `;
+
+} else {
+
+    finePlayerContainer.innerHTML = `
+
+        <select id="finePlayer">
+
+            ${
+                state.players.length
+                    ?
+
+                state.players
+                    .map(
+                        player => `
+
+                            <option
+                                value="${escapeHtml(player)}"
+                                ${
+                                    fine?.player === player
+                                        ? "selected"
+                                        : ""
+                                }
+                            >
+                                ${escapeHtml(player)}
+                            </option>
+
+                        `
+                    )
+                    .join("")
+
+                    :
+
+                `
+                    <option value="">
+                        Nessun giocatore
+                    </option>
+                `
+            }
+
+        </select>
+
+    `;
+
+}
 
 
         /* =========================

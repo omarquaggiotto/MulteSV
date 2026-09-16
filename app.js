@@ -830,10 +830,49 @@ function renderHome() {
        CALCOLO STATISTICHE
        ===================================================== */
 
-    const total = state.fines.reduce(
-        (sum, fine) => sum + Number(fine.amount),
-        0
+    const totalFines = state.fines.reduce(
+    (sum, fine) =>
+        sum + Number(fine.amount),
+    0
+);
+
+
+/* =====================================================
+   QUOTE MENSILI MATURATE
+   ===================================================== */
+
+const paymentMonths =
+    getPaymentMonths();
+
+const currentMonth =
+    paymentMonths.includes(
+        selectedPaymentMonth
+    )
+        ? selectedPaymentMonth
+        : paymentMonths[0];
+
+const currentMonthIndex =
+    paymentMonths.indexOf(
+        currentMonth
     );
+
+const totalBase =
+    paymentMonths
+        .slice(
+            0,
+            currentMonthIndex + 1
+        )
+        .reduce(
+            (sum, month) =>
+                sum +
+                getMonthlyBase(month),
+            0
+        );
+
+
+const total =
+    totalFines +
+    totalBase;
 
     const paid = state.fines
         .filter(fine => fine.paid)
@@ -933,15 +972,6 @@ function renderHome() {
     /* =====================================================
        MESE CORRENTE
        ===================================================== */
-
-    const paymentMonths = getPaymentMonths();
-
-      const currentMonth =
-        paymentMonths.includes(
-        selectedPaymentMonth
-          )
-        ? selectedPaymentMonth
-        : paymentMonths[0];
 
     const currentMonthFines =
         state.fines.filter(
@@ -1461,11 +1491,6 @@ function renderHome() {
     `;
 
 }
-
-
-/* =========================================================
-   MULTE
-   ========================================================= */
 
 /* =========================================================
    MULTE

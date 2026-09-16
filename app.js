@@ -3094,11 +3094,13 @@ function openFineModal(id = null) {
 
             <!-- DATA -->
 
-            <div class="field">
+            <div class="field date-field">
 
                 <label>
                     DATA
                 </label>
+
+                <div class="date-input-wrapper">
 
                 <input
                     id="fineDate"
@@ -3110,6 +3112,8 @@ function openFineModal(id = null) {
                             .slice(0, 10)
                     }"
                 >
+
+                </div>
 
             </div>
 

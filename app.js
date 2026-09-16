@@ -3161,19 +3161,42 @@ function openFineModal(id = null) {
 
                 <div class="date-input-wrapper">
 
-                <input
-                    id="fineDate"
-                    type="text"
-                    inputmode="numeric"
-                    autocomplete="off"
-                    placeholder="GG/MM/AAAA"
-                    value="${
-                        fine?.date
-                            ? formatDate(fine.date)
-                            : new Date()
-                                .toLocaleDateString("it-IT")
-                    }"
-                >
+                    <input
+                        id="fineDate"
+                        type="text"
+                        inputmode="numeric"
+                        autocomplete="off"
+                        placeholder="GG/MM/AAAA"
+                        value="${
+                            fine?.date
+                                ? formatDate(fine.date)
+                                : new Date()
+                                    .toLocaleDateString("it-IT")
+                        }"
+                    >
+
+                    <button
+                        id="openFineDatePicker"
+                        class="date-picker-button"
+                        type="button"
+                        aria-label="Apri calendario"
+                    >
+                        📅
+                    </button>
+
+                    <input
+                        id="fineDatePicker"
+                        class="fine-date-picker-native"
+                        type="date"
+                        tabindex="-1"
+                        aria-hidden="true"
+                        value="${
+                            fine?.date ||
+                            new Date()
+                                .toISOString()
+                                .slice(0, 10)
+                        }"
+                    >
 
                 </div>
 
@@ -3641,6 +3664,63 @@ if (
 
         }
 
+
+        const fineDateInput =
+            document.getElementById(
+                "fineDate"
+            );
+
+        const fineDatePicker =
+            document.getElementById(
+                "fineDatePicker"
+            );
+
+        document
+            .getElementById(
+                "openFineDatePicker"
+            )
+            .addEventListener(
+                "click",
+                () => {
+                    try {
+                        if (
+                            typeof fineDatePicker.showPicker ===
+                            "function"
+                        ) {
+                            fineDatePicker.showPicker();
+                            return;
+                        }
+                    } catch (error) {
+                        // Il click nativo sotto gestisce i browser meno recenti.
+                    }
+
+                    fineDatePicker.click();
+                }
+            );
+
+        fineDatePicker.addEventListener(
+            "change",
+            () => {
+                fineDateInput.value =
+                    formatDate(
+                        fineDatePicker.value
+                    );
+            }
+        );
+
+        fineDateInput.addEventListener(
+            "input",
+            () => {
+                const parsedDate =
+                    parseFineDate(
+                        fineDateInput.value
+                    );
+
+                if (parsedDate) {
+                    fineDatePicker.value = parsedDate;
+                }
+            }
+        );
 
         updateFineInterface();
 

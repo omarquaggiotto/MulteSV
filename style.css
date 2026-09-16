@@ -2053,3 +2053,41 @@ h3 {
         color: var(--primary);
     }
 }
+
+
+/* Accesso e modalità amministratore */
+.topbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+}
+
+.auth-button {
+    min-height: 38px;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface);
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 800;
+    box-shadow: var(--shadow);
+}
+
+.is-admin .auth-button {
+    border-color: var(--primary);
+    background: var(--primary);
+    color: #fff;
+}
+
+@media (max-width: 720px) {
+    .topbar-actions {
+        gap: 7px;
+    }
+
+    .auth-button {
+        min-height: 36px;
+        padding: 7px 10px;
+        font-size: 12px;
+    }
+}

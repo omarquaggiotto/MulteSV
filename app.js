@@ -3274,59 +3274,29 @@ if (
 
     finePlayerContainer.innerHTML = `
 
-    <div class="multi-player-select">
+    <select
+        id="finePlayers"
+        multiple
+        size="1"
+    >
 
-        <button
-            type="button"
-            class="multi-player-select-button"
-            id="multiPlayerToggle"
-        >
-            <span>
-                Seleziona giocatori
-            </span>
+        ${state.players
+            .map(
+                player => `
 
-            <span>
-                ▼
-            </span>
-        </button>
+                    <option
+                        value="${escapeHtml(player)}"
+                    >
+                        ${escapeHtml(player)}
+                    </option>
 
-        <div
-            class="multi-player-dropdown"
-            id="multiPlayerDropdown"
-            style="display:none;"
-        >
+                `
+            )
+            .join("")}
 
-            ${state.players
-                .map(
-                    player => `
-
-                        <label class="multi-player-option">
-
-                            <input
-                                type="checkbox"
-                                value="${escapeHtml(player)}"
-                                data-team-player
-                            >
-
-                            <span>
-                                ${escapeHtml(player)}
-                            </span>
-
-                        </label>
-
-                    `
-                )
-                .join("")}
-
-        </div>
-
-    </div>
+    </select>
 
 `;
-   const multiPlayerToggle =
-    document.getElementById(
-        "multiPlayerToggle"
-    );
 
 const multiPlayerDropdown =
     document.getElementById(

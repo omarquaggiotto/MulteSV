@@ -17,7 +17,7 @@
 
     <link
         rel="stylesheet"
-        href="style.css?v=mobile-fix-12"
+        href="style.css?v=supabase-13"
     >
 
     <link
@@ -46,13 +46,16 @@
                 </h1>
             </div>
 
-            <button
-                id="themeButton"
-                class="icon-button"
-                type="button"
-            >
-                ☀️
-            </button>
+            <div class="topbar-actions">
+                <button id="authButton" class="auth-button" type="button">Accedi</button>
+                <button
+                    id="themeButton"
+                    class="icon-button"
+                    type="button"
+                >
+                    ☀️
+                </button>
+            </div>
 
         </header>
 
@@ -162,7 +165,8 @@
     >
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="app.js?v=mobile-fix-12"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="app.js?v=supabase-13"></script>
 
 </body>
 </html>

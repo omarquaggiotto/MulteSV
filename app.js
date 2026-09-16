@@ -2868,22 +2868,7 @@ function openModal(title, content) {
         .onclick = closeModal;
 
 
-    document
-        .getElementById(
-            "modalBackdrop"
-        )
-        .onclick = event => {
-
-            if (
-                event.target.id ===
-                "modalBackdrop"
-            ) {
-
-                closeModal();
-
-            }
-
-        };
+    /* Su iPhone la modale si chiude solo con × o Annulla:        un tocco sui selettori non può più essere intercettato dallo sfondo. */
 
 }
 

@@ -392,6 +392,65 @@ function formatDate(date) {
 }
 
 
+function parseFineDate(value) {
+
+    const raw =
+        String(value ?? "")
+            .trim();
+
+    const italian =
+        raw.match(
+            /^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/
+        );
+
+    const iso =
+        raw.match(
+            /^(\d{4})-(\d{1,2})-(\d{1,2})$/
+        );
+
+    const parts =
+        italian
+            ? {
+                year: Number(italian[3]),
+                month: Number(italian[2]),
+                day: Number(italian[1])
+            }
+            : iso
+                ? {
+                    year: Number(iso[1]),
+                    month: Number(iso[2]),
+                    day: Number(iso[3])
+                }
+                : null;
+
+    if (!parts) {
+        return "";
+    }
+
+    const date =
+        new Date(
+            parts.year,
+            parts.month - 1,
+            parts.day
+        );
+
+    if (
+        date.getFullYear() !== parts.year ||
+        date.getMonth() !== parts.month - 1 ||
+        date.getDate() !== parts.day
+    ) {
+        return "";
+    }
+
+    return [
+        parts.year,
+        String(parts.month)
+            .padStart(2, "0"),
+        String(parts.day)
+            .padStart(2, "0")
+    ].join("-");
+}
+
 function generateId() {
 
     return Date.now() +
@@ -3104,12 +3163,15 @@ function openFineModal(id = null) {
 
                 <input
                     id="fineDate"
-                    type="date"
+                    type="text"
+                    inputmode="numeric"
+                    autocomplete="off"
+                    placeholder="GG/MM/AAAA"
                     value="${
-                        fine?.date ||
-                        new Date()
-                            .toISOString()
-                            .slice(0, 10)
+                        fine?.date
+                            ? formatDate(fine.date)
+                            : new Date()
+                                .toLocaleDateString("it-IT")
                     }"
                 >
 
@@ -3706,11 +3768,13 @@ document
                 : "";
 
         const date =
-            document
-                .getElementById(
-                    "fineDate"
-                )
-                .value;
+            parseFineDate(
+                document
+                    .getElementById(
+                        "fineDate"
+                    )
+                    .value
+            );
 
         const selectedRule =
             ruleSelect.value;

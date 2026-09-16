@@ -1590,18 +1590,6 @@ if (selectedFinePlayer !== "all") {
             0
         );
 
-    const unpaid =
-        fines
-            .filter(fine => !fine.paid)
-            .reduce(
-                (sum, fine) =>
-                    sum + Number(fine.amount || 0),
-                0
-            );
-
-    const paid = total - unpaid;
-
-
     /* =====================================================
        TITOLO
        ===================================================== */
@@ -1843,75 +1831,85 @@ if (selectedFinePlayer !== "all") {
              RIEPILOGO
              ================================================ -->
 
-        <div class="stats-grid fines-summary">
+        <!-- ================================================
+     RIEPILOGO
+     ================================================ -->
 
-            <div class="stat-card">
+<div class="stats-grid fines-summary">
 
-                <span>
-                    Totale periodo
-                </span>
+    <div class="stat-card">
 
-                <strong>
-                    ${money(total)}
-                </strong>
+        <span>
+            Totale periodo
+        </span>
 
-                <small>
-                    ${fines.length}
-                    ${fines.length === 1 ? "multa" : "multe"}
-                </small>
+        <strong>
+            ${money(total)}
+        </strong>
 
-            </div>
+        <small>
+            ${fines.length}
+            ${fines.length === 1 ? "multa" : "multe"}
+        </small>
 
-
-            <div class="stat-card">
-
-                <span>
-                    Pagate
-                </span>
-
-                <strong class="positive">
-                    ${money(paid)}
-                </strong>
-
-                <small>
-                    Già saldate
-                </small>
-
-            </div>
+    </div>
 
 
-            <div class="stat-card">
+    <div class="stat-card">
 
-                <span>
-                    Da pagare
-                </span>
+        <span>
+            Giocatori coinvolti
+        </span>
 
-                <strong class="${
-                    unpaid > 0
-                        ? "negative"
-                        : "positive"
-                }">
+        <strong>
+            ${
+                new Set(
+                    fines.map(
+                        fine => fine.player
+                    )
+                ).size
+            }
+        </strong>
 
-                    ${money(unpaid)}
+        <small>
+            ${
+                new Set(
+                    fines.map(
+                        fine => fine.player
+                    )
+                ).size === 1
+                    ? "giocatore"
+                    : "giocatori"
+            }
+        </small>
 
-                </strong>
+    </div>
 
-                <small>
 
-                    ${
-                        fines.filter(
-                            fine => !fine.paid
-                        ).length
-                    }
+    <div class="stat-card">
 
-                    non saldate
+        <span>
+            Media multa
+        </span>
 
-                </small>
+        <strong>
+            ${
+                fines.length > 0
+                    ? money(
+                        total /
+                        fines.length
+                    )
+                    : money(0)
+            }
+        </strong>
 
-            </div>
+        <small>
+            Importo medio
+        </small>
 
-        </div>
+    </div>
 
+</div>
 
         <!-- ================================================
              ELENCO
@@ -2295,24 +2293,6 @@ function renderFineRow(fine) {
                         )}
                     </div>
 
-
-                    <span
-                        class="
-                            badge
-                            ${
-                                fine.paid
-                                    ? "paid"
-                                    : "unpaid"
-                            }
-                        "
-                    >
-                        ${
-                            fine.paid
-                                ? "Pagata"
-                                : "Da pagare"
-                        }
-                    </span>
-
                 </div>
 
             </div>
@@ -2325,19 +2305,6 @@ function renderFineRow(fine) {
                     margin-top:10px;
                 "
             >
-
-                <button
-                    class="btn secondary"
-                    data-toggle-paid="${fine.id}"
-                    type="button"
-                >
-                    ${
-                        fine.paid
-                            ? "Segna da pagare"
-                            : "Segna pagata"
-                    }
-                </button>
-
 
                 <button
                     class="btn secondary"

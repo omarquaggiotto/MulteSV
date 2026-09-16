@@ -280,6 +280,32 @@ function loadState() {
                 JSON.parse(saved);
 
 
+            loaded.team =
+                typeof loaded.team === "string" &&
+                loaded.team.trim()
+                    ? loaded.team
+                    : defaultState.team;
+
+            loaded.season =
+                typeof loaded.season === "string" &&
+                loaded.season.trim()
+                    ? loaded.season
+                    : defaultState.season;
+
+            loaded.theme =
+                loaded.theme === "dark"
+                    ? "dark"
+                    : "light";
+
+            loaded.players =
+                Array.isArray(loaded.players)
+                    ? loaded.players.filter(
+                        player =>
+                            typeof player === "string" &&
+                            player.trim()
+                    )
+                    : structuredClone(defaultState.players);
+
             loaded.rules =
                 Array.isArray(loaded.rules) &&
                 loaded.rules.length
@@ -293,7 +319,9 @@ function loadState() {
             // nella sezione Pagamenti, non nella singola multa.
             loaded.fines =
                 Array.isArray(loaded.fines)
-                    ? loaded.fines.map(({ paid, ...fine }) => fine)
+                    ? loaded.fines
+                        .filter(fine => fine && typeof fine === "object")
+                        .map(({ paid, ...fine }) => fine)
                     : [];
 
             localStorage.setItem(

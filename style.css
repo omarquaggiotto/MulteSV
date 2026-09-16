@@ -2091,3 +2091,8 @@ h3 {
         font-size: 12px;
     }
 }
+
+/* I controlli non autorizzati non devono poter essere mostrati da stili specifici. */
+[hidden] {
+    display: none !important;
+}

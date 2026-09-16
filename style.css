@@ -1767,7 +1767,7 @@ h3 {
     }
 }
 
-/* Calendario della data: visibile come pulsante, nativo solo quando aperto. */
+/* Calendario integrato della data. */
 .modal .date-input-wrapper {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 48px;
@@ -1797,16 +1797,75 @@ h3 {
     transform: scale(0.97);
 }
 
-.fine-date-picker-native {
-    position: fixed;
-    right: 0;
-    bottom: 0;
-    width: 1px !important;
-    min-width: 0 !important;
-    min-height: 0 !important;
-    height: 1px !important;
-    padding: 0 !important;
-    border: 0 !important;
-    opacity: 0;
-    pointer-events: none;
+.date-calendar {
+    grid-column: 1 / -1;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--surface);
+    box-shadow: var(--shadow);
+}
+
+.date-calendar-header {
+    display: grid;
+    grid-template-columns: 36px 1fr 36px;
+    align-items: center;
+    margin-bottom: 10px;
+    text-align: center;
+    text-transform: capitalize;
+}
+
+.date-calendar-header button {
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border: 0;
+    border-radius: 10px;
+    background: var(--surface-2);
+    color: var(--text);
+    font-size: 24px;
+    line-height: 1;
+}
+
+.date-calendar-weekdays,
+.date-calendar-days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+    text-align: center;
+}
+
+.date-calendar-weekdays {
+    margin-bottom: 4px;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.date-calendar-days > span,
+.date-calendar-days button {
+    aspect-ratio: 1;
+}
+
+.date-calendar-days button {
+    display: grid;
+    place-items: center;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.date-calendar-days button:hover,
+.date-calendar-days button:focus-visible {
+    background: var(--surface-2);
+}
+
+.date-calendar-days button.active {
+    background: var(--primary);
+    color: white;
 }

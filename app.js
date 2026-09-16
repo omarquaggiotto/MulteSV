@@ -5,6 +5,29 @@
 
 const STORAGE_KEY = "multefc_v1";
 
+const SUPABASE_URL = "https://gzeyptkjdvrwzsjeijss.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_juzsgyE5TPcFwNxXZV0t8A_w3TOKMfj";
+const supabaseClient = window.supabase?.createClient
+    ? window.supabase.createClient(
+        SUPABASE_URL,
+        SUPABASE_PUBLISHABLE_KEY,
+        {
+            auth: {
+                persistSession: true,
+                autoRefreshToken: true,
+                detectSessionInUrl: true
+            }
+        }
+    )
+    : null;
+
+let authUser = null;
+let isAdmin = false;
+let cloudReady = false;
+let cloudChannel = null;
+let cloudSaveTimer = null;
+
+
 
 /* =========================================================
    DATI INIZIALI
@@ -350,12 +373,243 @@ function loadState() {
 
 function saveState() {
 
+    saveLocalState();
+    queueCloudSave();
+
+}
+
+function saveLocalState() {
     localStorage.setItem(
         STORAGE_KEY,
         JSON.stringify(state)
     );
-
 }
+
+function queueCloudSave() {
+    if (!supabaseClient || !cloudReady || !isAdmin) return;
+
+    clearTimeout(cloudSaveTimer);
+    cloudSaveTimer = setTimeout(async () => {
+        const { error } = await supabaseClient
+            .from("app_state")
+            .upsert(
+                { id: "team", data: state },
+                { onConflict: "id" }
+            );
+
+        if (error) {
+            console.error("Errore salvataggio online:", error);
+            showToast("Salvataggio online non riuscito.");
+        }
+    }, 250);
+}
+
+function applyAccessMode() {
+    document.body.classList.toggle("is-admin", isAdmin);
+
+    const adminControls = [
+        "#addFine",
+        "#addFineEmpty",
+        "[data-edit-fine]",
+        "[data-delete-fine]",
+        "#addRule",
+        "[data-edit-rule]",
+        "[data-delete-rule]",
+        "#addPlayer",
+        "[data-delete-player]",
+        "#saveSettings",
+        "#importData",
+        "#resetData"
+    ];
+
+    document.querySelectorAll(adminControls.join(",")).forEach(control => {
+        control.hidden = !isAdmin;
+    });
+
+    document.querySelectorAll(".payment-paid-input").forEach(input => {
+        input.disabled = !isAdmin;
+    });
+}
+
+function updateAuthButton() {
+    const button = document.getElementById("authButton");
+    if (!button) return;
+
+    if (!authUser) {
+        button.textContent = "Accedi";
+    } else if (isAdmin) {
+        button.textContent = "Admin";
+    } else {
+        button.textContent = "Esci";
+    }
+
+    button.onclick = openAuthModal;
+}
+
+async function refreshAccess() {
+    if (!supabaseClient) return;
+
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    authUser = user || null;
+    isAdmin = false;
+
+    if (authUser) {
+        await supabaseClient.rpc("claim_initial_admin");
+        const { data } = await supabaseClient.rpc("is_app_admin");
+        isAdmin = data === true;
+    }
+
+    updateAuthButton();
+    applyAccessMode();
+}
+
+async function loadCloudState() {
+    if (!supabaseClient) return false;
+
+    const { data, error } = await supabaseClient
+        .from("app_state")
+        .select("data")
+        .eq("id", "team")
+        .maybeSingle();
+
+    if (error) {
+        console.error("Errore caricamento online:", error);
+        return false;
+    }
+
+    if (data?.data && Object.keys(data.data).length) {
+        state = {
+            ...structuredClone(defaultState),
+            ...data.data
+        };
+        saveLocalState();
+        return true;
+    }
+
+    return false;
+}
+
+function subscribeToCloud() {
+    if (!supabaseClient || cloudChannel) return;
+
+    cloudChannel = supabaseClient
+        .channel("multefc-state")
+        .on(
+            "postgres_changes",
+            {
+                event: "*",
+                schema: "public",
+                table: "app_state",
+                filter: "id=eq.team"
+            },
+            payload => {
+                if (!payload.new?.data) return;
+                state = {
+                    ...structuredClone(defaultState),
+                    ...payload.new.data
+                };
+                saveLocalState();
+                render();
+                showToast("Dati aggiornati online.");
+            }
+        )
+        .subscribe();
+}
+
+async function initializeCloud() {
+    if (!supabaseClient) return;
+
+    await refreshAccess();
+    const hasCloudState = await loadCloudState();
+    cloudReady = true;
+
+    if (isAdmin && !hasCloudState) {
+        queueCloudSave();
+    }
+
+    subscribeToCloud();
+    render();
+
+    supabaseClient.auth.onAuthStateChange(() => {
+        setTimeout(async () => {
+            await refreshAccess();
+            const hasData = await loadCloudState();
+            cloudReady = true;
+            if (isAdmin && !hasData) queueCloudSave();
+            render();
+        }, 0);
+    });
+}
+
+function openAuthModal() {
+    if (authUser) {
+        openModal(
+            isAdmin ? "Amministratore" : "Accesso",
+                            `<div class="form">
+                    <p class="muted">${isAdmin ? "Hai accesso alle modifiche su questo dispositivo." : "Sei connesso in sola visualizzazione."}</p>
+                    <button class="btn secondary" id="signOutButton" type="button">Esci</button>
+                </div>`
+        );
+
+        document.getElementById("signOutButton").onclick = async () => {
+            await supabaseClient.auth.signOut();
+            closeModal();
+            showToast("Accesso disconnesso.");
+        };
+        return;
+    }
+
+    openModal(
+        "Accesso amministratore",
+                    `<div class="form">
+                <p class="muted">Accedi per modificare. La sessione resta memorizzata su questo dispositivo.</p>
+                <div class="field"><label>EMAIL</label><input id="authEmail" type="email" autocomplete="email" placeholder="nome@email.it"></div>
+                <div class="field"><label>PASSWORD</label><input id="authPassword" type="password" autocomplete="current-password" placeholder="Password"></div>
+                <div class="modal-actions">
+                    <button class="btn secondary" id="signUpButton" type="button">Crea account</button>
+                    <button class="btn" id="signInButton" type="button">Accedi</button>
+                </div>
+            </div>`
+    );
+
+    const getCredentials = () => ({
+        email: document.getElementById("authEmail").value.trim(),
+        password: document.getElementById("authPassword").value
+    });
+
+    document.getElementById("signInButton").onclick = async () => {
+        const { email, password } = getCredentials();
+        const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+        if (error) {
+            showToast(error.message);
+            return;
+        }
+        closeModal();
+        showToast("Accesso effettuato.");
+    };
+
+    document.getElementById("signUpButton").onclick = async () => {
+        const { email, password } = getCredentials();
+        const { data, error } = await supabaseClient.auth.signUp({
+            email,
+            password,
+            options: {
+                emailRedirectTo: window.location.origin + window.location.pathname
+            }
+        });
+        if (error) {
+            showToast(error.message);
+            return;
+        }
+        if (data.session) {
+            closeModal();
+            showToast("Account creato: questo dispositivo è amministratore.");
+        } else {
+            showToast("Controlla l'email per confermare l'account.");
+        }
+    };
+}
+
 
 
 /* =========================================================
@@ -901,6 +1155,7 @@ function render() {
    }
 
     bindPageEvents();
+    applyAccessMode();
 
 }
 
@@ -5450,6 +5705,7 @@ document
    ========================================================= */
 
 render();
+initializeCloud();
 if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {
         navigator.serviceWorker

@@ -3431,13 +3431,21 @@ if (
         }
 
        if (
-          isTeamFine
-         ) {
+    isTeamFine
+) {
 
-          quantityField.style.display =
-           "none";
+    quantityField.style.display =
+        "none";
 
-      }
+    amountInput.disabled =
+        true;
+
+    amountInput.value =
+        selectedRule.amount;
+
+    return;
+
+}
 
         /* =========================
            RITARDO AL MINUTO

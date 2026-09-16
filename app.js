@@ -3725,26 +3725,24 @@ const player =
         ? singlePlayerSelect.value
         : "";
 
+const date =
+    document
+        .getElementById(
+            "fineDate"
+        )
+        .value;
 
-            const date =
-                document
-                    .getElementById(
-                        "fineDate"
-                    )
-                    .value;
+const paid =
+    document
+        .getElementById(
+            "finePaid"
+        )
+        .checked;
 
+const selectedRule =
+    ruleSelect.value;
 
-            const paid =
-                document
-                    .getElementById(
-                        "finePaid"
-                    )
-                    .checked;
-
-
-            const selectedRule =
-                ruleSelect.value;
-           const isTeamFine =
+const isTeamFine =
     state.rules.find(
         item =>
             String(item.id) ===
@@ -3752,6 +3750,87 @@ const player =
     )?.type ===
     "Squadra perdente la partitella del giovedì";
 
+           /* =========================
+   MULTA SQUADRA
+   ========================= */
+
+if (
+    !isEdit &&
+    isTeamFine
+) {
+
+    const selectedPlayers =
+        multiPlayerSelect
+            ? Array.from(
+                multiPlayerSelect.selectedOptions
+            ).map(
+                option => option.value
+            )
+            : [];
+
+    if (
+        selectedPlayers.length === 0 ||
+        !date
+    ) {
+
+        showToast(
+            "Seleziona almeno un giocatore."
+        );
+
+        return;
+
+    }
+
+    selectedPlayers.forEach(
+        playerName => {
+
+            state.fines.push({
+
+                id:
+                    generateId(),
+
+                date,
+
+                player:
+                    playerName,
+
+                category:
+                    "Allenamento",
+
+                type:
+                    "Squadra perdente la partitella del giovedì",
+
+                ruleId:
+                    Number(selectedRule),
+
+                quantity:
+                    null,
+
+                custom:
+                    false,
+
+                amount:
+                    1,
+
+                paid
+
+            });
+
+        }
+    );
+
+    saveState();
+
+    closeModal();
+
+    render();
+
+    showToast(
+        `${selectedPlayers.length} multe aggiunte`
+    );
+
+    return;
+}
 
             /* =========================
                MULTA PERSONALIZZATA
@@ -3872,87 +3951,7 @@ const player =
 
             }
 
-           /* =========================
-   MULTA SQUADRA
-   ========================= */
 
-if (
-    !isEdit &&
-    isTeamFine
-) {
-
-    const selectedPlayers =
-        Array.from(
-            multiPlayerSelect?.selectedOptions || []
-        ).map(
-            option => option.value
-        );
-
-    if (
-        selectedPlayers.length === 0 ||
-        !date
-    ) {
-
-        showToast(
-            "Seleziona almeno un giocatore."
-        );
-
-        return;
-
-    }
-
-    const amount = 1;
-
-    selectedPlayers.forEach(
-        playerName => {
-
-            state.fines.push({
-
-                id:
-                    generateId(),
-
-                date,
-
-                player:
-                    playerName,
-
-                category:
-                    rule.category,
-
-                type:
-                    rule.type,
-
-                ruleId:
-                    rule.id,
-
-                quantity:
-                    null,
-
-                custom:
-                    false,
-
-                amount,
-
-                paid
-
-            });
-
-        }
-    );
-
-    saveState();
-
-    closeModal();
-
-    render();
-
-    showToast(
-        `${selectedPlayers.length} multe aggiunte`
-    );
-
-    return;
-
-}
 
             /* =========================
                REGOLA NORMALE

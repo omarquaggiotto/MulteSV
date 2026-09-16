@@ -3274,13 +3274,33 @@ if (
 
     finePlayerContainer.innerHTML = `
 
-        <div class="multi-player-list">
+    <div class="multi-player-select">
+
+        <button
+            type="button"
+            class="multi-player-select-button"
+            id="multiPlayerToggle"
+        >
+            <span>
+                Seleziona giocatori
+            </span>
+
+            <span>
+                ▼
+            </span>
+        </button>
+
+        <div
+            class="multi-player-dropdown"
+            id="multiPlayerDropdown"
+            style="display:none;"
+        >
 
             ${state.players
                 .map(
                     player => `
 
-                        <label class="multi-player-item">
+                        <label class="multi-player-option">
 
                             <input
                                 type="checkbox"
@@ -3300,7 +3320,38 @@ if (
 
         </div>
 
-    `;
+    </div>
+
+`;
+   const multiPlayerToggle =
+    document.getElementById(
+        "multiPlayerToggle"
+    );
+
+const multiPlayerDropdown =
+    document.getElementById(
+        "multiPlayerDropdown"
+    );
+
+if (
+    multiPlayerToggle &&
+    multiPlayerDropdown
+) {
+
+    multiPlayerToggle.onclick = () => {
+
+        const isOpen =
+            multiPlayerDropdown.style.display ===
+            "block";
+
+        multiPlayerDropdown.style.display =
+            isOpen
+                ? "none"
+                : "block";
+
+    };
+
+}
 
 } else {
 

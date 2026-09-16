@@ -1853,3 +1853,63 @@ h3 {
         text-align: left;
     }
 }
+
+/* iPhone: il campo data resta sempre dentro la modale. */
+@media (max-width: 720px) {
+    .bottom-navigation {
+        z-index: 9999 !important;
+    }
+
+    .modal .field.date-field {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        overflow: hidden;
+        box-sizing: border-box !important;
+    }
+
+    .modal .date-input-wrapper {
+        display: block !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        height: 48px !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: hidden;
+        border: 1px solid var(--border) !important;
+        border-radius: 13px !important;
+        background: var(--surface) !important;
+        box-sizing: border-box !important;
+    }
+
+    .modal .date-input-wrapper input[type="date"]#fineDate {
+        display: block !important;
+        inline-size: 100% !important;
+        width: 100% !important;
+        max-inline-size: 100% !important;
+        max-width: 100% !important;
+        min-inline-size: 0 !important;
+        min-width: 0 !important;
+        height: 46px !important;
+        min-height: 46px !important;
+        margin: 0 !important;
+        padding: 0 12px !important;
+        overflow: hidden;
+        border: 0 !important;
+        border-radius: 0 !important;
+        box-sizing: border-box !important;
+        line-height: normal !important;
+    }
+
+    .modal .date-input-wrapper input[type="date"]#fineDate::-webkit-datetime-edit,
+    .modal .date-input-wrapper input[type="date"]#fineDate::-webkit-date-and-time-value {
+        display: block !important;
+        height: auto !important;
+        min-height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        line-height: normal !important;
+        text-align: left !important;
+    }
+}

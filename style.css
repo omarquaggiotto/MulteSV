@@ -1738,3 +1738,37 @@ h3 {
         padding-inline: 10px;
     }
 }
+
+
+/* =========================================================
+   CORREZIONE DATA SU MOBILE
+   ========================================================= */
+
+@media (max-width: 720px) {
+    .modal,
+    .modal .form,
+    .modal .field {
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    .modal {
+        overflow-x: hidden;
+    }
+
+    .modal input[type="date"]#fineDate {
+        display: block;
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        min-inline-size: 0 !important;
+        box-sizing: border-box !important;
+        padding: 12px !important;
+        font-size: 16px;
+    }
+
+    .modal input[type="date"]#fineDate::-webkit-date-and-time-value {
+        min-width: 0;
+        text-align: left;
+    }
+}

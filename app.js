@@ -3704,277 +3704,85 @@ if (
        SALVA
        ========================= */
 
-    document
-        .getElementById(
-            "saveFine"
-        )
-        .onclick = () => {
-
-            const singlePlayerSelect =
-    document.getElementById(
-        "finePlayer"
-    );
-
-const multiPlayerSelect =
-    document.getElementById(
-        "finePlayers"
-    );
-
-const player =
-    singlePlayerSelect
-        ? singlePlayerSelect.value
-        : "";
-
-const date =
-    document
-        .getElementById(
-            "fineDate"
-        )
-        .value;
-
-const paid =
-    document
-        .getElementById(
-            "finePaid"
-        )
-        .checked;
-
-const selectedRule =
-    ruleSelect.value;
-
-const isTeamFine =
-    state.rules.find(
-        item =>
-            String(item.id) ===
-            String(selectedRule)
-    )?.type ===
-    "Squadra perdente la partitella del giovedì";
-
-           /* =========================
-   MULTA SQUADRA
+    /* =========================
+   SALVA
    ========================= */
 
-if (
-    !isEdit &&
-    isTeamFine
-) {
-
-    const selectedPlayers =
-        multiPlayerSelect
-            ? Array.from(
-                multiPlayerSelect.selectedOptions
-            ).map(
-                option => option.value
-            )
-            : [];
-
-    if (
-        selectedPlayers.length === 0 ||
-        !date
-    ) {
-
-        showToast(
-            "Seleziona almeno un giocatore."
-        );
-
-        return;
-
-    }
-
-    selectedPlayers.forEach(
-        playerName => {
-
-            state.fines.push({
-
-                id:
-                    generateId(),
-
-                date,
-
-                player:
-                    playerName,
-
-                category:
-                    "Allenamento",
-
-                type:
-                    "Squadra perdente la partitella del giovedì",
-
-                ruleId:
-                    Number(selectedRule),
-
-                quantity:
-                    null,
-
-                custom:
-                    false,
-
-                amount:
-                    1,
-
-                paid
-
-            });
-
-        }
-    );
-
-    saveState();
-
-    closeModal();
-
-    render();
-
-    showToast(
-        `${selectedPlayers.length} multe aggiunte`
-    );
-
-    return;
-}
-
-            /* =========================
-               MULTA PERSONALIZZATA
-               ========================= */
-
-            if (
-                selectedRule ===
-                CUSTOM_RULE_ID
-            ) {
-
-                const description =
-                    customDescription.value.trim();
-
-
-                const customAmount =
-                    Number(
-                        amountInput.value
-                    );
-
-
-                if (
-                    !player ||
-                    !date ||
-                    !description ||
-                    !Number.isFinite(
-                        customAmount
-                    ) ||
-                    customAmount < 0
-                ) {
-
-                    showToast(
-                        "Controlla i dati inseriti."
-                    );
-
-                    return;
-
-                }
-
-
-                if (isEdit) {
-
-                    fine.player =
-                        player;
-
-                    fine.category =
-                        "Personalizzata";
-
-                    fine.type =
-                        description;
-
-                    fine.ruleId =
-                        null;
-
-                    fine.custom =
-                        true;
-
-                    fine.quantity =
-                        null;
-
-                    fine.date =
-                        date;
-
-                    fine.amount =
-                        customAmount;
-
-                    fine.paid =
-                        paid;
-
-                } else {
-
-                    state.fines.push({
-
-                        id:
-                            generateId(),
-
-                        date,
-
-                        player,
-
-                        category:
-                            "Personalizzata",
-
-                        type:
-                            description,
-
-                        ruleId:
-                            null,
-
-                        custom:
-                            true,
-
-                        quantity:
-                            null,
-
-                        amount:
-                            customAmount,
-
-                        paid
-
-                    });
-
-                }
-
-
-                saveState();
-
-                closeModal();
-
-                render();
-
-                showToast(
-                    isEdit
-                        ? "Multa modificata"
-                        : "Multa aggiunta"
-                );
-
-                return;
-
-            }
-
-
-
-            /* =========================
-               REGOLA NORMALE
-               ========================= */
-
-            const ruleId =
+document
+    .getElementById(
+        "saveFine"
+    )
+    .onclick = () => {
+
+        const singlePlayerSelect =
+            document.getElementById(
+                "finePlayer"
+            );
+
+        const multiPlayerSelect =
+            document.getElementById(
+                "finePlayers"
+            );
+
+        const player =
+            singlePlayerSelect
+                ? singlePlayerSelect.value
+                : "";
+
+        const date =
+            document
+                .getElementById(
+                    "fineDate"
+                )
+                .value;
+
+        const paid =
+            document
+                .getElementById(
+                    "finePaid"
+                )
+                .checked;
+
+        const selectedRule =
+            ruleSelect.value;
+
+        const rule =
+            state.rules.find(
+                item =>
+                    String(item.id) ===
+                    String(selectedRule)
+            );
+
+        const isTeamFine =
+            rule?.type ===
+            "Squadra perdente la partitella del giovedì";
+
+
+        /* =========================
+           MULTA PERSONALIZZATA
+           ========================= */
+
+        if (
+            selectedRule ===
+            CUSTOM_RULE_ID
+        ) {
+
+            const description =
+                customDescription.value.trim();
+
+            const customAmount =
                 Number(
-                    selectedRule
+                    amountInput.value
                 );
-
-
-            const rule =
-                state.rules.find(
-                    item =>
-                        item.id ===
-                        ruleId
-                );
-
 
             if (
                 !player ||
-                !rule ||
-                !date
+                !date ||
+                !description ||
+                !Number.isFinite(
+                    customAmount
+                ) ||
+                customAmount < 0
             ) {
 
                 showToast(
@@ -3982,160 +3790,39 @@ if (
                 );
 
                 return;
-
             }
 
-
-            let amount =
-                Number(
-                    amountInput.value
-                );
-
-
-            let quantity =
-                null;
-
-
-            /* =========================
-               CALCOLO AL MINUTO
-               ========================= */
-
-            if (
-                rule.calculation ===
-                "per_minute"
-            ) {
-
-                quantity =
-                    Number(
-                        quantityInput.value
-                    ) || 0;
-
-
-                amount =
-                    rule.baseAmount +
-                    quantity *
-                    rule.perMinute;
-
-            }
-
-
-            /* =========================
-               CALCOLO PER PEZZO
-               ========================= */
-
-            if (
-                rule.calculation ===
-                "per_piece"
-            ) {
-
-                quantity =
-                    Number(
-                        quantityInput.value
-                    ) || 0;
-
-
-                if (quantity < 1) {
-
-                    showToast(
-                        "Inserisci almeno 1 pezzo."
-                    );
-
-                    return;
-
-                }
-
-
-                amount =
-                    quantity *
-                    rule.perPiece;
-
-            }
-
-
-            /* =========================
-               IMPORTO MINIMO
-               ========================= */
-
-            if (
-                rule.calculation ===
-                "custom_min"
-            ) {
-
-                if (
-                    amount <
-                    rule.minAmount
-                ) {
-
-                    showToast(
-                        `L'importo minimo è ${money(
-                            rule.minAmount
-                        )}.`
-                    );
-
-                    return;
-
-                }
-
-            }
-
-
-            if (
-                !Number.isFinite(
-                    amount
-                ) ||
-                amount < 0
-            ) {
-
-                showToast(
-                    "Controlla l'importo."
-                );
-
-                return;
-
-            }
-
-
-            /* =========================
-               MODIFICA
-               ========================= */
 
             if (isEdit) {
 
                 fine.player =
                     player;
 
-                fine.ruleId =
-                    ruleId;
-
                 fine.category =
-                    rule.category;
+                    "Personalizzata";
 
                 fine.type =
-                    rule.type;
+                    description;
+
+                fine.ruleId =
+                    null;
+
+                fine.custom =
+                    true;
+
+                fine.quantity =
+                    null;
 
                 fine.date =
                     date;
 
                 fine.amount =
-                    amount;
-
-                fine.quantity =
-                    quantity;
-
-                fine.custom =
-                    false;
+                    customAmount;
 
                 fine.paid =
                     paid;
 
-            }
-
-
-            /* =========================
-               NUOVA MULTA
-               ========================= */
-
-            else {
+            } else {
 
                 state.fines.push({
 
@@ -4147,19 +3834,22 @@ if (
                     player,
 
                     category:
-                        rule.category,
+                        "Personalizzata",
 
                     type:
-                        rule.type,
+                        description,
 
-                    ruleId,
-
-                    quantity,
+                    ruleId:
+                        null,
 
                     custom:
-                        false,
+                        true,
 
-                    amount,
+                    quantity:
+                        null,
+
+                    amount:
+                        customAmount,
 
                     paid
 
@@ -4180,7 +3870,310 @@ if (
                     : "Multa aggiunta"
             );
 
-        };
+            return;
+        }
+
+
+        /* =========================
+           MULTA SQUADRA
+           ========================= */
+
+        if (
+            !isEdit &&
+            isTeamFine
+        ) {
+
+            const selectedPlayers =
+                multiPlayerSelect
+                    ? Array.from(
+                        multiPlayerSelect
+                            .selectedOptions
+                    ).map(
+                        option =>
+                            option.value
+                    )
+                    : [];
+
+
+            if (
+                selectedPlayers.length === 0 ||
+                !date
+            ) {
+
+                showToast(
+                    "Seleziona almeno un giocatore."
+                );
+
+                return;
+            }
+
+
+            selectedPlayers.forEach(
+                playerName => {
+
+                    state.fines.push({
+
+                        id:
+                            generateId(),
+
+                        date,
+
+                        player:
+                            playerName,
+
+                        category:
+                            rule.category,
+
+                        type:
+                            rule.type,
+
+                        ruleId:
+                            rule.id,
+
+                        quantity:
+                            null,
+
+                        custom:
+                            false,
+
+                        amount:
+                            1,
+
+                        paid
+
+                    });
+
+                }
+            );
+
+
+            saveState();
+
+            closeModal();
+
+            render();
+
+            showToast(
+                `${selectedPlayers.length} multe aggiunte`
+            );
+
+            return;
+        }
+
+
+        /* =========================
+           REGOLA NORMALE
+           ========================= */
+
+        const ruleId =
+            Number(
+                selectedRule
+            );
+
+
+        if (
+            !player ||
+            !rule ||
+            !date
+        ) {
+
+            showToast(
+                "Controlla i dati inseriti."
+            );
+
+            return;
+        }
+
+
+        let amount =
+            Number(
+                amountInput.value
+            );
+
+        let quantity =
+            null;
+
+
+        /* =========================
+           CALCOLO AL MINUTO
+           ========================= */
+
+        if (
+            rule.calculation ===
+            "per_minute"
+        ) {
+
+            quantity =
+                Number(
+                    quantityInput.value
+                ) || 0;
+
+            amount =
+                rule.baseAmount +
+                quantity *
+                rule.perMinute;
+        }
+
+
+        /* =========================
+           CALCOLO PER PEZZO
+           ========================= */
+
+        if (
+            rule.calculation ===
+            "per_piece"
+        ) {
+
+            quantity =
+                Number(
+                    quantityInput.value
+                ) || 0;
+
+
+            if (
+                quantity < 1
+            ) {
+
+                showToast(
+                    "Inserisci almeno 1 pezzo."
+                );
+
+                return;
+            }
+
+
+            amount =
+                quantity *
+                rule.perPiece;
+        }
+
+
+        /* =========================
+           IMPORTO MINIMO
+           ========================= */
+
+        if (
+            rule.calculation ===
+            "custom_min"
+        ) {
+
+            if (
+                amount <
+                rule.minAmount
+            ) {
+
+                showToast(
+                    `L'importo minimo è ${money(
+                        rule.minAmount
+                    )}.`
+                );
+
+                return;
+            }
+        }
+
+
+        if (
+            !Number.isFinite(
+                amount
+            ) ||
+            amount < 0
+        ) {
+
+            showToast(
+                "Controlla l'importo."
+            );
+
+            return;
+        }
+
+
+        /* =========================
+           MODIFICA
+           ========================= */
+
+        if (isEdit) {
+
+            fine.player =
+                player;
+
+            fine.ruleId =
+                ruleId;
+
+            fine.category =
+                rule.category;
+
+            fine.type =
+                rule.type;
+
+            fine.date =
+                date;
+
+            fine.amount =
+                amount;
+
+            fine.quantity =
+                quantity;
+
+            fine.custom =
+                false;
+
+            fine.paid =
+                paid;
+
+        }
+
+
+        /* =========================
+           NUOVA MULTA
+           ========================= */
+
+        else {
+
+            state.fines.push({
+
+                id:
+                    generateId(),
+
+                date,
+
+                player,
+
+                category:
+                    rule.category,
+
+                type:
+                    rule.type,
+
+                ruleId,
+
+                quantity,
+
+                custom:
+                    false,
+
+                amount,
+
+                paid
+
+            });
+
+        }
+
+
+        saveState();
+
+        closeModal();
+
+        render();
+
+        showToast(
+            isEdit
+                ? "Multa modificata"
+                : "Multa aggiunta"
+        );
+
+    };
 
 
     /* =========================

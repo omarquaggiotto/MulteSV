@@ -3256,7 +3256,21 @@ function openFineModal(id = null) {
 
         const selectedValue =
             ruleSelect.value;
+       const selectedRule =
+    state.rules.find(
+        item =>
+            String(item.id) ===
+            String(selectedValue)
+    );
 
+const isTeamFine =
+    selectedRule?.type ===
+    "Squadra perdente la partitella del giovedì";
+
+
+/* =========================
+   SELEZIONE GIOCATORI
+   ========================= */
 
 if (
     !isEdit &&
@@ -3265,54 +3279,32 @@ if (
 
     finePlayerContainer.innerHTML = `
 
-    <select
-        id="finePlayers"
-        multiple
-        size="1"
-    >
+        <select
+            id="finePlayers"
+            multiple
+        >
 
-        ${state.players
-            .map(
-                player => `
+            ${state.players
+                .map(
+                    player => `
 
-                    <option
-                        value="${escapeHtml(player)}"
-                    >
-                        ${escapeHtml(player)}
-                    </option>
+                        <option
+                            value="${escapeHtml(player)}"
+                        >
+                            ${escapeHtml(player)}
+                        </option>
 
-                `
-            )
-            .join("")}
+                    `
+                )
+                .join("")}
 
-    </select>
+        </select>
 
-`;
+        <small class="muted">
+            Tieni premuto CTRL (PC) o usa la selezione multipla su telefono.
+        </small>
 
-const multiPlayerDropdown =
-    document.getElementById(
-        "multiPlayerDropdown"
-    );
-
-if (
-    multiPlayerToggle &&
-    multiPlayerDropdown
-) {
-
-    multiPlayerToggle.onclick = () => {
-
-        const isOpen =
-            multiPlayerDropdown.style.display ===
-            "block";
-
-        multiPlayerDropdown.style.display =
-            isOpen
-                ? "none"
-                : "block";
-
-    };
-
-}
+    `;
 
 } else {
 
@@ -3718,12 +3710,20 @@ if (
         )
         .onclick = () => {
 
-            const player =
-                document
-                    .getElementById(
-                        "finePlayer"
-                    )
-                    .value;
+            const singlePlayerSelect =
+    document.getElementById(
+        "finePlayer"
+    );
+
+const multiPlayerSelect =
+    document.getElementById(
+        "finePlayers"
+    );
+
+const player =
+    singlePlayerSelect
+        ? singlePlayerSelect.value
+        : "";
 
 
             const date =
@@ -3744,6 +3744,13 @@ if (
 
             const selectedRule =
                 ruleSelect.value;
+           const isTeamFine =
+    state.rules.find(
+        item =>
+            String(item.id) ===
+            String(selectedRule)
+    )?.type ===
+    "Squadra perdente la partitella del giovedì";
 
 
             /* =========================
@@ -3865,6 +3872,87 @@ if (
 
             }
 
+           /* =========================
+   MULTA SQUADRA
+   ========================= */
+
+if (
+    !isEdit &&
+    isTeamFine
+) {
+
+    const selectedPlayers =
+        Array.from(
+            multiPlayerSelect?.selectedOptions || []
+        ).map(
+            option => option.value
+        );
+
+    if (
+        selectedPlayers.length === 0 ||
+        !date
+    ) {
+
+        showToast(
+            "Seleziona almeno un giocatore."
+        );
+
+        return;
+
+    }
+
+    const amount = 1;
+
+    selectedPlayers.forEach(
+        playerName => {
+
+            state.fines.push({
+
+                id:
+                    generateId(),
+
+                date,
+
+                player:
+                    playerName,
+
+                category:
+                    rule.category,
+
+                type:
+                    rule.type,
+
+                ruleId:
+                    rule.id,
+
+                quantity:
+                    null,
+
+                custom:
+                    false,
+
+                amount,
+
+                paid
+
+            });
+
+        }
+    );
+
+    saveState();
+
+    closeModal();
+
+    render();
+
+    showToast(
+        `${selectedPlayers.length} multe aggiunte`
+    );
+
+    return;
+
+}
 
             /* =========================
                REGOLA NORMALE

@@ -894,14 +894,9 @@ function renderHome() {
         state.fines.map(fine => fine.player)
     ).size;
 
-    const paymentPercentage =
-        total > 0
-            ? Math.round((paid / total) * 100)
-            : 0;
-
     const averageFine =
         fineCount > 0
-            ? total / fineCount
+            ? totalFines / fineCount
             : 0;
 
     const highestFine =

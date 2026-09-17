@@ -1,11 +1,12 @@
-const CACHE_NAME = "multefc-v14";
+const CACHE_NAME = "multefc-v15";
 const APP_SHELL = [
     "./",
     "./index.html",
     "./style.css",
     "./app.js",
     "./manifest.json",
-    "./assets/icon.svg"
+    "./assets/icon.svg",
+    "./vendor/html2canvas.min.js"
 ];
 
 self.addEventListener("install", event => {

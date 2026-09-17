@@ -2190,31 +2190,6 @@ body.modal-open .global-fab {
     min-height: 48px;
 }
 
-.payments-export-canvas {
-    position: fixed;
-    top: 0;
-    left: -10000px;
-    width: max-content;
-    min-width: 760px;
-    padding: 28px;
-    background: var(--bg);
-    color: var(--text);
-}
-
-.payments-export-canvas h1 {
-    margin: 0 0 5px;
-    font-size: 24px;
-}
-
-.payments-export-canvas > p {
-    margin: 0 0 18px;
-    color: var(--muted);
-}
-
-.payments-export-canvas .payments-table-card {
-    overflow: visible;
-}
-
 @media (max-width: 460px) {
     .payment-export-actions {
         grid-template-columns: 1fr;

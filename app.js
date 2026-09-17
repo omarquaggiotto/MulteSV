@@ -2757,45 +2757,52 @@ async function exportPaymentsImage(mode = "all") {
         return;
     }
 
-    const monthLabel = new Date(
-        `${selectedPaymentMonth}-01T12:00:00`
-    ).toLocaleDateString("it-IT", { month: "long", year: "numeric" });
-    const exportCard = table.cloneNode(true);
-    exportCard.removeAttribute("id");
+    const exportMode = mode === "due" ? "due" : "all";
+    const hiddenRows = [];
 
-    if (mode === "due") {
-        exportCard.querySelectorAll(".payment-row").forEach(row => {
+    if (exportMode === "due") {
+        table.querySelectorAll(".payment-row").forEach(row => {
             if (Number(row.dataset.paymentRemaining) <= 0) {
-                row.remove();
+                hiddenRows.push(row);
+                row.hidden = true;
             }
         });
 
-        if (!exportCard.querySelector(".payment-row")) {
+        if (!table.querySelector(".payment-row:not([hidden])")) {
+            hiddenRows.forEach(row => { row.hidden = false; });
             showToast("Nessun giocatore da esportare.");
             return;
         }
     }
 
-    const exportContainer = document.createElement("section");
-    exportContainer.className = "payments-export-canvas";
-    exportContainer.innerHTML = `
-        <h1>${mode === "due" ? "Da pagare" : "Pagamenti"} — ${escapeHtml(monthLabel)}</h1>
-        <p>${escapeHtml(state.team)} · ${escapeHtml(state.season)}</p>
-    `;
-    exportContainer.append(exportCard);
-    document.body.append(exportContainer);
+    const originalWidth = table.style.width;
+    const originalOverflow = table.style.overflow;
+    const exportWidth = Math.max(
+        table.scrollWidth,
+        table.querySelector(".payments-table-header")?.scrollWidth || 0,
+        table.clientWidth
+    );
+
+    // Cattura direttamente la tabella: è più affidabile su Safari/iPhone
+    // rispetto a un clone collocato fuori dalla viewport.
+    table.style.width = `${exportWidth}px`;
+    table.style.overflow = "visible";
 
     try {
 
         const canvas =
             await html2canvas(
-                exportContainer,
+                table,
                 {
                     backgroundColor:
                         getComputedStyle(
                             document.body
                         ).backgroundColor,
-                    scale: 2
+                    scale: 2,
+                    width: exportWidth,
+                    windowWidth: exportWidth,
+                    scrollX: 0,
+                    scrollY: 0
                 }
             );
 
@@ -2803,7 +2810,7 @@ async function exportPaymentsImage(mode = "all") {
             document.createElement("a");
 
         link.download =
-            `${mode === "due" ? "da-pagare" : "pagamenti"}-${selectedPaymentMonth}.png`;
+            `${exportMode === "due" ? "da-pagare" : "pagamenti"}-${selectedPaymentMonth}.png`;
 
         link.href =
             canvas.toDataURL(
@@ -2823,7 +2830,9 @@ async function exportPaymentsImage(mode = "all") {
             "Errore durante l'esportazione"
         );
     } finally {
-        exportContainer.remove();
+        table.style.width = originalWidth;
+        table.style.overflow = originalOverflow;
+        hiddenRows.forEach(row => { row.hidden = false; });
     }
 }
 
@@ -5536,7 +5545,7 @@ document
                 const index = state.players.indexOf(player);
 
 
-                if (!player) {
+                if (!player || index < 0) {
 
                     return;
 
@@ -5572,7 +5581,7 @@ document
    .getElementById("exportPaymentsImage")
     ?.addEventListener(
         "click",
-        exportPaymentsImage
+        () => exportPaymentsImage("all")
     );
 
    document

@@ -3211,23 +3211,17 @@ function renderRules() {
 
     return `
 
-        <div class="row wrap">
+        <div class="multario-intro">
 
-            <div>
+            <div class="multario-intro-copy">
 
-                <div class="small muted">
-                    Regolamento personalizzabile
-                </div>
+                <span class="multario-kicker">REGOLAMENTO SQUADRA</span>
 
-                <h2
-                    style="
-                        margin:
-                        4px
-                        0;
-                    "
-                >
-                    Multario
-                </h2>
+                <h2>Multario</h2>
+
+                <p>
+                    Regole, importi e calcoli pronti da usare quando aggiungi una multa.
+                </p>
 
             </div>
 
@@ -3241,17 +3235,6 @@ function renderRules() {
             </button>
 
         </div>
-
-
-        <p class="muted small">
-
-            Crea liberamente categorie,
-            tipologie e importi.
-
-            Le regole saranno disponibili
-            quando inserisci una multa.
-
-        </p>
 
 
         ${
@@ -3268,57 +3251,51 @@ function renderRules() {
 
                         return `
 
-                        <div
-                            class="section-head"
-                        >
+                        <section class="multario-category">
 
-                            <h2>
-                                ${escapeHtml(
-                                    category
-                                )}
-                            </h2>
+                            <div class="multario-category-head">
 
-                            <span
-                                class="badge neutral"
-                            >
-                                ${rules.length}
-                            </span>
+                                <div>
+                                    <span class="multario-category-badge ${getFineCategoryTone(category)}">
+                                        ${escapeHtml(category)}
+                                    </span>
 
-                        </div>
+                                    <p>${rules.length} ${rules.length === 1 ? "regola" : "regole"}</p>
+                                </div>
+
+                            </div>
 
 
-                        <div
-                            class="card table-like"
-                        >
+                        <div class="multario-rules">
 
                             ${
                                 rules
                                     .map(
                                         rule => `
 
-                                            <div
-                                                class="rule-row"
-                                            >
+                                            <article class="rule-row">
 
-                                                <div>
+                                                <div class="rule-row-copy">
 
-                                                    <strong>
+                                                    <strong class="rule-row-title">
                                                         ${escapeHtml(
                                                             rule.type
                                                         )}
                                                     </strong>
 
+                                                    <span class="rule-calculation">
+                                                        ${getRuleCalculation(rule) === "per_minute" ? "A minuti" : getRuleCalculation(rule) === "per_piece" ? "A quantità" : getRuleCalculation(rule) === "custom_min" ? "Importo personalizzato" : "Importo fisso"}
+                                                    </span>
+
                                                 </div>
 
 
-                                                <strong>
+                                                <strong class="rule-amount">
                                                     ${formatRuleAmount(rule)}
                                                 </strong>
 
 
-                                                <div
-                                                    class="row"
-                                                >
+                                                <div class="rule-actions">
 
                                                     <button
                                                         class="icon-mini"
@@ -3339,7 +3316,7 @@ function renderRules() {
 
                                                 </div>
 
-                                            </div>
+                                            </article>
 
                                         `
                                     )
@@ -3347,6 +3324,8 @@ function renderRules() {
                             }
 
                         </div>
+
+                        </section>
 
                     `;
                     }

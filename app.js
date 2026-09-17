@@ -4,6 +4,8 @@
    ========================================================= */
 
 const STORAGE_KEY = "multefc_v1";
+const ADMIN_USERNAME = "admin";
+const ADMIN_EMAIL = "admin@multefc.local";
 
 const SUPABASE_URL = "https://gzeyptkjdvrwzsjeijss.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_juzsgyE5TPcFwNxXZV0t8A_w3TOKMfj";
@@ -561,52 +563,41 @@ function openAuthModal() {
 
     openModal(
         "Accesso amministratore",
-                    `<div class="form">
+        `<div class="form">
                 <p class="muted">Accedi per modificare. La sessione resta memorizzata su questo dispositivo.</p>
-                <div class="field"><label>EMAIL</label><input id="authEmail" type="email" autocomplete="email" placeholder="nome@email.it"></div>
+                <div class="field"><label>UTENTE</label><input id="authUsername" type="text" autocomplete="username" placeholder="Utente"></div>
                 <div class="field"><label>PASSWORD</label><input id="authPassword" type="password" autocomplete="current-password" placeholder="Password"></div>
                 <div class="modal-actions">
-                    <button class="btn secondary" id="signUpButton" type="button">Crea account</button>
                     <button class="btn" id="signInButton" type="button">Accedi</button>
                 </div>
             </div>`
     );
 
     const getCredentials = () => ({
-        email: document.getElementById("authEmail").value.trim(),
+        username: document.getElementById("authUsername").value.trim().toLowerCase(),
         password: document.getElementById("authPassword").value
     });
 
     document.getElementById("signInButton").onclick = async () => {
-        const { email, password } = getCredentials();
-        const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
-        if (error) {
-            showToast(error.message);
+        const { username, password } = getCredentials();
+
+        if (username !== ADMIN_USERNAME || !password) {
+            showToast("Credenziali non valide.");
             return;
         }
+
+        const { error } = await supabaseClient.auth.signInWithPassword({
+            email: ADMIN_EMAIL,
+            password
+        });
+
+        if (error) {
+            showToast("Credenziali non valide.");
+            return;
+        }
+
         closeModal();
         showToast("Accesso effettuato.");
-    };
-
-    document.getElementById("signUpButton").onclick = async () => {
-        const { email, password } = getCredentials();
-        const { data, error } = await supabaseClient.auth.signUp({
-            email,
-            password,
-            options: {
-                emailRedirectTo: window.location.origin + window.location.pathname
-            }
-        });
-        if (error) {
-            showToast(error.message);
-            return;
-        }
-        if (data.session) {
-            closeModal();
-            showToast("Account creato: questo dispositivo è amministratore.");
-        } else {
-            showToast("Controlla l'email per confermare l'account.");
-        }
     };
 }
 

@@ -1573,7 +1573,7 @@ function renderHome() {
                             <div class="rank">
 
                                 <div class="rank-number">
-                                    ${index + 1}
+                                    ${index + 6}
                                 </div>
 
                                 <div class="avatar">

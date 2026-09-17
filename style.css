@@ -1671,15 +1671,20 @@ body.modal-open .global-fab {
 }
 
 .fine-row-main .row-left {
+    flex: 1;
     min-width: 0;
 }
 
 .fine-row-copy {
+    flex: 1;
     min-width: 0;
 }
 
 .fine-row-copy .player-history-link {
     display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .fine-row-type {
@@ -1693,8 +1698,8 @@ body.modal-open .global-fab {
 }
 
 .fine-row-meta {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
     gap: 7px;
     margin-top: 9px;
@@ -1714,11 +1719,16 @@ body.modal-open .global-fab {
 .fine-date {
     background: var(--surface-2);
     color: var(--muted);
+    white-space: nowrap;
 }
 
 .fine-category {
     background: color-mix(in srgb, var(--primary) 13%, var(--surface));
     color: var(--primary);
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .fine-tone-training { background: color-mix(in srgb, #16a34a 15%, var(--surface)); color: #15803d; }
@@ -1778,11 +1788,13 @@ body.modal-open .global-fab {
         margin-top: 2px;
         font-size: 12px;
         line-height: 1.25;
+        white-space: nowrap !important;
     }
 
     .fine-row-meta {
         gap: 5px;
         margin-top: 6px;
+        min-height: 20px;
     }
 
     .fine-category,

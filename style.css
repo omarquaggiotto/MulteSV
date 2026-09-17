@@ -2190,6 +2190,32 @@ body.modal-open .global-fab {
     min-height: 48px;
 }
 
+.export-preview {
+    display: grid;
+    gap: 12px;
+}
+
+.export-preview p {
+    margin: 0;
+}
+
+.export-preview img {
+    display: block;
+    width: 100%;
+    max-height: 52dvh;
+    object-fit: contain;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: #fff;
+}
+
+.export-preview .modal-actions .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+}
+
 @media (max-width: 460px) {
     .payment-export-actions {
         grid-template-columns: 1fr;

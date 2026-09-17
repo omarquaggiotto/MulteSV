@@ -2806,18 +2806,14 @@ async function exportPaymentsImage(mode = "all") {
                 }
             );
 
-        const link =
-            document.createElement("a");
-
-        link.download =
+        const fileName =
             `${exportMode === "due" ? "da-pagare" : "pagamenti"}-${selectedPaymentMonth}.png`;
 
-        link.href =
-            canvas.toDataURL(
-                "image/png"
-            );
-
-        link.click();
+        openExportPreview(
+            canvas.toDataURL("image/png"),
+            fileName,
+            exportMode === "due" ? "Da pagare" : "Pagamenti"
+        );
 
     } catch (error) {
 
@@ -2834,6 +2830,24 @@ async function exportPaymentsImage(mode = "all") {
         table.style.overflow = originalOverflow;
         hiddenRows.forEach(row => { row.hidden = false; });
     }
+}
+
+function openExportPreview(imageUrl, fileName, title) {
+    openModal(
+        `${title} — anteprima`,
+        `
+            <div class="export-preview">
+                <p class="muted">L'immagine è pronta. Da telefono puoi scaricarla oppure tenerla premuta per salvarla o condividerla.</p>
+                <img src="${imageUrl}" alt="${escapeHtml(title)} esportati">
+                <div class="modal-actions">
+                    <button class="btn secondary" id="closeExportPreview" type="button">Chiudi</button>
+                    <a class="btn" href="${imageUrl}" download="${escapeHtml(fileName)}">Scarica PNG</a>
+                </div>
+            </div>
+        `
+    );
+
+    document.getElementById("closeExportPreview").onclick = closeModal;
 }
 
 function openPlayerHistoryModal(player) {

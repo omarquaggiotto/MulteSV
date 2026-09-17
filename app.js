@@ -790,6 +790,17 @@ function formatRuleAmount(rule) {
     return money(rule.amount);
 }
 
+function getFineCategoryTone(category) {
+    const normalized = String(category || "").toLocaleLowerCase("it");
+
+    if (normalized.includes("allenamento")) return "fine-tone-training";
+    if (normalized.includes("partita")) return "fine-tone-match";
+    if (normalized.includes("materiale")) return "fine-tone-material";
+    if (normalized.includes("squadra")) return "fine-tone-team";
+    if (normalized.includes("comportamento")) return "fine-tone-behaviour";
+    return "fine-tone-default";
+}
+
 
 function formatDate(date) {
 
@@ -3114,9 +3125,9 @@ function renderFineRow(fine) {
 
     return `
 
-        <div class="list-item">
+        <article class="list-item fine-row-card">
 
-            <div class="row">
+            <div class="fine-row-main">
 
                 <div class="row-left">
 
@@ -3127,7 +3138,7 @@ function renderFineRow(fine) {
                     </div>
 
 
-                    <div>
+                    <div class="fine-row-copy">
 
                         <button
                             class="player-history-link"
@@ -3137,27 +3148,15 @@ function renderFineRow(fine) {
                             ${escapeHtml(fine.player)}
                         </button>
 
-                        <div class="small muted">
-
-                            ${escapeHtml(
-                                fine.category
-                            )}
-
-                            ·
-
-                            ${escapeHtml(
-                                fine.type
-                            )}
-
+                        <div class="fine-row-type">
+                            ${escapeHtml(fine.type)}
                         </div>
 
-
-                        <div class="small muted">
-
-                            ${formatDate(
-                                fine.date
-                            )}
-
+                        <div class="fine-row-meta">
+                            <span class="fine-category ${getFineCategoryTone(fine.category)}">
+                                ${escapeHtml(fine.category)}
+                            </span>
+                            <span class="fine-date">${formatDate(fine.date)}</span>
                         </div>
 
                     </div>
@@ -3165,30 +3164,12 @@ function renderFineRow(fine) {
                 </div>
 
 
-                <div
-                    style="
-                        text-align:right;
-                    "
-                >
-
-                    <div class="amount">
-                        ${money(
-                            fine.amount
-                        )}
-                    </div>
-
-                </div>
+                <div class="fine-row-amount">${money(fine.amount)}</div>
 
             </div>
 
 
-            <div
-                class="row"
-                style="
-                    justify-content:flex-end;
-                    margin-top:10px;
-                "
-            >
+            <div class="fine-row-actions">
 
                 <button
                     class="btn secondary"
@@ -3209,7 +3190,7 @@ function renderFineRow(fine) {
 
             </div>
 
-        </div>
+        </article>
 
     `;
 
@@ -3460,7 +3441,7 @@ function renderSettings() {
                     Salva impostazioni
                 </button>
 
-        </div>
+        </article>
 
 
         <!-- GIOCATORI -->

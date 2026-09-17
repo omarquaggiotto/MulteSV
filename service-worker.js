@@ -1,11 +1,11 @@
-const CACHE_NAME = "multefc-v17";
+const CACHE_NAME = "multefc-v19";
 const APP_SHELL = [
     "./",
     "./index.html",
     "./style.css",
     "./app.js",
     "./manifest.json",
-    "./assets/icon.svg",
+    "./assets/multe-sv-icon.png",
     "./vendor/html2canvas.min.js"
 ];
 

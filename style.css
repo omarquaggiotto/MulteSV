@@ -2190,6 +2190,12 @@ body.modal-open .global-fab {
     min-height: 48px;
 }
 
+.payment-export-actions .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
 .export-preview {
     display: grid;
     gap: 12px;
@@ -2333,6 +2339,73 @@ body.modal-open .global-fab {
     margin-top: 16px;
 }
 
+.home-income-card {
+    margin-top: 16px;
+}
+
+.data-management {
+    display: grid;
+    gap: 14px;
+}
+
+.data-section {
+    padding: 0;
+    overflow: hidden;
+}
+
+.data-section-heading {
+    padding: 17px 18px 15px;
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--border);
+}
+
+.data-section-heading h3,
+.data-section-heading p {
+    margin: 0;
+}
+
+.data-section-heading h3 {
+    font-size: 16px;
+}
+
+.data-section-heading p {
+    margin-top: 5px;
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.data-section-danger .data-section-heading {
+    background: color-mix(in srgb, var(--red) 10%, var(--surface-2));
+}
+
+.data-action-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 18px;
+    border-top: 1px solid var(--border);
+}
+
+.data-section-heading + .data-action-row {
+    border-top: 0;
+}
+
+.data-action-row > div {
+    min-width: 0;
+}
+
+.data-action-row .small {
+    margin-top: 4px;
+    line-height: 1.4;
+}
+
+.data-action-row .btn {
+    min-width: 118px;
+    white-space: nowrap;
+}
+
 .overdue-list {
     display: grid;
     gap: 7px;
@@ -2425,6 +2498,15 @@ body.modal-open .global-fab {
 @media (max-width: 420px) {
     .recipient-list {
         grid-template-columns: 1fr;
+    }
+
+    .data-action-row {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .data-action-row .btn {
+        width: 100%;
     }
 }
 

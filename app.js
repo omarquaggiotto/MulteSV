@@ -1856,7 +1856,7 @@ function renderHome() {
              BARRA INCASSI
              ================================================ -->
 
-        <div class="card">
+        <div class="card home-income-card">
 
             <div class="row">
 
@@ -2733,10 +2733,10 @@ function renderPayments() {
         </div>
 
         <div class="payment-export-actions">
-            <button id="exportPaymentsImage" class="primary-button" type="button">
+            <button id="exportPaymentsImage" class="btn" type="button">
                 🖼️ Esporta tabella completa
             </button>
-            <button id="exportDuePaymentsImage" class="btn secondary" type="button">
+            <button id="exportDuePaymentsImage" class="btn" type="button">
                 🖼️ Esporta solo da pagare
             </button>
         </div>
@@ -3393,141 +3393,68 @@ function renderSettings() {
         </div>
 
 
-        <div class="card">
+        <div class="data-management">
 
-            <div class="row wrap">
-
-                <div>
-
-                    <strong>
-                        Backup squadra
-                    </strong>
-
-                    <div class="small muted">
-                        Esporta tutte le impostazioni,
-                        regole e multe.
-                    </div>
-
+            <section class="card data-section">
+                <div class="data-section-heading">
+                    <h3>Backup</h3>
+                    <p>Salva o recupera una copia completa dei dati della squadra.</p>
                 </div>
 
-
-                <button
-                    class="btn secondary"
-                    id="exportData"
-                    type="button"
-                >
-                    Esporta backup
-                </button>
-
-            </div>
-
-
-            <div class="divider"></div>
-
-            <div class="row wrap">
-
-                <div>
-
-                    <strong>
-                        Nuova stagione
-                    </strong>
-
-                    <div class="small muted">
-                        Mantiene squadra, giocatori e Multario; azzera multe e pagamenti stagionali.
-                        Scarica prima un backup automatico.
+                <div class="data-action-row">
+                    <div>
+                        <strong>Esporta backup</strong>
+                        <div class="small muted">Include impostazioni, giocatori, regole, multe e pagamenti.</div>
                     </div>
-
+                    <button class="btn secondary" id="exportData" type="button">Esporta</button>
                 </div>
 
-                <button class="btn danger" id="resetSeason" type="button">
-                    Nuova stagione
-                </button>
-
-            </div>
-
-
-            <div class="divider"></div>
-
-
-            <div class="row wrap">
-
-                <div>
-
-                    <strong>
-                        Ripristina backup
-                    </strong>
-
-                    <div class="small muted">
-                        Importa un file JSON
-                        precedentemente esportato.
+                <div class="data-action-row">
+                    <div>
+                        <strong>Importa backup</strong>
+                        <div class="small muted">Recupera un file JSON esportato in precedenza.</div>
                     </div>
+                    <button class="btn secondary" id="importData" type="button">Importa</button>
+                </div>
+            </section>
 
+            <section class="card data-section">
+                <div class="data-section-heading">
+                    <h3>Stagione</h3>
+                    <p>Prepara la nuova stagione mantenendo squadra e Multario.</p>
                 </div>
 
-
-                <button
-                    class="btn secondary"
-                    id="importData"
-                    type="button"
-                >
-                    Importa
-                </button>
-
-            </div>
-
-
-            <div class="divider"></div>
-
-
-            <div class="row wrap">
-
-                <div>
-
-                    <strong>
-                        Ripristina demo
-                    </strong>
-
-                    <div class="small muted">
-                        Cancella i dati attuali
-                        e torna ai dati di esempio.
+                <div class="data-action-row">
+                    <div>
+                        <strong>Nuova stagione</strong>
+                        <div class="small muted">Azzera multe e pagamenti stagionali e scarica prima un backup automatico.</div>
                     </div>
+                    <button class="btn danger" id="resetSeason" type="button">Nuova stagione</button>
+                </div>
+            </section>
 
+            <section class="card data-section data-section-danger">
+                <div class="data-section-heading">
+                    <h3>Operazioni irreversibili</h3>
+                    <p>Usale soltanto se sei sicuro: i backup automatici restano disponibili per sicurezza.</p>
                 </div>
 
-
-                <button
-                    class="btn danger"
-                    id="resetData"
-                    type="button"
-                >
-                    Reset
-                </button>
-
-            </div>
-
-
-            <div class="divider"></div>
-
-
-            <div class="row wrap">
-
-                <div>
-
-                    <strong>
-                        Reset totale
-                    </strong>
-
-                    <div class="small muted">
-                        Riporta l'app ai dati iniziali. Richiede la conferma RESET e scarica prima un backup.
+                <div class="data-action-row">
+                    <div>
+                        <strong>Ripristina demo</strong>
+                        <div class="small muted">Cancella i dati attuali e torna ai dati di esempio.</div>
                     </div>
-
+                    <button class="btn danger" id="resetData" type="button">Reset demo</button>
                 </div>
 
-                <button class="btn danger" id="resetTotal" type="button">
-                    Reset totale
-                </button>
-
-            </div>
+                <div class="data-action-row">
+                    <div>
+                        <strong>Reset totale</strong>
+                        <div class="small muted">Riporta l'app allo stato iniziale. Richiede la conferma RESET.</div>
+                    </div>
+                    <button class="btn danger" id="resetTotal" type="button">Reset totale</button>
+                </div>
+            </section>
 
         </div>
 

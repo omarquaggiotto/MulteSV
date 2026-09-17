@@ -1,7 +1,7 @@
 {
-    "name": "MulteFC",
-    "short_name": "MulteFC",
-    "description": "Gestione multe e multario della squadra",
+    "name": "Multe SV",
+    "short_name": "Multe SV",
+    "description": "Gestione multe della squadra San Vitale",
     "start_url": "./index.html",
     "display": "standalone",
     "background_color": "#f4f6f9",
@@ -10,9 +10,9 @@
     "lang": "it",
     "icons": [
         {
-            "src": "assets/icon.svg",
-            "sizes": "any",
-            "type": "image/svg+xml",
+            "src": "assets/multe-sv-icon.png",
+            "sizes": "512x512",
+            "type": "image/png",
             "purpose": "any maskable"
         }
     ]

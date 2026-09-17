@@ -2003,6 +2003,18 @@ function renderHome() {
 function renderFines() {
 
     const allFines = state.fines || [];
+    const now = new Date();
+    const currentFineMonth = `${now.getFullYear()}-${String(
+        now.getMonth() + 1
+    ).padStart(2, "0")}`;
+    const previousFineDate = new Date(
+        now.getFullYear(),
+        now.getMonth() - 1,
+        1
+    );
+    const previousFineMonth = `${previousFineDate.getFullYear()}-${String(
+        previousFineDate.getMonth() + 1
+    ).padStart(2, "0")}`;
 
     const monthNames = [
         "Gennaio",
@@ -2245,6 +2257,30 @@ if (selectedFinePlayer !== "all") {
 
         </div>
 
+    </div>
+
+    <div class="fine-quick-filters" aria-label="Filtri rapidi multe">
+        <button
+            type="button"
+            data-fine-period="${currentFineMonth}"
+            class="${selectedMonth === currentFineMonth ? "active" : ""}"
+        >
+            Questo mese
+        </button>
+        <button
+            type="button"
+            data-fine-period="${previousFineMonth}"
+            class="${selectedMonth === previousFineMonth ? "active" : ""}"
+        >
+            Mese scorso
+        </button>
+        <button
+            type="button"
+            data-fine-period="all"
+            class="${selectedMonth === "all" ? "active" : ""}"
+        >
+            Tutta la stagione
+        </button>
     </div>
 
 
@@ -5174,6 +5210,15 @@ document
 
         render();
 
+    });
+
+document
+    .querySelectorAll("[data-fine-period]")
+    .forEach(button => {
+        button.addEventListener("click", () => {
+            selectedMonth = button.dataset.finePeriod;
+            render();
+        });
     });
 
 

@@ -2147,6 +2147,36 @@ body.modal-open .global-fab {
     gap: 9px;
 }
 
+.fine-quick-filters {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 2px 0 12px;
+    scrollbar-width: none;
+}
+
+.fine-quick-filters::-webkit-scrollbar {
+    display: none;
+}
+
+.fine-quick-filters button {
+    flex: 0 0 auto;
+    min-height: 38px;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--surface);
+    color: var(--text);
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.fine-quick-filters button.active {
+    border-color: var(--primary);
+    background: var(--primary);
+    color: #fff;
+}
+
 .payment-export-actions {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));

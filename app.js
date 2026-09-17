@@ -2743,68 +2743,128 @@ function renderPayments() {
     `;
 }
 
-async function exportPaymentsImage(mode = "all") {
-
-    const table =
-        document.getElementById(
-            "paymentsTableExport"
-        );
-
-    if (!table) {
-        showToast(
-            "Tabella non trovata"
-        );
-        return;
-    }
+function createPaymentsExportCanvas(mode = "all") {
 
     const exportMode = mode === "due" ? "due" : "all";
-    const hiddenRows = [];
+    const month = selectedPaymentMonth;
+    const players = getSortedPlayers()
+        .map(player => ({
+            player,
+            summary: getPlayerMonthSummary(player, month)
+        }))
+        .filter(entry =>
+            exportMode !== "due" || entry.summary.remaining > 0
+        );
 
-    if (exportMode === "due") {
-        table.querySelectorAll(".payment-row").forEach(row => {
-            if (Number(row.dataset.paymentRemaining) <= 0) {
-                hiddenRows.push(row);
-                row.hidden = true;
-            }
+    if (!players.length) {
+        return null;
+    }
+
+    // Canvas nativo: non dipende dal rendering HTML, quindi resta affidabile
+    // anche in Safari e nella PWA installata su iPhone.
+    const columns = [300, 145, 165, 135, 135, 165];
+    const labels = [
+        "Giocatore",
+        "Versato",
+        "Rimanente",
+        "Base",
+        "Multe",
+        "Totale"
+    ];
+    const padding = 44;
+    const titleHeight = 108;
+    const headerHeight = 46;
+    const rowHeight = 52;
+    const logicalWidth = columns.reduce((total, width) => total + width, 0) + padding * 2;
+    const logicalHeight = titleHeight + headerHeight + players.length * rowHeight + padding;
+    const pixelRatio = 2;
+    const canvas = document.createElement("canvas");
+
+    canvas.width = logicalWidth * pixelRatio;
+    canvas.height = logicalHeight * pixelRatio;
+
+    const context = canvas.getContext("2d");
+    context.scale(pixelRatio, pixelRatio);
+    context.textBaseline = "middle";
+
+    const monthLabel = new Date(`${month}-01T12:00:00`)
+        .toLocaleDateString("it-IT", { month: "long", year: "numeric" });
+    const title = `${exportMode === "due" ? "Da pagare" : "Pagamenti"} — ${monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1)}`;
+    const tableWidth = columns.reduce((total, width) => total + width, 0);
+    const tableLeft = padding;
+
+    context.fillStyle = "#f7f9fc";
+    context.fillRect(0, 0, logicalWidth, logicalHeight);
+
+    context.fillStyle = "#13213a";
+    context.font = "700 27px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+    context.fillText(title, tableLeft, 43);
+    context.fillStyle = "#5b677a";
+    context.font = "500 15px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+    context.fillText(
+        exportMode === "due"
+            ? "Solo i giocatori con un importo ancora da versare"
+            : "Riepilogo quote, multe e versamenti",
+        tableLeft,
+        74
+    );
+
+    context.fillStyle = "#203657";
+    context.fillRect(tableLeft, titleHeight, tableWidth, headerHeight);
+    context.font = "700 14px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+    context.fillStyle = "#ffffff";
+
+    let left = tableLeft;
+    labels.forEach((label, index) => {
+        context.fillText(label, left + 15, titleHeight + headerHeight / 2);
+        left += columns[index];
+    });
+
+    players.forEach(({ player, summary }, index) => {
+        const y = titleHeight + headerHeight + index * rowHeight;
+        const isEven = index % 2 === 0;
+
+        context.fillStyle = isEven ? "#ffffff" : "#eef3f9";
+        context.fillRect(tableLeft, y, tableWidth, rowHeight);
+        context.strokeStyle = "#d7e0ec";
+        context.lineWidth = 1;
+        context.strokeRect(tableLeft, y, tableWidth, rowHeight);
+
+        const values = [
+            player,
+            money(summary.paid),
+            money(summary.remaining),
+            money(summary.base),
+            money(summary.fines),
+            money(summary.total)
+        ];
+
+        left = tableLeft;
+        values.forEach((value, columnIndex) => {
+            context.font = columnIndex === 0
+                ? "650 16px system-ui, -apple-system, BlinkMacSystemFont, sans-serif"
+                : "600 16px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+            context.fillStyle = columnIndex === 2 && summary.remaining > 0
+                ? "#ba2a31"
+                : "#172236";
+            context.fillText(String(value), left + 15, y + rowHeight / 2);
+            left += columns[columnIndex];
         });
+    });
 
-        if (!table.querySelector(".payment-row:not([hidden])")) {
-            hiddenRows.forEach(row => { row.hidden = false; });
+    return canvas;
+}
+
+function exportPaymentsImage(mode = "all") {
+
+    try {
+        const exportMode = mode === "due" ? "due" : "all";
+        const canvas = createPaymentsExportCanvas(exportMode);
+
+        if (!canvas) {
             showToast("Nessun giocatore da esportare.");
             return;
         }
-    }
-
-    const originalWidth = table.style.width;
-    const originalOverflow = table.style.overflow;
-    const exportWidth = Math.max(
-        table.scrollWidth,
-        table.querySelector(".payments-table-header")?.scrollWidth || 0,
-        table.clientWidth
-    );
-
-    // Cattura direttamente la tabella: è più affidabile su Safari/iPhone
-    // rispetto a un clone collocato fuori dalla viewport.
-    table.style.width = `${exportWidth}px`;
-    table.style.overflow = "visible";
-
-    try {
-
-        const canvas =
-            await html2canvas(
-                table,
-                {
-                    backgroundColor:
-                        getComputedStyle(
-                            document.body
-                        ).backgroundColor,
-                    scale: 2,
-                    width: exportWidth,
-                    windowWidth: exportWidth,
-                    scrollX: 0,
-                    scrollY: 0
-                }
-            );
 
         const fileName =
             `${exportMode === "due" ? "da-pagare" : "pagamenti"}-${selectedPaymentMonth}.png`;
@@ -2814,21 +2874,9 @@ async function exportPaymentsImage(mode = "all") {
             fileName,
             exportMode === "due" ? "Da pagare" : "Pagamenti"
         );
-
     } catch (error) {
-
-        console.error(
-            "Errore esportazione immagine:",
-            error
-        );
-
-        showToast(
-            "Errore durante l'esportazione"
-        );
-    } finally {
-        table.style.width = originalWidth;
-        table.style.overflow = originalOverflow;
-        hiddenRows.forEach(row => { row.hidden = false; });
+        console.error("Errore esportazione immagine:", error);
+        showToast("Errore durante l'esportazione");
     }
 }
 

@@ -1490,7 +1490,7 @@ function renderHome() {
        ULTIME MULTE
        ===================================================== */
 
-    const latest = sortFinesByLatestEntry(state.fines).slice(0, 5);
+    const latest = sortFinesByDateThenEntry(state.fines).slice(0, 5);
 
 
     /* =====================================================
@@ -2126,10 +2126,10 @@ function getFineEntryTime(fine) {
     return Number.isFinite(numericId) ? numericId : 0;
 }
 
-function sortFinesByLatestEntry(fines) {
+function sortFinesByDateThenEntry(fines) {
     return [...fines].sort((left, right) =>
-        getFineEntryTime(right) - getFineEntryTime(left) ||
-        String(right.date || "").localeCompare(String(left.date || ""))
+        String(right.date || "").localeCompare(String(left.date || "")) ||
+        getFineEntryTime(right) - getFineEntryTime(left)
     );
 }
 
@@ -2185,7 +2185,7 @@ if (fineSearchQuery.trim()) {
        ORDINAMENTO
        ===================================================== */
 
-    const sortedFines = sortFinesByLatestEntry(fines);
+    const sortedFines = sortFinesByDateThenEntry(fines);
 
 
     /* =====================================================

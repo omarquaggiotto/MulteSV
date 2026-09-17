@@ -886,6 +886,21 @@ function generateId() {
 
 }
 
+function getFineEntryTime(fine) {
+    const createdTime = new Date(fine?.createdAt || "").getTime();
+    if (Number.isFinite(createdTime) && createdTime > 0) return createdTime;
+
+    const numericId = Number(fine?.id);
+    return Number.isFinite(numericId) ? numericId : 0;
+}
+
+function sortFinesByDateThenEntry(fines) {
+    return [...fines].sort((left, right) =>
+        String(right.date || "").localeCompare(String(left.date || "")) ||
+        getFineEntryTime(right) - getFineEntryTime(left)
+    );
+}
+
 
 function initials(name) {
 
@@ -2116,21 +2131,6 @@ if (selectedFinePlayer !== "all") {
         fine.player === selectedFinePlayer
     );
 
-}
-
-function getFineEntryTime(fine) {
-    const createdTime = new Date(fine?.createdAt || "").getTime();
-    if (Number.isFinite(createdTime) && createdTime > 0) return createdTime;
-
-    const numericId = Number(fine?.id);
-    return Number.isFinite(numericId) ? numericId : 0;
-}
-
-function sortFinesByDateThenEntry(fines) {
-    return [...fines].sort((left, right) =>
-        String(right.date || "").localeCompare(String(left.date || "")) ||
-        getFineEntryTime(right) - getFineEntryTime(left)
-    );
 }
 
 if (fineSearchQuery.trim()) {

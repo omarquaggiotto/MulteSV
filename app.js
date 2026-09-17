@@ -4,6 +4,7 @@
    ========================================================= */
 
 const STORAGE_KEY = "multefc_v1";
+const THEME_STORAGE_KEY = "multefc_theme_v1";
 const ADMIN_USERNAME = "admin";
 const ADMIN_EMAIL = "admin@multefc.local";
 
@@ -282,11 +283,13 @@ rules: [
    ========================================================= */
 
 let state = loadState();
+let deviceTheme = getDeviceTheme(state.theme);
 
 let currentPage = "home";
 let selectedMonth = "all";
 let selectedPaymentMonth = "2026-08";
 let selectedFinePlayer = "all";
+let showAllRanking = false;
 
 
 /* =========================================================
@@ -404,9 +407,15 @@ function queueCloudSave() {
 function applyAccessMode() {
     const canEdit = isAdmin && navigator.onLine;
 
+    const offlineIndicator = document.getElementById("offlineIndicator");
+    if (offlineIndicator) {
+        offlineIndicator.hidden = navigator.onLine;
+    }
+
     document.body.classList.toggle("is-admin", isAdmin);
 
     const adminControls = [
+        "#globalAddFine",
         "#addFine",
         "#addFineEmpty",
         "[data-edit-fine]",
@@ -473,7 +482,7 @@ async function loadCloudState() {
 
     if (error) {
         console.error("Errore caricamento online:", error);
-        return false;
+        return null;
     }
 
     if (data?.data && Object.keys(data.data).length) {
@@ -520,7 +529,7 @@ async function initializeCloud() {
 
     await refreshAccess();
     const hasCloudState = await loadCloudState();
-    cloudReady = true;
+    cloudReady = hasCloudState !== null;
 
     if (isAdmin && !hasCloudState) {
         queueCloudSave();
@@ -528,7 +537,10 @@ async function initializeCloud() {
 
     subscribeToCloud();
 
-    window.addEventListener("online", () => {
+    window.addEventListener("online", async () => {
+        const refreshed = await loadCloudState();
+        cloudReady = refreshed !== null;
+        await refreshAccess();
         render();
         showToast("Connessione ristabilita.");
     });
@@ -545,7 +557,7 @@ async function initializeCloud() {
         setTimeout(async () => {
             await refreshAccess();
             const hasData = await loadCloudState();
-            cloudReady = true;
+            cloudReady = hasData !== null;
             if (isAdmin && !hasData) queueCloudSave();
             render();
         }, 0);
@@ -632,6 +644,15 @@ function money(value) {
         }
     ).format(value);
 
+}
+
+function getDeviceTheme(fallback = "light") {
+    const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+    return savedTheme === "dark" || savedTheme === "light"
+        ? savedTheme
+        : fallback === "dark"
+            ? "dark"
+            : "light";
 }
 
 const PREFERRED_CATEGORY_ORDER = [
@@ -1142,7 +1163,7 @@ function applyTheme() {
 
     document.documentElement
         .dataset.theme =
-            state.theme === "dark"
+            deviceTheme === "dark"
                 ? "dark"
                 : "light";
 
@@ -1154,7 +1175,7 @@ function applyTheme() {
     if (button) {
 
         button.textContent =
-            state.theme === "dark"
+            deviceTheme === "dark"
                 ? "🌙"
                 : "☀️";
 
@@ -1313,6 +1334,28 @@ function renderHome() {
 
     const unpaid = Math.max(0, total - totalPaid);
 
+    // Dal giorno 15 diventa esigibile il mese precedente.
+    const overdueReference = today.getDate() >= 15
+        ? new Date(today.getFullYear(), today.getMonth() - 1, 1)
+        : null;
+    const overdueMonth = overdueReference
+        ? `${overdueReference.getFullYear()}-${String(
+            overdueReference.getMonth() + 1
+        ).padStart(2, "0")}`
+        : null;
+    const overduePlayers = overdueMonth && paymentMonths.includes(overdueMonth)
+        ? getSortedPlayers().map(player => ({
+            player,
+            summary: getPlayerMonthSummary(player, overdueMonth)
+        })).filter(item => item.summary.remaining > 0)
+        : [];
+    const overdueMonthLabel = overdueMonth
+        ? new Date(`${overdueMonth}-01T12:00:00`).toLocaleDateString(
+            "it-IT",
+            { month: "long", year: "numeric" }
+        )
+        : "";
+
     const paymentPercentage =
         total > 0
             ? Math.round((totalPaid / total) * 100)
@@ -1368,12 +1411,12 @@ function renderHome() {
         .filter(player => player.fines > 0)
         .sort(
             (a, b) =>
-                b.amount - a.amount
+                b.amount - a.amount || compareItalian(a.player, b.player)
         );
 
 
     const podium =
-        ranking.slice(0, 3);
+        ranking.slice(0, 5);
 
 
     /* =====================================================
@@ -1425,7 +1468,7 @@ function renderHome() {
                         <div class="rank">
 
                             <div class="rank-number">
-                                ${positions[index]}
+                                ${positions[index] || `${index + 1}°`}
                             </div>
 
                             <div class="avatar">
@@ -1491,7 +1534,7 @@ function renderHome() {
 
     const rankingHtml =
         ranking.length
-            ? ranking
+            ? ranking.slice(5)
                 .map(
                     (player, index) => {
 
@@ -1761,6 +1804,37 @@ function renderHome() {
         </div>
 
 
+        ${
+            overdueMonth
+                ? `
+                    <div class="card overdue-card">
+                        <div class="row">
+                            <div>
+                                <strong>⚠ Insoluti di ${escapeHtml(overdueMonthLabel)}</strong>
+                                <div class="small muted">Dal 15 del mese successivo</div>
+                            </div>
+                            <strong>${overduePlayers.length}</strong>
+                        </div>
+                        ${
+                            overduePlayers.length
+                                ? `
+                                    <div class="overdue-list">
+                                        ${overduePlayers.map(item => `
+                                            <div class="overdue-row">
+                                                <span>${escapeHtml(item.player)}</span>
+                                                <strong>${money(item.summary.remaining)}</strong>
+                                            </div>
+                                        `).join("")}
+                                    </div>
+                                `
+                                : `<p class="small muted">Nessun insoluto per il mese di riferimento.</p>`
+                        }
+                    </div>
+                `
+                : ""
+        }
+
+
         <!-- ================================================
              BARRA INCASSI
              ================================================ -->
@@ -1838,7 +1912,7 @@ function renderHome() {
 
 
         ${
-            ranking.length > 3
+            ranking.length > 5
                 ?
 
             `
@@ -1846,17 +1920,20 @@ function renderHome() {
                 <div class="section-head">
 
                     <h2>
-                        📊 Classifica completa
+                        📊 Classifica
                     </h2>
 
-                </div>
-
-
-                <div class="card list">
-
-                    ${rankingHtml}
+                    <button class="btn secondary" id="toggleRanking" type="button">
+                        ${showAllRanking ? "Mostra meno" : "Mostra tutti"}
+                    </button>
 
                 </div>
+
+                ${
+                    showAllRanking
+                        ? `<div class="card list">${rankingHtml}</div>`
+                        : ""
+                }
 
             `
 
@@ -4992,6 +5069,10 @@ document
                 openFineModal()
         );
 
+    document
+        .getElementById("globalAddFine")
+        .onclick = openFineModal;
+
 
     document
         .getElementById(
@@ -5023,6 +5104,13 @@ document
 
             }
         );
+
+    document
+        .getElementById("toggleRanking")
+        ?.addEventListener("click", () => {
+            showAllRanking = !showAllRanking;
+            render();
+        });
 
 
 
@@ -5655,13 +5743,12 @@ document
         "click",
         () => {
 
-            state.theme =
-                state.theme === "dark"
+            deviceTheme =
+                deviceTheme === "dark"
                     ? "light"
                     : "dark";
 
-
-            saveState();
+            localStorage.setItem(THEME_STORAGE_KEY, deviceTheme);
 
             applyTheme();
 

@@ -1092,6 +1092,35 @@ h3 {
     isolation: isolate;
 }
 
+.global-fab {
+    position: fixed;
+    right: max(18px, calc(env(safe-area-inset-right) + 14px));
+    bottom: calc(94px + env(safe-area-inset-bottom));
+    z-index: 10000;
+    display: grid;
+    width: 56px;
+    height: 56px;
+    place-items: center;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: var(--primary);
+    color: #fff;
+    box-shadow: 0 12px 26px rgba(37, 99, 235, .36);
+    font-size: 32px;
+    font-weight: 400;
+    line-height: 1;
+    touch-action: manipulation;
+}
+
+.global-fab:active {
+    transform: scale(.96);
+}
+
+body.modal-open .global-fab {
+    display: none;
+}
+
 .nav-button {
 
     display: grid;
@@ -2105,6 +2134,17 @@ h3 {
     gap: 9px;
 }
 
+.offline-indicator {
+    padding: 6px 9px;
+    border: 1px solid color-mix(in srgb, var(--yellow) 45%, var(--border));
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--yellow) 12%, var(--surface));
+    color: var(--yellow);
+    font-size: 11px;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
 .auth-button {
     min-height: 38px;
     padding: 8px 12px;
@@ -2132,6 +2172,14 @@ h3 {
         min-height: 36px;
         padding: 7px 10px;
         font-size: 12px;
+    }
+
+    .offline-indicator {
+        max-width: 92px;
+        overflow: hidden;
+        padding: 5px 7px;
+        font-size: 10px;
+        text-overflow: ellipsis;
     }
 }
 
@@ -2174,6 +2222,28 @@ h3 {
     background: var(--surface-2);
     color: var(--muted);
     line-height: 1.4;
+}
+
+.overdue-card {
+    margin-top: 16px;
+}
+
+.overdue-list {
+    display: grid;
+    gap: 7px;
+    margin-top: 13px;
+}
+
+.overdue-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 9px 0;
+    border-top: 1px solid var(--border);
+}
+
+.overdue-row strong {
+    color: var(--red);
 }
 
 @media (max-width: 420px) {

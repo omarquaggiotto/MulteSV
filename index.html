@@ -17,7 +17,7 @@
 
     <link
         rel="stylesheet"
-        href="style.css?v=desktop-16"
+        href="style.css?v=ux-19"
     >
 
     <link
@@ -47,6 +47,9 @@
             </div>
 
             <div class="topbar-actions">
+                <span id="offlineIndicator" class="offline-indicator" hidden>
+                    Offline · sola lettura
+                </span>
                 <button id="authButton" class="auth-button" type="button">Accedi</button>
                 <button
                     id="themeButton"
@@ -126,7 +129,17 @@
         <span class="nav-label">Impostazioni</span>
     </button>
 
-    </nav>
+        </nav>
+
+        <button
+            id="globalAddFine"
+            class="global-fab"
+            type="button"
+            aria-label="Nuova multa"
+            title="Nuova multa"
+        >
+            +
+        </button>
 
     </div>
 
@@ -166,7 +179,7 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="app.js?v=team-fine-18"></script>
+    <script src="app.js?v=ux-19"></script>
 
 </body>
 </html>

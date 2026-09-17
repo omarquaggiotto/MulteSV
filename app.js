@@ -378,6 +378,21 @@ function saveState() {
 
 }
 
+function canMutate() {
+    return isAdmin && navigator.onLine;
+}
+
+function requireOnlineAdmin() {
+    if (canMutate()) return true;
+
+    showToast(
+        navigator.onLine
+            ? "Devi accedere come amministratore."
+            : "Offline: l'app è in sola lettura."
+    );
+    return false;
+}
+
 function saveLocalState() {
     localStorage.setItem(
         STORAGE_KEY,
@@ -405,7 +420,7 @@ function queueCloudSave() {
 }
 
 function applyAccessMode() {
-    const canEdit = isAdmin && navigator.onLine;
+    const canEdit = canMutate();
 
     const offlineIndicator = document.getElementById("offlineIndicator");
     if (offlineIndicator) {
@@ -427,7 +442,9 @@ function applyAccessMode() {
         "[data-delete-player]",
         "#saveSettings",
         "#importData",
-        "#resetData"
+        "#resetData",
+        "#resetSeason",
+        "#resetTotal"
     ];
 
     document.querySelectorAll(adminControls.join(",")).forEach(control => {
@@ -3300,6 +3317,30 @@ function renderSettings() {
 
             <div class="divider"></div>
 
+            <div class="row wrap">
+
+                <div>
+
+                    <strong>
+                        Nuova stagione
+                    </strong>
+
+                    <div class="small muted">
+                        Mantiene squadra, giocatori e Multario; azzera multe e pagamenti stagionali.
+                        Scarica prima un backup automatico.
+                    </div>
+
+                </div>
+
+                <button class="btn danger" id="resetSeason" type="button">
+                    Nuova stagione
+                </button>
+
+            </div>
+
+
+            <div class="divider"></div>
+
 
             <div class="row wrap">
 
@@ -3353,6 +3394,30 @@ function renderSettings() {
                     type="button"
                 >
                     Reset
+                </button>
+
+            </div>
+
+
+            <div class="divider"></div>
+
+
+            <div class="row wrap">
+
+                <div>
+
+                    <strong>
+                        Reset totale
+                    </strong>
+
+                    <div class="small muted">
+                        Riporta l'app ai dati iniziali. Richiede la conferma RESET e scarica prima un backup.
+                    </div>
+
+                </div>
+
+                <button class="btn danger" id="resetTotal" type="button">
+                    Reset totale
                 </button>
 
             </div>
@@ -3450,6 +3515,8 @@ function closeModal() {
    ========================================================= */
 
 function openFineModal(id = null) {
+
+    if (!requireOnlineAdmin()) return;
 
     const fine = id
         ? state.fines.find(item => item.id === id)
@@ -4754,6 +4821,8 @@ document
 
 function openRuleModal(id = null) {
 
+    if (!requireOnlineAdmin()) return;
+
     const rule = id
         ? state.rules.find(item => item.id === id)
         : null;
@@ -4932,6 +5001,8 @@ function openRuleModal(id = null) {
    ========================================================= */
 
 function openPlayerModal() {
+
+    if (!requireOnlineAdmin()) return;
 
     openModal(
 
@@ -5237,6 +5308,8 @@ document
 
             button.onclick = () => {
 
+                if (!requireOnlineAdmin()) return;
+
                 const id =
                     Number(
                         button.dataset
@@ -5326,6 +5399,8 @@ document
 
             button.onclick = () => {
 
+                if (!requireOnlineAdmin()) return;
+
                 const id =
                     Number(
                         button.dataset
@@ -5389,6 +5464,8 @@ document
         .forEach(button => {
 
             button.onclick = () => {
+
+                if (!requireOnlineAdmin()) return;
 
                 const player = button.dataset.deletePlayer;
                 const index = state.players.indexOf(player);
@@ -5458,6 +5535,8 @@ document
         ?.addEventListener(
             "click",
             () => {
+
+                if (!requireOnlineAdmin()) return;
 
                 const team =
                     document
@@ -5547,6 +5626,14 @@ document
             "click",
             resetData
         );
+
+    document
+        .getElementById("resetSeason")
+        ?.addEventListener("click", resetSeason);
+
+    document
+        .getElementById("resetTotal")
+        ?.addEventListener("click", resetTotal);
 /* =========================
    PAGAMENTI
    ========================= */
@@ -5560,6 +5647,11 @@ document
         input.addEventListener(
             "change",
             event => {
+
+                if (!requireOnlineAdmin()) {
+                    render();
+                    return;
+                }
 
                 const player =
                     event.target.dataset
@@ -5608,6 +5700,13 @@ document
 
 function exportBackup() {
 
+    downloadBackup("multefc-backup");
+    showToast("Backup esportato");
+
+}
+
+function downloadBackup(prefix) {
+
     const data =
         JSON.stringify(
             state,
@@ -5642,7 +5741,7 @@ function exportBackup() {
 
 
     link.download =
-        `multefc-backup-${new Date()
+        `${prefix}-${new Date()
             .toISOString()
             .slice(0, 10)}.json`;
 
@@ -5662,11 +5761,6 @@ function exportBackup() {
         url
     );
 
-
-    showToast(
-        "Backup esportato"
-    );
-
 }
 
 
@@ -5679,8 +5773,13 @@ document
         "importFile"
     )
     .addEventListener(
-        "change",
-        event => {
+    "change",
+    event => {
+
+        if (!requireOnlineAdmin()) {
+            event.target.value = "";
+            return;
+        }
 
             const file =
                 event.target.files[0];
@@ -5762,7 +5861,49 @@ document
    RESET
    ========================================================= */
 
+function resetSeason() {
+    if (!requireOnlineAdmin()) return;
+
+    const confirmed = confirm(
+        "Avviare una nuova stagione?\n\n" +
+        "Saranno azzerate multe e pagamenti. Giocatori e Multario resteranno invariati."
+    );
+
+    if (!confirmed) return;
+
+    downloadBackup("multefc-backup-prima-nuova-stagione");
+    state = {
+        ...state,
+        fines: [],
+        payments: {}
+    };
+    saveState();
+    render();
+    showToast("Nuova stagione avviata. Backup scaricato.");
+}
+
+function resetTotal() {
+    if (!requireOnlineAdmin()) return;
+
+    const code = prompt(
+        "Operazione irreversibile. Verrà scaricato un backup automatico.\n\nDigita RESET per continuare:"
+    );
+
+    if (code !== "RESET") {
+        showToast("Reset totale annullato.");
+        return;
+    }
+
+    downloadBackup("multefc-backup-prima-reset-totale");
+    state = structuredClone(defaultState);
+    saveState();
+    render();
+    showToast("Reset totale eseguito. Backup scaricato.");
+}
+
 function resetData() {
+
+    if (!requireOnlineAdmin()) return;
 
     const confirmed =
         confirm(
@@ -5778,6 +5919,8 @@ function resetData() {
         return;
 
     }
+
+    downloadBackup("multefc-backup-prima-ripristino-demo");
 
 
     state =

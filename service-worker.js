@@ -1,4 +1,4 @@
-const CACHE_NAME = "multefc-v19";
+const CACHE_NAME = "multefc-v20";
 const APP_SHELL = [
     "./",
     "./index.html",
@@ -45,8 +45,25 @@ self.addEventListener("fetch", event => {
         return;
     }
 
+    // CSS e JavaScript con ?v= devono essere aggiornati online: la cache
+    // resta solo il fallback se manca la connessione, senza bloccare le novità.
+    if (url.searchParams.has("v")) {
+        event.respondWith(
+            fetch(request)
+                .then(response => {
+                    if (response.ok) {
+                        caches.open(CACHE_NAME)
+                            .then(cache => cache.put(request, response.clone()));
+                    }
+                    return response;
+                })
+                .catch(() => caches.match(request, { ignoreSearch: true }))
+        );
+        return;
+    }
+
     event.respondWith(
-        caches.match(request, { ignoreSearch: true })
+        caches.match(request)
             .then(cached => cached || fetch(request))
     );
 });

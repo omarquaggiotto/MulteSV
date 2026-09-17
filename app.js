@@ -2498,29 +2498,6 @@ if (fineSearchQuery.trim()) {
     </div>
 
 
-    <div class="stat-card">
-
-        <span>
-            Media multa
-        </span>
-
-        <strong>
-            ${
-                fines.length > 0
-                    ? money(
-                        total /
-                        fines.length
-                    )
-                    : money(0)
-            }
-        </strong>
-
-        <small>
-            Importo medio
-        </small>
-
-    </div>
-
 </div>
 
         <!-- ================================================

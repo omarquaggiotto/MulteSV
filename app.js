@@ -423,8 +423,7 @@ function applyAccessMode() {
         "[data-delete-player]",
         "#saveSettings",
         "#importData",
-        "#resetData",
-        '[data-page="settings"]'
+        "#resetData"
     ];
 
     document.querySelectorAll(adminControls.join(",")).forEach(control => {
@@ -4969,7 +4968,7 @@ function bindPageEvents() {
             button.onclick = () => {
 
                 if (button.dataset.page === "settings" && !isAdmin) {
-                    openAuthModal();
+                    showToast("Per aprire Impostazioni devi accedere come amministratore.");
                     return;
                 }
 

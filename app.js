@@ -3194,6 +3194,8 @@ function openFineModal(id = null) {
        ========================= */
 
     const CUSTOM_RULE_ID = "custom";
+    const TEAM_CUSTOM_RULE_ID = "team_custom";
+    const TEAM_CUSTOM_CATEGORY = "team_custom_category";
 
 
     /* =========================
@@ -3296,6 +3298,10 @@ function openFineModal(id = null) {
 
                 <div class="fine-select-control" id="fineCategoryControl">
 <select id="fineCategory">
+
+                    <option value="${TEAM_CUSTOM_CATEGORY}">
+                        👥 Multa di squadra
+                    </option>
 
                     ${
                         categories
@@ -3703,6 +3709,10 @@ function openFineModal(id = null) {
             String(selectedValue)
     );
 
+const isTeamCustomFine =
+    selectedValue ===
+    TEAM_CUSTOM_RULE_ID;
+
 const isTeamFine =
     selectedRule?.type ===
     "Squadra perdente la partitella del giovedì";
@@ -3722,6 +3732,24 @@ if (rememberedPlayer) {
 }
 
 if (
+    !isEdit &&
+    isTeamCustomFine &&
+    !document.getElementById("teamFinePlayersNotice")
+) {
+
+    finePlayerContainer.innerHTML = `
+
+        <div
+            class="muted"
+            id="teamFinePlayersNotice"
+            style="padding:16px 0;"
+        >
+            👥 L’importo verrà assegnato automaticamente a tutti i giocatori della rosa.
+        </div>
+
+    `;
+
+} else if (
     !isEdit &&
     isTeamFine &&
     !document.getElementById("finePlayers")
@@ -3809,6 +3837,30 @@ if (
         /* =========================
            MULTA PERSONALIZZATA
            ========================= */
+
+        if (
+            selectedValue ===
+            TEAM_CUSTOM_RULE_ID
+        ) {
+
+            customDescriptionField.style.display =
+                "block";
+
+            quantityField.style.display =
+                "none";
+
+            amountInput.disabled =
+                false;
+
+            amountInput.min =
+                "0";
+
+            amountInput.value =
+                "";
+
+            return;
+
+        }
 
         if (
             selectedValue ===
@@ -4008,12 +4060,18 @@ if (
         const category =
             categorySelect.value;
 
+        const isTeamCategory =
+            category ===
+            TEAM_CUSTOM_CATEGORY;
+
         const rules =
-            state.rules.filter(
-                rule =>
-                    rule.category ===
-                    category
-            );
+            isTeamCategory
+                ? []
+                : state.rules.filter(
+                    rule =>
+                        rule.category ===
+                        category
+                );
 
         ruleSelect.innerHTML =
             '<option value="">Seleziona il tipo di multa</option>' +
@@ -4036,20 +4094,33 @@ if (
                     `
                 )
                 .join("") +
-            `
+            (
+                isTeamCategory
+                    ? `
 
-                <option value="${CUSTOM_RULE_ID}">
-                    ✏️ Multa personalizzata
-                </option>
+                        <option value="${TEAM_CUSTOM_RULE_ID}">
+                            👥 Multa di squadra personalizzata
+                        </option>
 
-            `;
+                    `
+                    : `
 
-        ruleSelect.value = "";
+                        <option value="${CUSTOM_RULE_ID}">
+                            ✏️ Multa personalizzata
+                        </option>
+
+                    `
+            );
+
+        ruleSelect.value =
+            isTeamCategory
+                ? TEAM_CUSTOM_RULE_ID
+                : "";
+
         refreshRuleMenu();
         updateFineInterface();
 
     }
-
 
     /* =========================
        CAMBIO CATEGORIA
@@ -4190,6 +4261,10 @@ document
                     String(selectedRule)
             );
 
+        const isTeamCustomFine =
+            selectedRule ===
+            TEAM_CUSTOM_RULE_ID;
+
         const isTeamFine =
             rule?.type ===
             "Squadra perdente la partitella del giovedì";
@@ -4307,6 +4382,94 @@ document
 
 
         /* =========================
+           MULTA DI SQUADRA PERSONALIZZATA
+           ========================= */
+
+        if (
+            !isEdit &&
+            isTeamCustomFine
+        ) {
+
+            const description =
+                customDescription.value.trim();
+
+            const customAmount =
+                Number(
+                    amountInput.value
+                );
+
+            if (
+                state.players.length === 0 ||
+                !date ||
+                !description ||
+                !Number.isFinite(
+                    customAmount
+                ) ||
+                customAmount < 0
+            ) {
+
+                showToast(
+                    "Controlla descrizione, data e importo."
+                );
+
+                return;
+
+            }
+
+            state.players.forEach(
+                playerName => {
+
+                    state.fines.push({
+
+                        id:
+                            generateId(),
+
+                        date,
+
+                        player:
+                            playerName,
+
+                        category:
+                            "Squadra",
+
+                        type:
+                            description,
+
+                        ruleId:
+                            null,
+
+                        custom:
+                            true,
+
+                        team:
+                            true,
+
+                        quantity:
+                            null,
+
+                        amount:
+                            customAmount
+
+                    });
+
+                }
+            );
+
+            saveState();
+
+            closeModal();
+
+            render();
+
+            showToast(
+                `Multa di squadra aggiunta a ${state.players.length} giocatori`
+            );
+
+            return;
+        }
+
+
+                /* =========================
            MULTA SQUADRA
            ========================= */
 

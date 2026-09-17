@@ -2746,34 +2746,28 @@ function renderPayments() {
 
         <div class="payment-summary-grid">
 
-            <div class="card payment-summary-card">
-                <span>
-                    Totale da incassare
-                </span>
-
-                <strong>
-                    ${money(totalDue)}
-                </strong>
+            <div class="card payment-summary-card payment-summary-due">
+                <span class="payment-summary-icon">€</span>
+                <div>
+                    <small>Dovuto</small>
+                    <strong>${money(totalDue)}</strong>
+                </div>
             </div>
 
-            <div class="card payment-summary-card">
-                <span>
-                    Incassato
-                </span>
-
-                <strong>
-                    ${money(totalPaid)}
-                </strong>
+            <div class="card payment-summary-card payment-summary-paid">
+                <span class="payment-summary-icon">✓</span>
+                <div>
+                    <small>Versato</small>
+                    <strong>${money(totalPaid)}</strong>
+                </div>
             </div>
 
-            <div class="card payment-summary-card">
-                <span>
-                    Da incassare
-                </span>
-
-                <strong>
-                    ${money(totalRemaining)}
-                </strong>
+            <div class="card payment-summary-card payment-summary-remaining">
+                <span class="payment-summary-icon">!</span>
+                <div>
+                    <small>Resta</small>
+                    <strong>${money(totalRemaining)}</strong>
+                </div>
             </div>
 
         </div>

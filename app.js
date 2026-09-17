@@ -1490,13 +1490,7 @@ function renderHome() {
        ULTIME MULTE
        ===================================================== */
 
-    const latest =
-        [...state.fines]
-            .sort(
-                (a, b) =>
-                    b.date.localeCompare(a.date)
-            )
-            .slice(0, 5);
+    const latest = sortFinesByLatestEntry(state.fines).slice(0, 5);
 
 
     /* =====================================================
@@ -2124,6 +2118,21 @@ if (selectedFinePlayer !== "all") {
 
 }
 
+function getFineEntryTime(fine) {
+    const createdTime = new Date(fine?.createdAt || "").getTime();
+    if (Number.isFinite(createdTime) && createdTime > 0) return createdTime;
+
+    const numericId = Number(fine?.id);
+    return Number.isFinite(numericId) ? numericId : 0;
+}
+
+function sortFinesByLatestEntry(fines) {
+    return [...fines].sort((left, right) =>
+        getFineEntryTime(right) - getFineEntryTime(left) ||
+        String(right.date || "").localeCompare(String(left.date || ""))
+    );
+}
+
 if (fineSearchQuery.trim()) {
     const query = fineSearchQuery.trim().toLocaleLowerCase("it");
     fines = fines.filter(fine =>
@@ -2176,12 +2185,7 @@ if (fineSearchQuery.trim()) {
        ORDINAMENTO
        ===================================================== */
 
-    const sortedFines =
-        [...fines].sort(
-            (a, b) =>
-                new Date(b.date) -
-                new Date(a.date)
-        );
+    const sortedFines = sortFinesByLatestEntry(fines);
 
 
     /* =====================================================
@@ -4776,6 +4780,7 @@ document
                         ruleId: null,
                         custom: true,
                         team: recipientMode === "team",
+                        createdAt: new Date().toISOString(),
                         quantity: null,
                         amount: customAmount
                     });
@@ -4974,6 +4979,7 @@ document
                     quantity,
                     custom: false,
                     team: recipientMode === "team",
+                    createdAt: new Date().toISOString(),
                     amount
                 });
             });

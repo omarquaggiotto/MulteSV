@@ -87,6 +87,13 @@ body {
     -webkit-font-smoothing: antialiased;
 }
 
+body.modal-open {
+    position: fixed;
+    width: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+}
+
 
 button,
 input,
@@ -869,6 +876,7 @@ h3 {
         120px;
 
     overflow-y: auto;
+    overscroll-behavior: contain;
 
     background:
         rgba(
@@ -1328,6 +1336,25 @@ h3 {
     font-size: 14px;
 }
 
+.payment-status {
+    display: block;
+    margin-top: 3px;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.payment-status-ok {
+    color: var(--green);
+}
+
+.payment-status-partial {
+    color: var(--yellow);
+}
+
+.payment-status-due {
+    color: var(--red);
+}
+
 .player-avatar {
     width: 36px;
     height: 36px;
@@ -1372,6 +1399,18 @@ h3 {
     width: 100%;
 }
 
+.payment-sticky {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    background: var(--surface);
+}
+
+.payments-table-header .payment-sticky {
+    z-index: 3;
+    background: var(--surface-2);
+}
+
 @media (max-width: 700px) {
 
     .payment-summary-grid {
@@ -1394,6 +1433,10 @@ h3 {
 
     .payment-row {
         padding: 12px;
+    }
+
+    .payment-sticky {
+        box-shadow: 8px 0 12px -12px rgba(15, 23, 42, .65);
     }
 }
 .payment-paid-cell {
@@ -2095,6 +2138,48 @@ h3 {
 /* I controlli non autorizzati non devono poter essere mostrati da stili specifici. */
 [hidden] {
     display: none !important;
+}
+
+/* Destinatari della nuova multa: selezione leggibile e comoda al tocco. */
+.recipient-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.recipient-option {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    min-height: 44px;
+    padding: 9px 11px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface);
+    color: var(--text);
+    font-weight: 700;
+}
+
+.recipient-option input {
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    accent-color: var(--primary);
+}
+
+.recipient-notice {
+    padding: 13px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface-2);
+    color: var(--muted);
+    line-height: 1.4;
+}
+
+@media (max-width: 420px) {
+    .recipient-list {
+        grid-template-columns: 1fr;
+    }
 }
 
 

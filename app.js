@@ -28,6 +28,7 @@ let isAdmin = false;
 let cloudReady = false;
 let cloudChannel = null;
 let cloudSaveTimer = null;
+let modalScrollPosition = 0;
 
 
 
@@ -340,20 +341,14 @@ function loadState() {
             loaded.payments =
                 loaded.payments || {};
 
-            // Migrazione: il pagamento è registrato solo
-            // nella sezione Pagamenti, non nella singola multa.
+            // I campi storici delle multe (compreso "paid") vengono
+            // conservati: Pagamenti è la fonte economica attuale, ma
+            // il caricamento non deve mai cancellare dati legacy.
             loaded.fines =
                 Array.isArray(loaded.fines)
                     ? loaded.fines
                         .filter(fine => fine && typeof fine === "object")
-                        .map(({ paid, ...fine }) => fine)
                     : [];
-
-            localStorage.setItem(
-                STORAGE_KEY,
-                JSON.stringify(loaded)
-            );
-
 
             return loaded;
 
@@ -637,6 +632,85 @@ function money(value) {
         }
     ).format(value);
 
+}
+
+const PREFERRED_CATEGORY_ORDER = [
+    "Allenamento",
+    "Partita",
+    "Comportamento",
+    "Materiale",
+    "Spogliatoio",
+    "Squadra",
+    "Altro"
+];
+
+function compareItalian(left, right) {
+    return String(left ?? "").localeCompare(
+        String(right ?? ""),
+        "it",
+        { sensitivity: "base" }
+    );
+}
+
+function getSortedPlayers(players = state.players) {
+    return [...players].sort(compareItalian);
+}
+
+function getSortedCategories(categories) {
+    return [...new Set(categories.filter(Boolean))]
+        .sort((left, right) => {
+            const leftIndex = PREFERRED_CATEGORY_ORDER.indexOf(left);
+            const rightIndex = PREFERRED_CATEGORY_ORDER.indexOf(right);
+
+            if (leftIndex !== -1 || rightIndex !== -1) {
+                if (leftIndex === -1) return 1;
+                if (rightIndex === -1) return -1;
+                return leftIndex - rightIndex;
+            }
+
+            return compareItalian(left, right);
+        });
+}
+
+function getRuleCalculation(rule) {
+    return ["fixed", "per_minute", "per_piece", "custom_min"].includes(
+        rule?.calculation
+    )
+        ? rule.calculation
+        : "fixed";
+}
+
+function calculateRuleAmount(rule, quantity = 0) {
+    const safeQuantity = Number(quantity) || 0;
+
+    if (getRuleCalculation(rule) === "per_minute") {
+        return (Number(rule.baseAmount) || 0) +
+            safeQuantity * (Number(rule.perMinute) || 0);
+    }
+
+    if (getRuleCalculation(rule) === "per_piece") {
+        return safeQuantity * (Number(rule.perPiece) || 0);
+    }
+
+    return Number(rule?.amount) || 0;
+}
+
+function formatRuleAmount(rule) {
+    const calculation = getRuleCalculation(rule);
+
+    if (calculation === "per_minute") {
+        return `${money(rule.baseAmount)} + ${money(rule.perMinute)}/min`;
+    }
+
+    if (calculation === "per_piece") {
+        return `${money(rule.perPiece)}/pezzo`;
+    }
+
+    if (calculation === "custom_min") {
+        return `da ${money(rule.minAmount)}`;
+    }
+
+    return money(rule.amount);
 }
 
 
@@ -2316,7 +2390,7 @@ function renderPayments() {
     let totalRemaining = 0;
 
     const rows =
-        state.players.map(player => {
+        getSortedPlayers().map(player => {
             const summary =
                 getPlayerMonthSummary(
                     player,
@@ -2330,7 +2404,7 @@ function renderPayments() {
 
             return `
                 <div class="payment-row">
-                    <div class="payment-player">
+                    <div class="payment-player payment-sticky">
                         <div class="player-avatar">
                             ${escapeHtml(
                                 initials(player)
@@ -2352,19 +2426,23 @@ function renderPayments() {
                                     `
                                     : ""
                             }
+
+                            <small class="payment-status ${
+                                summary.remaining <= 0
+                                    ? "payment-status-ok"
+                                    : summary.paid > 0
+                                        ? "payment-status-partial"
+                                        : "payment-status-due"
+                            }">
+                                ${
+                                    summary.remaining <= 0
+                                        ? "✓ Saldato"
+                                        : summary.paid > 0
+                                            ? "€ Parziale"
+                                            : "! Da saldare"
+                                }
+                            </small>
                         </div>
-                    </div>
-
-                    <div class="payment-value">
-                        ${money(summary.base)}
-                    </div>
-
-                    <div class="payment-value">
-                        ${money(summary.fines)}
-                    </div>
-
-                    <div class="payment-value payment-total">
-                        ${money(summary.total)}
                     </div>
 
                     <div class="payment-value payment-paid-cell">
@@ -2389,6 +2467,18 @@ function renderPayments() {
                         }
                     ">
                         ${money(summary.remaining)}
+                    </div>
+
+                    <div class="payment-value">
+                        ${money(summary.base)}
+                    </div>
+
+                    <div class="payment-value">
+                        ${money(summary.fines)}
+                    </div>
+
+                    <div class="payment-value payment-total">
+                        ${money(summary.total)}
                     </div>
                 </div>
             `;
@@ -2493,12 +2583,12 @@ function renderPayments() {
         >
 
             <div class="payments-table-header">
-                <div>Giocatore</div>
+                <div class="payment-sticky">Giocatore</div>
+                <div>Versato</div>
+                <div>Rimanente</div>
                 <div>Base</div>
                 <div>Multe</div>
                 <div>Totale</div>
-                <div>Versato</div>
-                <div>Rimanente</div>
             </div>
 
             <div class="payments-table-body">
@@ -2534,6 +2624,14 @@ async function exportPaymentsImage() {
 
     try {
 
+        // Su smartphone la card scorre orizzontalmente: html2canvas deve
+        // ricevere la larghezza del contenuto, non solo quella visibile.
+        const exportWidth = Math.max(
+            table.scrollWidth,
+            table.querySelector(".payments-table-header")?.scrollWidth || 0,
+            table.clientWidth
+        );
+
         const canvas =
             await html2canvas(
                 table,
@@ -2542,7 +2640,11 @@ async function exportPaymentsImage() {
                         getComputedStyle(
                             document.body
                         ).backgroundColor,
-                    scale: 2
+                    scale: 2,
+                    width: exportWidth,
+                    windowWidth: exportWidth,
+                    scrollX: 0,
+                    scrollY: 0
                 }
             );
 
@@ -2752,9 +2854,14 @@ function renderRules() {
 
                 ?
 
-            Object.entries(groups)
+            getSortedCategories(Object.keys(groups))
                 .map(
-                    ([category, rules]) => `
+                    category => {
+                        const rules = [...groups[category]].sort(
+                            (left, right) => compareItalian(left.type, right.type)
+                        );
+
+                        return `
 
                         <div
                             class="section-head"
@@ -2800,9 +2907,7 @@ function renderRules() {
 
 
                                                 <strong>
-                                                    ${money(
-                                                        rule.amount
-                                                    )}
+                                                    ${formatRuleAmount(rule)}
                                                 </strong>
 
 
@@ -2838,7 +2943,8 @@ function renderRules() {
 
                         </div>
 
-                    `
+                    `;
+                    }
                 )
                 .join("")
 
@@ -2951,9 +3057,9 @@ function renderSettings() {
 
                     ?
 
-                state.players
+                getSortedPlayers()
                     .map(
-                        (player, index) => `
+                        player => `
 
                             <span
                                 class="player-chip"
@@ -2965,7 +3071,7 @@ function renderSettings() {
 
                                 <button
                                     type="button"
-                                    data-delete-player="${index}"
+                                    data-delete-player="${escapeHtml(player)}"
                                     title="Rimuovi"
                                 >
                                     ×
@@ -3141,6 +3247,13 @@ function openModal(title, content) {
 
     `;
 
+    // Blocca il contenuto sottostante senza perdere la posizione di lettura.
+    if (!document.body.classList.contains("modal-open")) {
+        modalScrollPosition = window.scrollY;
+        document.body.style.top = `-${modalScrollPosition}px`;
+        document.body.classList.add("modal-open");
+    }
+
 
     document
         .getElementById(
@@ -3159,6 +3272,12 @@ function closeModal() {
     document.getElementById(
         "modalRoot"
     ).innerHTML = "";
+
+    if (document.body.classList.contains("modal-open")) {
+        document.body.classList.remove("modal-open");
+        document.body.style.top = "";
+        window.scrollTo(0, modalScrollPosition);
+    }
 
 }
 
@@ -3180,13 +3299,9 @@ function openFineModal(id = null) {
        CATEGORIE
        ========================= */
 
-    const categories = [
-        ...new Set(
-            state.rules.map(
-                rule => rule.category
-            )
-        )
-    ];
+    const categories = getSortedCategories(
+        state.rules.map(rule => rule.category)
+    );
 
 
     /* =========================
@@ -3194,8 +3309,6 @@ function openFineModal(id = null) {
        ========================= */
 
     const CUSTOM_RULE_ID = "custom";
-    const TEAM_CUSTOM_RULE_ID = "team_custom";
-    const TEAM_CUSTOM_CATEGORY = "team_custom_category";
 
 
     /* =========================
@@ -3238,6 +3351,21 @@ function openFineModal(id = null) {
 
         <div class="form">
 
+            ${
+                !isEdit
+                    ? `
+                        <div class="field">
+                            <label>DESTINATARI</label>
+                            <select id="fineRecipients">
+                                <option value="single">Un giocatore</option>
+                                <option value="multiple">Più giocatori</option>
+                                <option value="team">Tutta la squadra</option>
+                            </select>
+                        </div>
+                    `
+                    : ""
+            }
+
             <!-- GIOCATORE -->
 
 <div class="field">
@@ -3254,7 +3382,7 @@ function openFineModal(id = null) {
                 state.players.length
                     ?
 
-                state.players
+                getSortedPlayers()
                     .map(
                         player => `
 
@@ -3298,10 +3426,6 @@ function openFineModal(id = null) {
 
                 <div class="fine-select-control" id="fineCategoryControl">
 <select id="fineCategory">
-
-                    <option value="${TEAM_CUSTOM_CATEGORY}">
-                        👥 Multa di squadra
-                    </option>
 
                     ${
                         categories
@@ -3360,7 +3484,7 @@ function openFineModal(id = null) {
                                     >
                                         ${escapeHtml(rule.type)}
                                         ·
-                                        ${money(rule.amount)}
+                                        ${formatRuleAmount(rule)}
                                     </option>
 
                                 `
@@ -3368,7 +3492,10 @@ function openFineModal(id = null) {
                             .join("")
                     }
 
-                    <option value="${CUSTOM_RULE_ID}">
+                    <option
+                        value="${CUSTOM_RULE_ID}"
+                        ${fine?.custom ? "selected" : ""}
+                    >
                         ✏️ Multa personalizzata
                     </option>
 
@@ -3563,10 +3690,11 @@ function openFineModal(id = null) {
         document.getElementById(
             "customDescription"
         );
-   const finePlayerContainer =
+    const finePlayerContainer =
     document.getElementById(
         "finePlayerContainer"
     );
+    const recipientsSelect = document.getElementById("fineRecipients");
 
 
     /* Nuova multa: nessun valore precompilato. */
@@ -3709,158 +3837,82 @@ function openFineModal(id = null) {
             String(selectedValue)
     );
 
-const isTeamCustomFine =
-    selectedValue ===
-    TEAM_CUSTOM_RULE_ID;
+        /* =========================
+           SELEZIONE DESTINATARI
+           ========================= */
 
-const isTeamFine =
-    selectedRule?.type ===
-    "Squadra perdente la partitella del giovedì";
+        const recipientMode = isEdit
+            ? "single"
+            : recipientsSelect?.value || "single";
 
+        const rememberedPlayer =
+            document.getElementById("finePlayer")?.value ||
+            finePlayerContainer.dataset.selectedPlayer ||
+            fine?.player ||
+            "";
 
-/* =========================
-   SELEZIONE GIOCATORI
-   ========================= */
+        const rememberedPlayers = Array.from(
+            document.querySelectorAll("[data-fine-recipient]:checked")
+        ).map(input => input.value);
 
-const rememberedPlayer =
-    document.getElementById("finePlayer")?.value ||
-    finePlayerContainer.dataset.selectedPlayer ||
-    "";
+        if (rememberedPlayer) {
+            finePlayerContainer.dataset.selectedPlayer = rememberedPlayer;
+        }
 
-if (rememberedPlayer) {
-    finePlayerContainer.dataset.selectedPlayer = rememberedPlayer;
-}
+        if (rememberedPlayers.length) {
+            finePlayerContainer.dataset.selectedPlayers = JSON.stringify(rememberedPlayers);
+        }
 
-if (
-    !isEdit &&
-    isTeamCustomFine &&
-    !document.getElementById("teamFinePlayersNotice")
-) {
+        let selectedPlayers = [];
+        try {
+            selectedPlayers = JSON.parse(
+                finePlayerContainer.dataset.selectedPlayers || "[]"
+            );
+        } catch (error) {
+            selectedPlayers = [];
+        }
 
-    finePlayerContainer.innerHTML = `
-
-        <div
-            class="muted"
-            id="teamFinePlayersNotice"
-            style="padding:16px 0;"
-        >
-            👥 L’importo verrà assegnato automaticamente a tutti i giocatori della rosa.
-        </div>
-
-    `;
-
-} else if (
-    !isEdit &&
-    isTeamFine &&
-    !document.getElementById("finePlayers")
-) {
-
-    finePlayerContainer.innerHTML = `
-
-        <select
-            id="finePlayers"
-            multiple
-        >
-
-            ${state.players
-                .map(
-                    player => `
-
+        if (recipientMode === "team") {
+            finePlayerContainer.innerHTML = `
+                <div class="recipient-notice" id="teamFinePlayersNotice">
+                    👥 La multa sarà assegnata automaticamente a tutti i giocatori della rosa.
+                </div>
+            `;
+        } else if (recipientMode === "multiple") {
+            finePlayerContainer.innerHTML = `
+                <div class="recipient-list" role="group" aria-label="Giocatori destinatari">
+                    ${getSortedPlayers().map(player => `
+                        <label class="recipient-option">
+                            <input
+                                type="checkbox"
+                                data-fine-recipient
+                                value="${escapeHtml(player)}"
+                                ${selectedPlayers.includes(player) ? "checked" : ""}
+                            >
+                            <span>${escapeHtml(player)}</span>
+                        </label>
+                    `).join("")}
+                </div>
+                <small class="muted">Seleziona i giocatori a cui applicare la multa.</small>
+            `;
+        } else if (!document.getElementById("finePlayer")) {
+            finePlayerContainer.innerHTML = `
+                <select id="finePlayer">
+                    <option value="">Seleziona un giocatore</option>
+                    ${getSortedPlayers().map(player => `
                         <option
                             value="${escapeHtml(player)}"
-                        >
-                            ${escapeHtml(player)}
-                        </option>
-
-                    `
-                )
-                .join("")}
-
-        </select>
-
-        <small class="muted">
-            Tieni premuto CTRL (PC) o usa la selezione multipla su telefono.
-        </small>
-
-    `;
-
-} else if (
-    !document.getElementById("finePlayer")
-) {
-
-    finePlayerContainer.innerHTML = `
-
-        <select id="finePlayer">
-
-            ${
-                state.players.length
-                    ?
-
-                state.players
-                    .map(
-                        player => `
-
-                            <option
-                                value="${escapeHtml(player)}"
-                                ${
-                                    (
-                                    fine?.player === player ||
-                                    finePlayerContainer.dataset.selectedPlayer === player
-                                )
-                                        ? "selected"
-                                        : ""
-                                }
-                            >
-                                ${escapeHtml(player)}
-                            </option>
-
-                        `
-                    )
-                    .join("")
-
-                    :
-
-                `
-                    <option value="">
-                        Nessun giocatore
-                    </option>
-                `
-            }
-
-        </select>
-
-    `;
-
-}
+                            ${rememberedPlayer === player ? "selected" : ""}
+                        >${escapeHtml(player)}</option>
+                    `).join("")}
+                </select>
+            `;
+        }
 
 
         /* =========================
            MULTA PERSONALIZZATA
            ========================= */
-
-        if (
-            selectedValue ===
-            TEAM_CUSTOM_RULE_ID
-        ) {
-
-            customDescriptionField.style.display =
-                "block";
-
-            quantityField.style.display =
-                "none";
-
-            amountInput.disabled =
-                false;
-
-            amountInput.min =
-                "0";
-
-            amountInput.value =
-                "";
-
-            return;
-
-        }
 
         if (
             selectedValue ===
@@ -3949,14 +4001,10 @@ if (
             amountInput.disabled =
                 true;
 
-            amountInput.value =
-                rule.baseAmount +
-                (
-                    Number(
-                        quantityInput.value
-                    ) || 0
-                ) *
-                rule.perMinute;
+            amountInput.value = calculateRuleAmount(
+                rule,
+                quantityInput.value
+            );
 
             return;
 
@@ -3992,13 +4040,10 @@ if (
             amountInput.disabled =
                 true;
 
-            amountInput.value =
-                (
-                    Number(
-                        quantityInput.value
-                    ) || 1
-                ) *
-                rule.perPiece;
+            amountInput.value = calculateRuleAmount(
+                rule,
+                Number(quantityInput.value) || 1
+            );
 
             return;
 
@@ -4060,18 +4105,9 @@ if (
         const category =
             categorySelect.value;
 
-        const isTeamCategory =
-            category ===
-            TEAM_CUSTOM_CATEGORY;
-
-        const rules =
-            isTeamCategory
-                ? []
-                : state.rules.filter(
-                    rule =>
-                        rule.category ===
-                        category
-                );
+        const rules = state.rules.filter(
+            rule => rule.category === category
+        );
 
         ruleSelect.innerHTML =
             '<option value="">Seleziona il tipo di multa</option>' +
@@ -4086,36 +4122,18 @@ if (
                                 rule.type
                             )}
                             ·
-                            ${money(
-                                rule.amount
-                            )}
+                            ${formatRuleAmount(rule)}
                         </option>
 
                     `
                 )
-                .join("") +
-            (
-                isTeamCategory
-                    ? `
+            .join("") + `
+                <option value="${CUSTOM_RULE_ID}">
+                    ✏️ Multa personalizzata
+                </option>
+            `;
 
-                        <option value="${TEAM_CUSTOM_RULE_ID}">
-                            👥 Multa di squadra personalizzata
-                        </option>
-
-                    `
-                    : `
-
-                        <option value="${CUSTOM_RULE_ID}">
-                            ✏️ Multa personalizzata
-                        </option>
-
-                    `
-            );
-
-        ruleSelect.value =
-            isTeamCategory
-                ? TEAM_CUSTOM_RULE_ID
-                : "";
+        ruleSelect.value = "";
 
         refreshRuleMenu();
         updateFineInterface();
@@ -4140,6 +4158,8 @@ if (
         "change",
         updateFineInterface
     );
+
+    recipientsSelect?.addEventListener("change", updateFineInterface);
 
 
     /* =========================
@@ -4178,10 +4198,7 @@ if (
                 "per_minute"
             ) {
 
-                amountInput.value =
-                    rule.baseAmount +
-                    quantity *
-                    rule.perMinute;
+                amountInput.value = calculateRuleAmount(rule, quantity);
 
             }
 
@@ -4191,9 +4208,7 @@ if (
                 "per_piece"
             ) {
 
-                amountInput.value =
-                    quantity *
-                    rule.perPiece;
+                amountInput.value = calculateRuleAmount(rule, quantity);
 
             }
 
@@ -4232,15 +4247,22 @@ document
                 "finePlayer"
             );
 
-        const multiPlayerSelect =
-            document.getElementById(
-                "finePlayers"
-            );
-
         const player =
             singlePlayerSelect
                 ? singlePlayerSelect.value
                 : "";
+
+        const recipientMode = isEdit
+            ? "single"
+            : recipientsSelect?.value || "single";
+
+        const selectedPlayers = recipientMode === "team"
+            ? getSortedPlayers()
+            : recipientMode === "multiple"
+                ? Array.from(
+                    document.querySelectorAll("[data-fine-recipient]:checked")
+                ).map(input => input.value)
+                : [player].filter(Boolean);
 
         const date =
             parseFineDate(
@@ -4261,15 +4283,6 @@ document
                     String(selectedRule)
             );
 
-        const isTeamCustomFine =
-            selectedRule ===
-            TEAM_CUSTOM_RULE_ID;
-
-        const isTeamFine =
-            rule?.type ===
-            "Squadra perdente la partitella del giovedì";
-
-
         /* =========================
            MULTA PERSONALIZZATA
            ========================= */
@@ -4288,7 +4301,7 @@ document
                 );
 
             if (
-                !player ||
+                (isEdit ? !player : selectedPlayers.length === 0) ||
                 !date ||
                 !description ||
                 !Number.isFinite(
@@ -4333,33 +4346,19 @@ document
 
             } else {
 
-                state.fines.push({
-
-                    id:
-                        generateId(),
-
-                    date,
-
-                    player,
-
-                    category:
-                        "Personalizzata",
-
-                    type:
-                        description,
-
-                    ruleId:
-                        null,
-
-                    custom:
-                        true,
-
-                    quantity:
-                        null,
-
-                    amount:
-                        customAmount
-
+                selectedPlayers.forEach(playerName => {
+                    state.fines.push({
+                        id: generateId(),
+                        date,
+                        player: playerName,
+                        category: recipientMode === "team" ? "Squadra" : "Personalizzata",
+                        type: description,
+                        ruleId: null,
+                        custom: true,
+                        team: recipientMode === "team",
+                        quantity: null,
+                        amount: customAmount
+                    });
                 });
 
             }
@@ -4374,185 +4373,13 @@ document
             showToast(
                 isEdit
                     ? "Multa modificata"
-                    : "Multa aggiunta"
+                    : selectedPlayers.length > 1
+                        ? `${selectedPlayers.length} multe aggiunte`
+                        : "Multa aggiunta"
             );
 
             return;
         }
-
-
-        /* =========================
-           MULTA DI SQUADRA PERSONALIZZATA
-           ========================= */
-
-        if (
-            !isEdit &&
-            isTeamCustomFine
-        ) {
-
-            const description =
-                customDescription.value.trim();
-
-            const customAmount =
-                Number(
-                    amountInput.value
-                );
-
-            if (
-                state.players.length === 0 ||
-                !date ||
-                !description ||
-                !Number.isFinite(
-                    customAmount
-                ) ||
-                customAmount < 0
-            ) {
-
-                showToast(
-                    "Controlla descrizione, data e importo."
-                );
-
-                return;
-
-            }
-
-            state.players.forEach(
-                playerName => {
-
-                    state.fines.push({
-
-                        id:
-                            generateId(),
-
-                        date,
-
-                        player:
-                            playerName,
-
-                        category:
-                            "Squadra",
-
-                        type:
-                            description,
-
-                        ruleId:
-                            null,
-
-                        custom:
-                            true,
-
-                        team:
-                            true,
-
-                        quantity:
-                            null,
-
-                        amount:
-                            customAmount
-
-                    });
-
-                }
-            );
-
-            saveState();
-
-            closeModal();
-
-            render();
-
-            showToast(
-                `Multa di squadra aggiunta a ${state.players.length} giocatori`
-            );
-
-            return;
-        }
-
-
-                /* =========================
-           MULTA SQUADRA
-           ========================= */
-
-        if (
-            !isEdit &&
-            isTeamFine
-        ) {
-
-            const selectedPlayers =
-                multiPlayerSelect
-                    ? Array.from(
-                        multiPlayerSelect
-                            .selectedOptions
-                    ).map(
-                        option =>
-                            option.value
-                    )
-                    : [];
-
-
-            if (
-                selectedPlayers.length === 0 ||
-                !date
-            ) {
-
-                showToast(
-                    "Seleziona almeno un giocatore."
-                );
-
-                return;
-            }
-
-
-            selectedPlayers.forEach(
-                playerName => {
-
-                    state.fines.push({
-
-                        id:
-                            generateId(),
-
-                        date,
-
-                        player:
-                            playerName,
-
-                        category:
-                            rule.category,
-
-                        type:
-                            rule.type,
-
-                        ruleId:
-                            rule.id,
-
-                        quantity:
-                            null,
-
-                        custom:
-                            false,
-
-                        amount:
-                            1
-
-                    });
-
-                }
-            );
-
-
-            saveState();
-
-            closeModal();
-
-            render();
-
-            showToast(
-                `${selectedPlayers.length} multe aggiunte`
-            );
-
-            return;
-        }
-
 
         /* =========================
            REGOLA NORMALE
@@ -4565,7 +4392,7 @@ document
 
 
         if (
-            !player ||
+            (isEdit ? !player : selectedPlayers.length === 0) ||
             !rule ||
             !date
         ) {
@@ -4601,10 +4428,7 @@ document
                     quantityInput.value
                 ) || 0;
 
-            amount =
-                rule.baseAmount +
-                quantity *
-                rule.perMinute;
+            amount = calculateRuleAmount(rule, quantity);
         }
 
 
@@ -4635,9 +4459,7 @@ document
             }
 
 
-            amount =
-                quantity *
-                rule.perPiece;
+            amount = calculateRuleAmount(rule, quantity);
         }
 
 
@@ -4720,30 +4542,19 @@ document
 
         else {
 
-            state.fines.push({
-
-                id:
-                    generateId(),
-
-                date,
-
-                player,
-
-                category:
-                    rule.category,
-
-                type:
-                    rule.type,
-
-                ruleId,
-
-                quantity,
-
-                custom:
-                    false,
-
-                amount
-
+            selectedPlayers.forEach(playerName => {
+                state.fines.push({
+                    id: generateId(),
+                    date,
+                    player: playerName,
+                    category: rule.category,
+                    type: rule.type,
+                    ruleId,
+                    quantity,
+                    custom: false,
+                    team: recipientMode === "team",
+                    amount
+                });
             });
 
         }
@@ -4758,6 +4569,8 @@ document
         showToast(
             isEdit
                 ? "Multa modificata"
+            : selectedPlayers.length > 1
+                ? `${selectedPlayers.length} multe aggiunte`
                 : "Multa aggiunta"
         );
 
@@ -4778,211 +4591,175 @@ document
 
 function openRuleModal(id = null) {
 
-    const rule =
-        id
-            ? state.rules.find(
-                item =>
-                    item.id === id
-            )
-            : null;
-
+    const rule = id
+        ? state.rules.find(item => item.id === id)
+        : null;
+    const calculation = getRuleCalculation(rule);
+    const categorySuggestions = getSortedCategories([
+        ...PREFERRED_CATEGORY_ORDER,
+        ...state.rules.map(item => item.category)
+    ]);
 
     openModal(
-
-        id
-            ? "Modifica regola"
-            : "Nuova regola",
-
+        id ? "Modifica regola" : "Nuova regola",
         `
+            <div class="form">
+                <div class="field">
+                    <label>CATEGORIA</label>
+                    <input id="ruleCategory" type="text" list="ruleCategories"
+                        value="${escapeHtml(rule?.category || "")}"
+                        placeholder="Es. Allenamento">
+                    <datalist id="ruleCategories">
+                        ${categorySuggestions.map(category =>
+                            `<option value="${escapeHtml(category)}"></option>`
+                        ).join("")}
+                    </datalist>
+                </div>
 
-        <div class="form">
+                <div class="field">
+                    <label>TIPOLOGIA</label>
+                    <input id="ruleType" type="text"
+                        value="${escapeHtml(rule?.type || "")}"
+                        placeholder="Es. Ritardo allenamento">
+                </div>
 
-            <div class="field">
+                <div class="field">
+                    <label>TIPO DI CALCOLO</label>
+                    <select id="ruleCalculation">
+                        <option value="fixed" ${calculation === "fixed" ? "selected" : ""}>Importo fisso</option>
+                        <option value="per_minute" ${calculation === "per_minute" ? "selected" : ""}>Importo × minuti</option>
+                        <option value="per_piece" ${calculation === "per_piece" ? "selected" : ""}>Importo × quantità</option>
+                        <option value="custom_min" ${calculation === "custom_min" ? "selected" : ""}>Importo libero con minimo</option>
+                    </select>
+                </div>
 
-                <label>
-                    CATEGORIA
-                </label>
+                <div class="field" id="ruleFixedField">
+                    <label>IMPORTO FISSO (€)</label>
+                    <input id="ruleAmount" type="number" min="0" step="0.01"
+                        value="${rule?.amount ?? 5}">
+                </div>
 
-                <input
-                    id="ruleCategory"
-                    type="text"
-                    value="${escapeHtml(
-                        rule?.category || ""
-                    )}"
-                    placeholder="Es. Allenamento"
-                >
+                <div class="field" id="ruleMinuteBaseField">
+                    <label>IMPORTO BASE (€)</label>
+                    <input id="ruleBaseAmount" type="number" min="0" step="0.01"
+                        value="${rule?.baseAmount ?? rule?.amount ?? 0}">
+                </div>
 
+                <div class="field" id="ruleMinuteRateField">
+                    <label>IMPORTO PER MINUTO (€)</label>
+                    <input id="rulePerMinute" type="number" min="0" step="0.01"
+                        value="${rule?.perMinute ?? 1}">
+                </div>
+
+                <div class="field" id="rulePieceField">
+                    <label>IMPORTO PER PEZZO (€)</label>
+                    <input id="rulePerPiece" type="number" min="0" step="0.01"
+                        value="${rule?.perPiece ?? rule?.amount ?? 1}">
+                </div>
+
+                <div class="field" id="ruleMinimumField">
+                    <label>IMPORTO MINIMO (€)</label>
+                    <input id="ruleMinimum" type="number" min="0" step="0.01"
+                        value="${rule?.minAmount ?? rule?.amount ?? 0}">
+                </div>
+
+                <div class="modal-actions">
+                    <button class="btn secondary" id="cancelRule" type="button">Annulla</button>
+                    <button class="btn" id="saveRule" type="button">Salva</button>
+                </div>
             </div>
-
-
-            <div class="field">
-
-                <label>
-                    TIPOLOGIA
-                </label>
-
-                <input
-                    id="ruleType"
-                    type="text"
-                    value="${escapeHtml(
-                        rule?.type || ""
-                    )}"
-                    placeholder="Es. Ritardo allenamento"
-                >
-
-            </div>
-
-
-            <div class="field">
-
-                <label>
-                    IMPORTO (€)
-                </label>
-
-                <input
-                    id="ruleAmount"
-                    type="number"
-                    min="0"
-                    step="1"
-                    value="${
-                        rule?.amount ??
-                        5
-                    }"
-                >
-
-            </div>
-
-
-            <div class="modal-actions">
-
-                <button
-                    class="btn secondary"
-                    id="cancelRule"
-                    type="button"
-                >
-                    Annulla
-                </button>
-
-
-                <button
-                    class="btn"
-                    id="saveRule"
-                    type="button"
-                >
-                    Salva
-                </button>
-
-            </div>
-
-        </div>
-
         `
-
     );
 
+    const calculationSelect = document.getElementById("ruleCalculation");
+    const calculationFields = {
+        fixed: ["ruleFixedField"],
+        per_minute: ["ruleMinuteBaseField", "ruleMinuteRateField"],
+        per_piece: ["rulePieceField"],
+        custom_min: ["ruleMinimumField"]
+    };
 
-    document
-        .getElementById(
-            "cancelRule"
-        )
-        .onclick = closeModal;
+    function updateRuleCalculationFields() {
+        Object.entries(calculationFields).forEach(([key, ids]) => {
+            ids.forEach(fieldId => {
+                document.getElementById(fieldId).hidden = key !== calculationSelect.value;
+            });
+        });
+    }
 
+    calculationSelect.addEventListener("change", updateRuleCalculationFields);
+    updateRuleCalculationFields();
+    document.getElementById("cancelRule").onclick = closeModal;
 
-    document
-        .getElementById(
-            "saveRule"
-        )
-        .onclick = () => {
-
-            const category =
-                document
-                    .getElementById(
-                        "ruleCategory"
-                    )
-                    .value
-                    .trim();
-
-
-            const type =
-                document
-                    .getElementById(
-                        "ruleType"
-                    )
-                    .value
-                    .trim();
-
-
-            const amount =
-                Number(
-                    document
-                        .getElementById(
-                            "ruleAmount"
-                        )
-                        .value
-                ) || 0;
-
-
-            if (
-                !category ||
-                !type
-            ) {
-
-                showToast(
-                    "Compila categoria e tipologia."
-                );
-
-                return;
-
-            }
-
-
-            const newRule = {
-
-                id:
-                    id ||
-                    generateId(),
-
-                category,
-
-                type,
-
-                amount
-
-            };
-
-
-            if (id) {
-
-                const index =
-                    state.rules.findIndex(
-                        item =>
-                            item.id === id
-                    );
-
-
-                state.rules[index] =
-                    newRule;
-
-            } else {
-
-                state.rules.push(
-                    newRule
-                );
-
-            }
-
-
-            saveState();
-
-            closeModal();
-
-            render();
-
-            showToast(
-                "Regola salvata"
-            );
-
+    document.getElementById("saveRule").onclick = () => {
+        const category = document.getElementById("ruleCategory").value.trim();
+        const type = document.getElementById("ruleType").value.trim();
+        const selectedCalculation = calculationSelect.value;
+        const values = {
+            amount: Number(document.getElementById("ruleAmount").value),
+            baseAmount: Number(document.getElementById("ruleBaseAmount").value),
+            perMinute: Number(document.getElementById("rulePerMinute").value),
+            perPiece: Number(document.getElementById("rulePerPiece").value),
+            minAmount: Number(document.getElementById("ruleMinimum").value)
         };
+
+        if (!category || !type) {
+            showToast("Compila categoria e tipologia.");
+            return;
+        }
+
+        const requiredValues = selectedCalculation === "fixed"
+            ? [values.amount]
+            : selectedCalculation === "per_minute"
+                ? [values.baseAmount, values.perMinute]
+                : selectedCalculation === "per_piece"
+                    ? [values.perPiece]
+                    : [values.minAmount];
+
+        if (requiredValues.some(value => !Number.isFinite(value) || value < 0)) {
+            showToast("Inserisci importi validi.");
+            return;
+        }
+
+        // Mantiene eventuali campi legacy o estensioni future della regola.
+        const newRule = {
+            ...(rule || {}),
+            id: id || generateId(),
+            category,
+            type,
+            calculation: selectedCalculation
+        };
+
+        if (selectedCalculation === "fixed") {
+            newRule.amount = values.amount;
+        } else if (selectedCalculation === "per_minute") {
+            newRule.baseAmount = values.baseAmount;
+            newRule.perMinute = values.perMinute;
+            newRule.amount = values.baseAmount;
+        } else if (selectedCalculation === "per_piece") {
+            newRule.perPiece = values.perPiece;
+            newRule.amount = values.perPiece;
+        } else {
+            newRule.minAmount = values.minAmount;
+            newRule.amount = values.minAmount;
+        }
+
+        if (id) {
+            const index = state.rules.findIndex(item => item.id === id);
+            if (index === -1) {
+                showToast("Regola non trovata.");
+                return;
+            }
+            state.rules[index] = newRule;
+        } else {
+            state.rules.push(newRule);
+        }
+
+        saveState();
+        closeModal();
+        render();
+        showToast("Regola salvata");
+    };
 
 }
 
@@ -5439,15 +5216,8 @@ document
 
             button.onclick = () => {
 
-                const index =
-                    Number(
-                        button.dataset
-                            .deletePlayer
-                    );
-
-
-                const player =
-                    state.players[index];
+                const player = button.dataset.deletePlayer;
+                const index = state.players.indexOf(player);
 
 
                 if (!player) {

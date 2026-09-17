@@ -2301,7 +2301,7 @@ if (selectedFinePlayer !== "all") {
                     Tutti i giocatori
                 </option>
 
-                ${state.players
+                ${getSortedPlayers()
                     .map(player => `
 
                         <option

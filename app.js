@@ -388,7 +388,7 @@ function saveLocalState() {
 }
 
 function queueCloudSave() {
-    if (!supabaseClient || !cloudReady || !isAdmin) return;
+    if (!supabaseClient || !cloudReady || !isAdmin || !navigator.onLine) return;
 
     clearTimeout(cloudSaveTimer);
     cloudSaveTimer = setTimeout(async () => {
@@ -407,6 +407,8 @@ function queueCloudSave() {
 }
 
 function applyAccessMode() {
+    const canEdit = isAdmin && navigator.onLine;
+
     document.body.classList.toggle("is-admin", isAdmin);
 
     const adminControls = [
@@ -421,15 +423,16 @@ function applyAccessMode() {
         "[data-delete-player]",
         "#saveSettings",
         "#importData",
-        "#resetData"
+        "#resetData",
+        '[data-page="settings"]'
     ];
 
     document.querySelectorAll(adminControls.join(",")).forEach(control => {
-        control.hidden = !isAdmin;
+        control.hidden = !canEdit;
     });
 
     document.querySelectorAll(".payment-paid-input").forEach(input => {
-        input.disabled = !isAdmin;
+        input.disabled = !canEdit;
     });
 }
 
@@ -530,6 +533,18 @@ async function initializeCloud() {
     }
 
     subscribeToCloud();
+
+    window.addEventListener("online", () => {
+        render();
+        showToast("Connessione ristabilita.");
+    });
+
+    window.addEventListener("offline", () => {
+        closeModal();
+        render();
+        showToast("Sei offline: le modifiche sono bloccate.");
+    });
+
     render();
 
     supabaseClient.auth.onAuthStateChange(() => {
@@ -544,6 +559,11 @@ async function initializeCloud() {
 }
 
 function openAuthModal() {
+    if (!authUser && !navigator.onLine) {
+        showToast("Serve una connessione Internet per accedere.");
+        return;
+    }
+
     if (authUser) {
         openModal(
             isAdmin ? "Amministratore" : "Accesso",
@@ -1113,6 +1133,10 @@ function updateNavigation() {
    ========================================================= */
 
 function render() {
+
+    if (!isAdmin && currentPage === "settings") {
+        currentPage = "home";
+    }
 
     applyTheme();
 
@@ -1979,12 +2003,18 @@ if (selectedFinePlayer !== "all") {
                         Non ci sono multe registrate per questo periodo.
                     </p>
 
-                    <button
-                        class="primary-btn"
-                        id="addFineEmpty"
-                    >
-                        ＋ Aggiungi multa
-                    </button>
+                    ${
+                        isAdmin
+                            ? `
+                                <button
+                                    class="primary-btn"
+                                    id="addFineEmpty"
+                                >
+                                    ＋ Aggiungi multa
+                                </button>
+                            `
+                            : ""
+                    }
 
                 </div>
 
@@ -2016,12 +2046,18 @@ if (selectedFinePlayer !== "all") {
             </div>
 
 
-            <button
-                class="primary-btn"
-                id="addFine"
-            >
-                ＋ Nuova multa
-            </button>
+            ${
+                isAdmin
+                    ? `
+                        <button
+                            class="primary-btn"
+                            id="addFine"
+                        >
+                            ＋ Nuova multa
+                        </button>
+                    `
+                    : ""
+            }
 
         </section>
 
@@ -4931,6 +4967,16 @@ function bindPageEvents() {
         .forEach(button => {
 
             button.onclick = () => {
+
+                if (button.dataset.page === "settings" && !isAdmin) {
+                    openAuthModal();
+                    return;
+                }
+
+                if (button.dataset.page === "settings" && !navigator.onLine) {
+                    showToast("Le impostazioni si modificano solo online.");
+                    return;
+                }
 
                 currentPage =
                     button.dataset.page;

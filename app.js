@@ -4146,6 +4146,10 @@ function openFineModal(id = null) {
             `;
         } else if (recipientMode === "multiple") {
             finePlayerContainer.innerHTML = `
+                <div class="recipient-actions">
+                    <button type="button" data-select-all-recipients>Seleziona tutti</button>
+                    <button type="button" data-clear-recipients>Deseleziona</button>
+                </div>
                 <div class="recipient-list" role="group" aria-label="Giocatori destinatari">
                     ${getSortedPlayers().map(player => `
                         <label class="recipient-option">
@@ -4161,6 +4165,22 @@ function openFineModal(id = null) {
                 </div>
                 <small class="muted">Seleziona i giocatori a cui applicare la multa.</small>
             `;
+
+            finePlayerContainer
+                .querySelector("[data-select-all-recipients]")
+                .addEventListener("click", () => {
+                    finePlayerContainer
+                        .querySelectorAll("[data-fine-recipient]")
+                        .forEach(input => { input.checked = true; });
+                });
+
+            finePlayerContainer
+                .querySelector("[data-clear-recipients]")
+                .addEventListener("click", () => {
+                    finePlayerContainer
+                        .querySelectorAll("[data-fine-recipient]")
+                        .forEach(input => { input.checked = false; });
+                });
         } else if (!document.getElementById("finePlayer")) {
             finePlayerContainer.innerHTML = `
                 <select id="finePlayer">

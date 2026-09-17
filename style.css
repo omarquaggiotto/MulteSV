@@ -2282,6 +2282,23 @@ body.modal-open .global-fab {
     gap: 8px;
 }
 
+.recipient-actions {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.recipient-actions button {
+    min-height: 34px;
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    background: var(--surface-2);
+    color: var(--text);
+    font-size: 12px;
+    font-weight: 800;
+}
+
 .recipient-option {
     display: flex;
     align-items: center;

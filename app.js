@@ -1073,6 +1073,21 @@ function getPaymentMonths() {
     return months;
 }
 
+function getPaymentMonthsToDate() {
+    const months = getPaymentMonths();
+    const today = new Date();
+    const currentMonth = `${today.getFullYear()}-${String(
+        today.getMonth() + 1
+    ).padStart(2, "0")}`;
+
+    if (currentMonth < months[0]) return [];
+
+    const currentIndex = months.indexOf(currentMonth);
+    return currentIndex === -1
+        ? months
+        : months.slice(0, currentIndex + 1);
+}
+
 
 function getMonthlyBase(monthId) {
     const startYear =
@@ -3041,13 +3056,13 @@ function openPlayerHistoryModal(player) {
         return;
     }
 
-    const months = getPaymentMonths();
+    const months = getPaymentMonthsToDate();
     const playerFines = [...state.fines]
         .filter(fine => fine.player === player)
         .sort((left, right) => String(right.date || "")
             .localeCompare(String(left.date || "")));
-    const finesTotal = playerFines.reduce(
-        (total, fine) => total + Number(fine.amount || 0),
+    const finesTotal = months.reduce(
+        (total, month) => total + getPlayerMonthFines(player, month),
         0
     );
     const baseTotal = months.reduce(

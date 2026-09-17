@@ -1,4 +1,4 @@
-const CACHE_NAME = "multefc-v20";
+const CACHE_NAME = "multefc-v21";
 const APP_SHELL = [
     "./",
     "./index.html",

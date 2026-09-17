@@ -1092,6 +1092,29 @@ h3 {
     isolation: isolate;
 }
 
+.home-stat-section {
+    margin-top: 18px;
+}
+
+.home-stat-heading {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 0 2px 9px;
+}
+
+.home-stat-heading span {
+    font-size: 15px;
+    font-weight: 900;
+}
+
+.home-stat-heading small {
+    color: var(--muted);
+    font-size: 12px;
+    text-transform: capitalize;
+}
+
 .global-fab {
     position: fixed;
     right: max(18px, calc(env(safe-area-inset-right) + 14px));
@@ -1360,6 +1383,24 @@ body.modal-open .global-fab {
     min-width: 0;
 }
 
+.toast.has-action {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    pointer-events: auto;
+}
+
+.toast.has-action button {
+    border: 0;
+    border-radius: 999px;
+    padding: 6px 9px;
+    background: #fff;
+    color: #111827;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 900;
+}
+
 .player-history-trigger {
     width: 100%;
     padding: 0;
@@ -1529,8 +1570,19 @@ body.modal-open .global-fab {
 
 .fines-filters-grid {
     display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.payment-filter-grid {
+    display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 14px;
+}
+
+.payment-filter-grid .form-label {
+    display: block;
+    margin-bottom: 7px;
 }
 
 .fines-filters-grid .field {
@@ -2339,6 +2391,37 @@ body.modal-open .global-fab {
     margin-top: 16px;
 }
 
+.payment-due-heading {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 11px;
+}
+
+.payment-due-icon {
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--red) 14%, var(--surface-2));
+    color: var(--red);
+    font-size: 20px;
+    font-weight: 900;
+}
+
+.payment-due-count {
+    display: grid;
+    place-items: center;
+    min-width: 30px;
+    height: 30px;
+    border-radius: 999px;
+    background: var(--surface-2);
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 900;
+}
+
 .home-income-card {
     margin-top: 16px;
 }
@@ -2457,6 +2540,64 @@ body.modal-open .global-fab {
     font-size: 16px;
 }
 
+.home-monthly-heading {
+    align-items: center;
+}
+
+.home-monthly-heading span {
+    display: block;
+    margin-top: 3px;
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.monthly-summary-list {
+    padding: 0;
+    overflow: hidden;
+}
+
+.monthly-summary-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 5px 14px;
+    padding: 13px 16px;
+    border-top: 1px solid var(--border);
+}
+
+.monthly-summary-row:first-child {
+    border-top: 0;
+}
+
+.monthly-summary-row span {
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.monthly-summary-row > strong:last-child {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    align-self: center;
+    text-align: right;
+}
+
+.player-history-link {
+    max-width: 100%;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--text);
+    font: inherit;
+    font-weight: 800;
+    text-align: left;
+    text-decoration: underline;
+    text-decoration-color: color-mix(in srgb, var(--primary) 42%, transparent);
+    text-underline-offset: 3px;
+}
+
+.player-history-link:active {
+    color: var(--primary);
+}
+
 .player-history-list {
     display: grid;
     gap: 6px;
@@ -2507,6 +2648,11 @@ body.modal-open .global-fab {
 
     .data-action-row .btn {
         width: 100%;
+    }
+
+    .fines-filters-grid,
+    .payment-filter-grid {
+        grid-template-columns: 1fr;
     }
 }
 

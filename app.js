@@ -5,6 +5,7 @@
 
 const STORAGE_KEY = "multefc_v1";
 const THEME_STORAGE_KEY = "multefc_theme_v1";
+const AUTO_BACKUP_STORAGE_KEY = "multefc_auto_backup_v1";
 const ADMIN_USERNAME = "admin";
 const ADMIN_EMAIL = "admin@multefc.local";
 
@@ -290,6 +291,11 @@ let selectedMonth = "all";
 let selectedPaymentMonth = "2026-08";
 let selectedFinePlayer = "all";
 let showAllRanking = false;
+let showMonthlySummary = false;
+let fineSearchQuery = "";
+let paymentSearchQuery = "";
+let undoSnapshot = null;
+let undoTimer = null;
 
 
 /* =========================================================
@@ -394,10 +400,43 @@ function requireOnlineAdmin() {
 }
 
 function saveLocalState() {
+    const serializedState = JSON.stringify(state);
+
+    localStorage.setItem(STORAGE_KEY, serializedState);
+
+    // Copia locale silenziosa: non sostituisce il backup scaricabile,
+    // ma offre un'ulteriore rete di sicurezza prima delle operazioni manuali.
     localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify(state)
+        AUTO_BACKUP_STORAGE_KEY,
+        JSON.stringify({ savedAt: new Date().toISOString(), data: state })
     );
+}
+
+function offerUndo(message, previousState) {
+    undoSnapshot = structuredClone(previousState);
+    clearTimeout(undoTimer);
+
+    const toast = document.getElementById("toast");
+    toast.innerHTML = `
+        <span>${escapeHtml(message)}</span>
+        <button id="undoLastOperation" type="button">Annulla</button>
+    `;
+    toast.classList.add("show", "has-action");
+
+    document.getElementById("undoLastOperation").onclick = () => {
+        if (!undoSnapshot || !requireOnlineAdmin()) return;
+        state = structuredClone(undoSnapshot);
+        undoSnapshot = null;
+        clearTimeout(undoTimer);
+        saveState();
+        render();
+        showToast("Operazione annullata.");
+    };
+
+    undoTimer = setTimeout(() => {
+        undoSnapshot = null;
+        toast.classList.remove("show", "has-action");
+    }, 6500);
 }
 
 function queueCloudSave() {
@@ -1464,6 +1503,20 @@ function renderHome() {
             0
         );
 
+    const currentMonthPayment = state.players.reduce(
+        (totals, player) => {
+            const summary = getPlayerMonthSummary(player, currentMonth);
+            totals.due += summary.total;
+            totals.paid += summary.paid;
+            totals.remaining += summary.remaining;
+            return totals;
+        },
+        { due: 0, paid: 0, remaining: 0 }
+    );
+
+    const currentMonthLabel = new Date(`${currentMonth}-01T12:00:00`)
+        .toLocaleDateString("it-IT", { month: "long", year: "numeric" });
+
 
     /* =====================================================
        PODIO
@@ -1501,11 +1554,13 @@ function renderHome() {
 
                                 <div class="row">
 
-                                    <strong>
-                                        ${escapeHtml(
-                                            player.player
-                                        )}
-                                    </strong>
+                                    <button
+                                        class="player-history-link"
+                                        type="button"
+                                        data-player-history="${escapeHtml(player.player)}"
+                                    >
+                                        ${escapeHtml(player.player)}
+                                    </button>
 
                                     <strong>
                                         ${money(
@@ -1591,11 +1646,13 @@ function renderHome() {
 
                                     <div class="row">
 
-                                        <strong>
-                                            ${escapeHtml(
-                                                player.player
-                                            )}
-                                        </strong>
+                                        <button
+                                            class="player-history-link"
+                                            type="button"
+                                            data-player-history="${escapeHtml(player.player)}"
+                                        >
+                                            ${escapeHtml(player.player)}
+                                        </button>
 
                                         <strong>
                                             ${money(
@@ -1689,148 +1746,68 @@ function renderHome() {
         </section>
 
 
-        <!-- ================================================
-             STATISTICHE PRINCIPALI
-             ================================================ -->
-
-        <div
-            class="grid stats"
-            style="margin-top:14px"
-        >
-
-            <div class="card stat">
-
-                <div class="stat-label">
-                    PAGATO
-                </div>
-
-                <div
-                    class="stat-value"
-                    style="color:var(--green)"
-                >
-                    ${money(totalPaid)}
-                </div>
-
+        <section class="home-stat-section">
+            <div class="home-stat-heading">
+                <span>Situazione generale</span>
+                <small>Stagione ${escapeHtml(state.season)}</small>
             </div>
-
-
-            <div class="card stat">
-
-                <div class="stat-label">
-                    DA PAGARE
+            <div class="grid stats">
+                <div class="card stat">
+                    <div class="stat-label">VERSATO</div>
+                    <div class="stat-value" style="color:var(--green)">${money(totalPaid)}</div>
                 </div>
-
-                <div
-                    class="stat-value"
-                    style="color:var(--red)"
-                >
-                    ${money(unpaid)}
+                <div class="card stat">
+                    <div class="stat-label">DA SALDARE</div>
+                    <div class="stat-value" style="color:var(--red)">${money(unpaid)}</div>
                 </div>
-
+                <div class="card stat">
+                    <div class="stat-label">MULTE</div>
+                    <div class="stat-value">${fineCount}</div>
+                </div>
+                <div class="card stat">
+                    <div class="stat-label">GIOCATORI</div>
+                    <div class="stat-value">${finedPlayers}</div>
+                </div>
             </div>
+        </section>
 
-
-            <div class="card stat">
-
-                <div class="stat-label">
-                    MULTE
-                </div>
-
-                <div class="stat-value">
-                    ${fineCount}
-                </div>
-
+        <section class="home-stat-section">
+            <div class="home-stat-heading">
+                <span>Questo mese</span>
+                <small>${escapeHtml(currentMonthLabel)}</small>
             </div>
-
-
-            <div class="card stat">
-
-                <div class="stat-label">
-                    GIOCATORI
+            <div class="grid stats">
+                <div class="card stat">
+                    <div class="stat-label">DOVUTO</div>
+                    <div class="stat-value">${money(currentMonthPayment.due)}</div>
                 </div>
-
-                <div class="stat-value">
-                    ${finedPlayers}
+                <div class="card stat">
+                    <div class="stat-label">VERSATO</div>
+                    <div class="stat-value" style="color:var(--green)">${money(currentMonthPayment.paid)}</div>
                 </div>
-
+                <div class="card stat">
+                    <div class="stat-label">DA SALDARE</div>
+                    <div class="stat-value" style="color:var(--red)">${money(currentMonthPayment.remaining)}</div>
+                </div>
+                <div class="card stat">
+                    <div class="stat-label">MULTE DEL MESE</div>
+                    <div class="stat-value">${money(currentMonthTotal)}</div>
+                </div>
             </div>
-
-        </div>
-
-
-        <!-- ================================================
-             STATISTICHE EXTRA
-             ================================================ -->
-
-        <div class="grid stats">
-
-            <div class="card stat">
-
-                <div class="stat-label">
-                    INCASSATO
-                </div>
-
-                <div class="stat-value">
-                    ${paymentPercentage}%
-                </div>
-
-            </div>
-
-
-            <div class="card stat">
-
-                <div class="stat-label">
-                    MEDIA MULTA
-                </div>
-
-                <div class="stat-value">
-                    ${money(averageFine)}
-                </div>
-
-            </div>
-
-
-            <div class="card stat">
-
-                <div class="stat-label">
-                    PIÙ ALTA
-                </div>
-
-                <div
-                    class="stat-value"
-                    style="color:var(--red)"
-                >
-                    ${money(highestFine)}
-                </div>
-
-            </div>
-
-
-            <div class="card stat">
-
-                <div class="stat-label">
-                    MESE
-                </div>
-
-                <div class="stat-value">
-                    ${money(currentMonthTotal)}
-                </div>
-
-            </div>
-
-        </div>
+        </section>
 
 
         ${
             overdueMonth
                 ? `
                     <div class="card overdue-card">
-                        <div class="row">
+                        <div class="payment-due-heading">
+                            <div class="payment-due-icon">€</div>
                             <div>
-                                <strong>⚠ Insoluti di ${escapeHtml(overdueMonthLabel)}</strong>
-                                <div class="small muted">Dal 15 del mese successivo</div>
+                                <strong>Da saldare</strong>
+                                <div class="small muted">${escapeHtml(overdueMonthLabel)} · dal 15 del mese successivo</div>
                             </div>
-                            <strong>${overduePlayers.length}</strong>
+                            <span class="payment-due-count">${overduePlayers.length}</span>
                         </div>
                         ${
                             overduePlayers.length
@@ -1844,7 +1821,7 @@ function renderHome() {
                                         `).join("")}
                                     </div>
                                 `
-                                : `<p class="small muted">Nessun insoluto per il mese di riferimento.</p>`
+                                : `<p class="small muted">Tutti in regola per il mese di riferimento.</p>`
                         }
                     </div>
                 `
@@ -1898,6 +1875,48 @@ function renderHome() {
             </div>
 
         </div>
+
+        <div class="section-head home-monthly-heading">
+            <div>
+                <h2>📅 Andamento mensile</h2>
+                <span>Quote, multe e versamenti</span>
+            </div>
+            <button class="btn secondary" id="toggleMonthlySummary" type="button">
+                ${showMonthlySummary ? "Mostra meno" : "Dettagli"}
+            </button>
+        </div>
+
+        ${
+            showMonthlySummary
+                ? `
+                    <div class="card monthly-summary-list">
+                        ${dueMonths.map(month => {
+                            const monthTotals = state.players.reduce(
+                                (totals, player) => {
+                                    const summary = getPlayerMonthSummary(player, month);
+                                    totals.due += summary.total;
+                                    totals.paid += summary.paid;
+                                    totals.remaining += summary.remaining;
+                                    return totals;
+                                },
+                                { due: 0, paid: 0, remaining: 0 }
+                            );
+                            const label = new Date(`${month}-01T12:00:00`)
+                                .toLocaleDateString("it-IT", { month: "long", year: "numeric" });
+                            return `
+                                <div class="monthly-summary-row">
+                                    <strong>${escapeHtml(label)}</strong>
+                                    <span>Versato ${money(monthTotals.paid)} di ${money(monthTotals.due)}</span>
+                                    <strong class="${monthTotals.remaining > 0 ? "history-due" : "history-ok"}">
+                                        ${monthTotals.remaining > 0 ? `${money(monthTotals.remaining)} da saldare` : "✓ Saldato"}
+                                    </strong>
+                                </div>
+                            `;
+                        }).join("")}
+                    </div>
+                `
+                : ""
+        }
 
 
         <!-- ================================================
@@ -2092,6 +2111,15 @@ if (selectedFinePlayer !== "all") {
         fine.player === selectedFinePlayer
     );
 
+}
+
+if (fineSearchQuery.trim()) {
+    const query = fineSearchQuery.trim().toLocaleLowerCase("it");
+    fines = fines.filter(fine =>
+        `${fine.player} ${fine.category} ${fine.type}`
+            .toLocaleLowerCase("it")
+            .includes(query)
+    );
 }
 
 
@@ -2375,6 +2403,23 @@ if (selectedFinePlayer !== "all") {
 
         </div>
 
+        <div class="field fines-search-field">
+
+            <label for="fineSearch" class="form-label">
+                🔎 Cerca
+            </label>
+
+            <input
+                id="fineSearch"
+                class="month-select"
+                type="search"
+                value="${escapeHtml(fineSearchQuery)}"
+                placeholder="Giocatore o tipo multa"
+                autocomplete="off"
+            >
+
+        </div>
+
     </div>
 
 </div>
@@ -2519,7 +2564,7 @@ function renderPayments() {
     let totalPaid = 0;
     let totalRemaining = 0;
 
-    const rows =
+    const paymentEntries =
         getSortedPlayers().map(player => {
             const summary =
                 getPlayerMonthSummary(
@@ -2532,7 +2577,16 @@ function renderPayments() {
             totalRemaining +=
                 summary.remaining;
 
-            return `
+            return { player, summary };
+        });
+
+    const paymentQuery = paymentSearchQuery.trim().toLocaleLowerCase("it");
+
+    const rows = paymentEntries
+        .filter(({ player }) =>
+            !paymentQuery || player.toLocaleLowerCase("it").includes(paymentQuery)
+        )
+        .map(({ player, summary }) => `
                 <div class="payment-row" data-payment-remaining="${summary.remaining}">
                     <button
                         type="button"
@@ -2616,8 +2670,7 @@ function renderPayments() {
                         ${money(summary.total)}
                     </div>
                 </div>
-            `;
-        })
+            `)
         .join("");
 
     return `
@@ -2630,18 +2683,11 @@ function renderPayments() {
             </div>
         </div>
 
-        <div class="card payment-month-card">
-            <label
-                for="paymentMonthSelect"
-                class="form-label"
-            >
-                Mese
-            </label>
-
-            <select
-                id="paymentMonthSelect"
-                class="form-input"
-            >
+        <div class="card payment-month-card payment-filter-card">
+            <div class="payment-filter-grid">
+                <div>
+                    <label for="paymentMonthSelect" class="form-label">Mese</label>
+                    <select id="paymentMonthSelect" class="form-input">
                 ${months
                     .map(month => {
                         const label =
@@ -2675,7 +2721,20 @@ function renderPayments() {
                         `;
                     })
                     .join("")}
-            </select>
+                    </select>
+                </div>
+                <div>
+                    <label for="paymentSearch" class="form-label">🔎 Cerca giocatore</label>
+                    <input
+                        id="paymentSearch"
+                        class="form-input"
+                        type="search"
+                        value="${escapeHtml(paymentSearchQuery)}"
+                        placeholder="Scrivi un nome"
+                        autocomplete="off"
+                    >
+                </div>
+            </div>
         </div>
 
         <div class="payment-summary-grid">
@@ -2738,6 +2797,9 @@ function renderPayments() {
             </button>
             <button id="exportDuePaymentsImage" class="btn" type="button">
                 🖼️ Esporta solo da pagare
+            </button>
+            <button id="exportSeasonImage" class="btn" type="button">
+                🏁 Esporta riepilogo stagione
             </button>
         </div>
     `;
@@ -2880,6 +2942,89 @@ function exportPaymentsImage(mode = "all") {
     }
 }
 
+function exportSeasonImage() {
+    try {
+        const months = getPaymentMonths();
+        const today = new Date();
+        const todayMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
+        const finalIndex = months.includes(todayMonth)
+            ? months.indexOf(todayMonth)
+            : todayMonth < months[0] ? 0 : months.length - 1;
+        const includedMonths = months.slice(0, finalIndex + 1);
+        const entries = getSortedPlayers().map(player => {
+            const totals = includedMonths.reduce((sum, month) => {
+                const summary = getPlayerMonthSummary(player, month);
+                sum.base += summary.base;
+                sum.fines += summary.fines;
+                sum.paid += summary.paid;
+                sum.remaining += summary.remaining;
+                return sum;
+            }, { base: 0, fines: 0, paid: 0, remaining: 0 });
+            return { player, ...totals, total: totals.base + totals.fines };
+        });
+
+        const columns = [300, 150, 150, 155, 180];
+        const labels = ["Giocatore", "Quote", "Multe", "Versato", "Da saldare"];
+        const padding = 44;
+        const titleHeight = 108;
+        const headerHeight = 46;
+        const rowHeight = 52;
+        const width = columns.reduce((sum, value) => sum + value, 0) + padding * 2;
+        const height = titleHeight + headerHeight + entries.length * rowHeight + padding;
+        const canvas = document.createElement("canvas");
+        const scale = 2;
+        canvas.width = width * scale;
+        canvas.height = height * scale;
+        const context = canvas.getContext("2d");
+        context.scale(scale, scale);
+        context.textBaseline = "middle";
+        context.fillStyle = "#f7f9fc";
+        context.fillRect(0, 0, width, height);
+        context.fillStyle = "#13213a";
+        context.font = "700 27px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+        context.fillText(`Riepilogo stagione — ${state.season}`, padding, 43);
+        context.fillStyle = "#5b677a";
+        context.font = "500 15px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+        context.fillText(`${state.team} · aggiornato a ${new Date().toLocaleDateString("it-IT")}`, padding, 74);
+        const tableWidth = width - padding * 2;
+        context.fillStyle = "#203657";
+        context.fillRect(padding, titleHeight, tableWidth, headerHeight);
+        context.fillStyle = "#fff";
+        context.font = "700 14px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+        let left = padding;
+        labels.forEach((label, index) => {
+            context.fillText(label, left + 15, titleHeight + headerHeight / 2);
+            left += columns[index];
+        });
+        entries.forEach((entry, index) => {
+            const y = titleHeight + headerHeight + index * rowHeight;
+            context.fillStyle = index % 2 === 0 ? "#fff" : "#eef3f9";
+            context.fillRect(padding, y, tableWidth, rowHeight);
+            context.strokeStyle = "#d7e0ec";
+            context.strokeRect(padding, y, tableWidth, rowHeight);
+            const values = [entry.player, money(entry.base), money(entry.fines), money(entry.paid), money(entry.remaining)];
+            left = padding;
+            values.forEach((value, columnIndex) => {
+                context.font = columnIndex === 0
+                    ? "650 16px system-ui, -apple-system, BlinkMacSystemFont, sans-serif"
+                    : "600 16px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+                context.fillStyle = columnIndex === 4 && entry.remaining > 0 ? "#ba2a31" : "#172236";
+                context.fillText(String(value), left + 15, y + rowHeight / 2);
+                left += columns[columnIndex];
+            });
+        });
+
+        openExportPreview(
+            canvas.toDataURL("image/png"),
+            `riepilogo-stagione-${state.season.replace(/[^\w-]/g, "-")}.png`,
+            "Riepilogo stagione"
+        );
+    } catch (error) {
+        console.error("Errore export stagione:", error);
+        showToast("Errore durante l'esportazione della stagione");
+    }
+}
+
 function openExportPreview(imageUrl, fileName, title) {
     openModal(
         `${title} — anteprima`,
@@ -2984,11 +3129,13 @@ function renderFineRow(fine) {
 
                     <div>
 
-                        <strong>
-                            ${escapeHtml(
-                                fine.player
-                            )}
-                        </strong>
+                        <button
+                            class="player-history-link"
+                            type="button"
+                            data-player-history="${escapeHtml(fine.player)}"
+                        >
+                            ${escapeHtml(fine.player)}
+                        </button>
 
                         <div class="small muted">
 
@@ -3270,7 +3417,7 @@ function renderSettings() {
 
             <div class="form">
 
-                <div class="field">
+        <div class="field">
 
                     <label>
                         NOME SQUADRA
@@ -3312,8 +3459,6 @@ function renderSettings() {
                 >
                     Salva impostazioni
                 </button>
-
-            </div>
 
         </div>
 
@@ -3415,6 +3560,14 @@ function renderSettings() {
                         <div class="small muted">Recupera un file JSON esportato in precedenza.</div>
                     </div>
                     <button class="btn secondary" id="importData" type="button">Importa</button>
+                </div>
+
+                <div class="data-action-row">
+                    <div>
+                        <strong>Backup automatico</strong>
+                        <div class="small muted">Copia locale aggiornata a ogni salvataggio, pronta da scaricare.</div>
+                    </div>
+                    <button class="btn secondary" id="exportAutoBackup" type="button">Esporta copia</button>
                 </div>
             </section>
 
@@ -4526,6 +4679,8 @@ document
     )
     .onclick = () => {
 
+        const previousState = structuredClone(state);
+
         const singlePlayerSelect =
             document.getElementById(
                 "finePlayer"
@@ -4654,12 +4809,13 @@ document
 
             render();
 
-            showToast(
+            offerUndo(
                 isEdit
                     ? "Multa modificata"
                     : selectedPlayers.length > 1
                         ? `${selectedPlayers.length} multe aggiunte`
-                        : "Multa aggiunta"
+                        : "Multa aggiunta",
+                previousState
             );
 
             return;
@@ -4850,12 +5006,13 @@ document
 
         render();
 
-        showToast(
+        offerUndo(
             isEdit
                 ? "Multa modificata"
             : selectedPlayers.length > 1
                 ? `${selectedPlayers.length} multe aggiunte`
-                : "Multa aggiunta"
+                : "Multa aggiunta",
+            previousState
         );
 
     };
@@ -5259,6 +5416,19 @@ document
     );
 
 
+document
+    .getElementById("fineSearch")
+    ?.addEventListener("input", event => {
+        fineSearchQuery = event.target.value;
+        render();
+        requestAnimationFrame(() => {
+            const input = document.getElementById("fineSearch");
+            input?.focus();
+            input?.setSelectionRange(fineSearchQuery.length, fineSearchQuery.length);
+        });
+    });
+
+
 /* =========================
    MESE PAGAMENTI
    ========================= */
@@ -5273,6 +5443,18 @@ document
            render();
 
     });
+
+    document
+       .getElementById("paymentSearch")
+       ?.addEventListener("input", event => {
+           paymentSearchQuery = event.target.value;
+           render();
+           requestAnimationFrame(() => {
+               const input = document.getElementById("paymentSearch");
+               input?.focus();
+               input?.setSelectionRange(paymentSearchQuery.length, paymentSearchQuery.length);
+           });
+       });
 
 
     /* =========================
@@ -5329,6 +5511,13 @@ document
         .getElementById("toggleRanking")
         ?.addEventListener("click", () => {
             showAllRanking = !showAllRanking;
+            render();
+        });
+
+    document
+        .getElementById("toggleMonthlySummary")
+        ?.addEventListener("click", () => {
+            showMonthlySummary = !showMonthlySummary;
             render();
         });
 
@@ -5390,6 +5579,7 @@ document
 
                 }
 
+                const previousState = structuredClone(state);
 
                 state.fines =
                     state.fines.filter(
@@ -5402,9 +5592,7 @@ document
 
                 render();
 
-                showToast(
-                    "Multa eliminata"
-                );
+                offerUndo("Multa eliminata", previousState);
 
             };
 
@@ -5580,6 +5768,13 @@ document
         () => exportPaymentsImage("due")
     );
 
+   document
+    .getElementById("exportSeasonImage")
+    ?.addEventListener(
+        "click",
+        exportSeasonImage
+    );
+
     document
         .querySelectorAll("[data-player-history]")
         .forEach(button => {
@@ -5654,6 +5849,10 @@ document
             exportBackup
         );
 
+    document
+        .getElementById("exportAutoBackup")
+        ?.addEventListener("click", exportAutomaticBackup);
+
 
     /* =========================
        IMPORT
@@ -5716,6 +5915,8 @@ document
                     return;
                 }
 
+                const previousState = structuredClone(state);
+
                 const player =
                     event.target.dataset
                         .paymentPlayer;
@@ -5750,6 +5951,8 @@ document
 
                 render();
 
+                offerUndo("Pagamento aggiornato", previousState);
+
             }
         );
 
@@ -5768,11 +5971,24 @@ function exportBackup() {
 
 }
 
-function downloadBackup(prefix) {
+function exportAutomaticBackup() {
+    try {
+        const storedBackup = JSON.parse(
+            localStorage.getItem(AUTO_BACKUP_STORAGE_KEY) || "null"
+        );
+        downloadBackup("multefc-backup-automatico", storedBackup?.data || state);
+        showToast("Copia automatica esportata");
+    } catch (error) {
+        console.error("Errore backup automatico:", error);
+        showToast("Backup automatico non disponibile");
+    }
+}
+
+function downloadBackup(prefix, backupState = state) {
 
     const data =
         JSON.stringify(
-            state,
+            backupState,
             null,
             2
         );
@@ -6014,6 +6230,8 @@ function showToast(message) {
             "toast"
         );
 
+    clearTimeout(undoTimer);
+    toast.classList.remove("has-action");
 
     toast.textContent =
         message;

@@ -1360,6 +1360,19 @@ body.modal-open .global-fab {
     min-width: 0;
 }
 
+.player-history-trigger {
+    width: 100%;
+    padding: 0;
+    border: 0;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+}
+
+.player-history-trigger:active {
+    opacity: .75;
+}
+
 .payment-player strong {
     display: block;
     font-size: 14px;
@@ -2134,6 +2147,50 @@ body.modal-open .global-fab {
     gap: 9px;
 }
 
+.payment-export-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 14px;
+}
+
+.payment-export-actions .primary-button,
+.payment-export-actions .btn {
+    width: 100%;
+    min-height: 48px;
+}
+
+.payments-export-canvas {
+    position: fixed;
+    top: 0;
+    left: -10000px;
+    width: max-content;
+    min-width: 760px;
+    padding: 28px;
+    background: var(--bg);
+    color: var(--text);
+}
+
+.payments-export-canvas h1 {
+    margin: 0 0 5px;
+    font-size: 24px;
+}
+
+.payments-export-canvas > p {
+    margin: 0 0 18px;
+    color: var(--muted);
+}
+
+.payments-export-canvas .payments-table-card {
+    overflow: visible;
+}
+
+@media (max-width: 460px) {
+    .payment-export-actions {
+        grid-template-columns: 1fr;
+    }
+}
+
 .offline-indicator {
     padding: 6px 9px;
     border: 1px solid color-mix(in srgb, var(--yellow) 45%, var(--border));
@@ -2244,6 +2301,77 @@ body.modal-open .global-fab {
 
 .overdue-row strong {
     color: var(--red);
+}
+
+.player-history-summary {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.player-history-summary > div {
+    display: grid;
+    gap: 5px;
+    padding: 11px;
+    border-radius: 12px;
+    background: var(--surface-2);
+}
+
+.player-history-summary span,
+.player-history-row small {
+    color: var(--muted);
+    font-size: 11px;
+}
+
+.player-history-summary strong {
+    font-size: 16px;
+}
+
+.compact-section-head {
+    margin: 20px 0 8px;
+}
+
+.compact-section-head h3 {
+    margin: 0;
+    font-size: 16px;
+}
+
+.player-history-list {
+    display: grid;
+    gap: 6px;
+}
+
+.player-history-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 0;
+    border-top: 1px solid var(--border);
+}
+
+.player-history-row > div {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+}
+
+.player-history-row > div:last-child {
+    text-align: right;
+}
+
+.history-due {
+    color: var(--red);
+}
+
+.history-ok {
+    color: var(--green);
+}
+
+@media (max-width: 420px) {
+    .player-history-summary {
+        grid-template-columns: 1fr;
+    }
 }
 
 @media (max-width: 420px) {

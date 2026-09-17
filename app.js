@@ -2480,8 +2480,13 @@ function renderPayments() {
                 summary.remaining;
 
             return `
-                <div class="payment-row">
-                    <div class="payment-player payment-sticky">
+                <div class="payment-row" data-payment-remaining="${summary.remaining}">
+                    <button
+                        type="button"
+                        class="payment-player payment-sticky player-history-trigger"
+                        data-player-history="${escapeHtml(player)}"
+                        aria-label="Apri situazione di ${escapeHtml(player)}"
+                    >
                         <div class="player-avatar">
                             ${escapeHtml(
                                 initials(player)
@@ -2520,7 +2525,7 @@ function renderPayments() {
                                 }
                             </small>
                         </div>
-                    </div>
+                    </button>
 
                     <div class="payment-value payment-paid-cell">
 
@@ -2674,18 +2679,18 @@ function renderPayments() {
 
         </div>
 
-        <button
-            id="exportPaymentsImage"
-            class="primary-button"
-            type="button"
-            style="width: 100%; margin-top: 14px;"
-        >
-            🖼️ Esporta tabella come immagine
-        </button>
+        <div class="payment-export-actions">
+            <button id="exportPaymentsImage" class="primary-button" type="button">
+                🖼️ Esporta tabella completa
+            </button>
+            <button id="exportDuePaymentsImage" class="btn secondary" type="button">
+                🖼️ Esporta solo da pagare
+            </button>
+        </div>
     `;
 }
 
-async function exportPaymentsImage() {
+async function exportPaymentsImage(mode = "all") {
 
     const table =
         document.getElementById(
@@ -2699,29 +2704,45 @@ async function exportPaymentsImage() {
         return;
     }
 
-    try {
+    const monthLabel = new Date(
+        `${selectedPaymentMonth}-01T12:00:00`
+    ).toLocaleDateString("it-IT", { month: "long", year: "numeric" });
+    const exportCard = table.cloneNode(true);
+    exportCard.removeAttribute("id");
 
-        // Su smartphone la card scorre orizzontalmente: html2canvas deve
-        // ricevere la larghezza del contenuto, non solo quella visibile.
-        const exportWidth = Math.max(
-            table.scrollWidth,
-            table.querySelector(".payments-table-header")?.scrollWidth || 0,
-            table.clientWidth
-        );
+    if (mode === "due") {
+        exportCard.querySelectorAll(".payment-row").forEach(row => {
+            if (Number(row.dataset.paymentRemaining) <= 0) {
+                row.remove();
+            }
+        });
+
+        if (!exportCard.querySelector(".payment-row")) {
+            showToast("Nessun giocatore da esportare.");
+            return;
+        }
+    }
+
+    const exportContainer = document.createElement("section");
+    exportContainer.className = "payments-export-canvas";
+    exportContainer.innerHTML = `
+        <h1>${mode === "due" ? "Da pagare" : "Pagamenti"} — ${escapeHtml(monthLabel)}</h1>
+        <p>${escapeHtml(state.team)} · ${escapeHtml(state.season)}</p>
+    `;
+    exportContainer.append(exportCard);
+    document.body.append(exportContainer);
+
+    try {
 
         const canvas =
             await html2canvas(
-                table,
+                exportContainer,
                 {
                     backgroundColor:
                         getComputedStyle(
                             document.body
                         ).backgroundColor,
-                    scale: 2,
-                    width: exportWidth,
-                    windowWidth: exportWidth,
-                    scrollX: 0,
-                    scrollY: 0
+                    scale: 2
                 }
             );
 
@@ -2729,7 +2750,7 @@ async function exportPaymentsImage() {
             document.createElement("a");
 
         link.download =
-            "pagamenti.png";
+            `${mode === "due" ? "da-pagare" : "pagamenti"}-${selectedPaymentMonth}.png`;
 
         link.href =
             canvas.toDataURL(
@@ -2748,7 +2769,72 @@ async function exportPaymentsImage() {
         showToast(
             "Errore durante l'esportazione"
         );
+    } finally {
+        exportContainer.remove();
     }
+}
+
+function openPlayerHistoryModal(player) {
+    if (!state.players.includes(player)) {
+        showToast("Giocatore non trovato.");
+        return;
+    }
+
+    const months = getPaymentMonths();
+    const playerFines = [...state.fines]
+        .filter(fine => fine.player === player)
+        .sort((left, right) => String(right.date || "")
+            .localeCompare(String(left.date || "")));
+    const finesTotal = playerFines.reduce(
+        (total, fine) => total + Number(fine.amount || 0),
+        0
+    );
+    const baseTotal = months.reduce(
+        (total, month) => total + getMonthlyBase(month),
+        0
+    );
+    const paidTotal = months.reduce(
+        (total, month) => total + getPlayerMonthPayment(player, month),
+        0
+    );
+    const dueTotal = baseTotal + finesTotal;
+    const remainingTotal = Math.max(0, dueTotal - paidTotal);
+
+    openModal(
+        `Situazione di ${escapeHtml(player)}`,
+        `
+            <div class="player-history-summary">
+                <div><span>Dovuto stagione</span><strong>${money(dueTotal)}</strong></div>
+                <div><span>Versato</span><strong>${money(paidTotal)}</strong></div>
+                <div><span>Rimanente</span><strong>${money(remainingTotal)}</strong></div>
+            </div>
+
+            <div class="section-head compact-section-head"><h3>Situazione mensile</h3></div>
+            <div class="player-history-list">
+                ${months.map(month => {
+                    const summary = getPlayerMonthSummary(player, month);
+                    const label = new Date(`${month}-01T12:00:00`)
+                        .toLocaleDateString("it-IT", { month: "long", year: "numeric" });
+                    return `
+                        <div class="player-history-row">
+                            <div><strong>${escapeHtml(label)}</strong><small>Quote ${money(summary.base)} · multe ${money(summary.fines)}</small></div>
+                            <div><small>Versato ${money(summary.paid)}</small><strong class="${summary.remaining > 0 ? "history-due" : "history-ok"}">${summary.remaining > 0 ? `${money(summary.remaining)} da saldare` : "✓ Saldato"}</strong></div>
+                        </div>
+                    `;
+                }).join("")}
+            </div>
+
+            <div class="section-head compact-section-head"><h3>Ultime multe</h3></div>
+            <div class="player-history-list">
+                ${playerFines.length ? playerFines.map(fine => `
+                    <div class="player-history-row">
+                        <div><strong>${escapeHtml(fine.type)}</strong><small>${formatDate(fine.date)} · ${escapeHtml(fine.category)}</small></div>
+                        <strong>${money(fine.amount)}</strong>
+                    </div>
+                `).join("") : `<p class="muted small">Nessuna multa registrata.</p>`}
+            </div>
+        `
+    );
 }
 
 /* =========================================================
@@ -5341,11 +5427,26 @@ document
         });
 
    document
-    .getElementById("exportPaymentsImage")
+   .getElementById("exportPaymentsImage")
     ?.addEventListener(
         "click",
         exportPaymentsImage
     );
+
+   document
+    .getElementById("exportDuePaymentsImage")
+    ?.addEventListener(
+        "click",
+        () => exportPaymentsImage("due")
+    );
+
+    document
+        .querySelectorAll("[data-player-history]")
+        .forEach(button => {
+            button.onclick = () => openPlayerHistoryModal(
+                button.dataset.playerHistory
+            );
+        });
     /* =========================
        SALVA IMPOSTAZIONI
        ========================= */

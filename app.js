@@ -2809,7 +2809,8 @@ function renderPayments() {
 function createPaymentsExportCanvas(mode = "all") {
 
     const exportMode = mode === "due" ? "due" : "all";
-    const month = selectedPaymentMonth;
+    const month = getPaymentMonths().includes(selectedPaymentMonth)
+        ? selectedPaymentMonth : getPaymentMonths()[0];
     const players = getSortedPlayers()
         .map(player => ({
             player,
@@ -2840,13 +2841,14 @@ function createPaymentsExportCanvas(mode = "all") {
     const rowHeight = 52;
     const logicalWidth = columns.reduce((total, width) => total + width, 0) + padding * 2;
     const logicalHeight = titleHeight + headerHeight + players.length * rowHeight + padding;
-    const pixelRatio = 2;
+    const pixelRatio = getExportScale(logicalWidth, logicalHeight);
     const canvas = document.createElement("canvas");
 
     canvas.width = logicalWidth * pixelRatio;
     canvas.height = logicalHeight * pixelRatio;
 
     const context = canvas.getContext("2d");
+    if (!context) throw new Error("Memoria insufficiente per generare il PNG");
     context.scale(pixelRatio, pixelRatio);
     context.textBaseline = "middle";
 
@@ -2910,7 +2912,7 @@ function createPaymentsExportCanvas(mode = "all") {
             context.fillStyle = columnIndex === 2 && summary.remaining > 0
                 ? "#ba2a31"
                 : "#172236";
-            context.fillText(String(value), left + 15, y + rowHeight / 2);
+            context.fillText(String(value), left + 15, y + rowHeight / 2, columns[columnIndex] - 30);
             left += columns[columnIndex];
         });
     });
@@ -2930,10 +2932,10 @@ function exportPaymentsImage(mode = "all") {
         }
 
         const fileName =
-            `${exportMode === "due" ? "da-pagare" : "pagamenti"}-${selectedPaymentMonth}.png`;
+            `${exportMode === "due" ? "da-pagare" : "pagamenti"}-${getPaymentMonths().includes(selectedPaymentMonth) ? selectedPaymentMonth : getPaymentMonths()[0]}.png`;
 
         openExportPreview(
-            canvas.toDataURL("image/png"),
+            canvas,
             fileName,
             exportMode === "due" ? "Da pagare" : "Pagamenti"
         );
@@ -2973,10 +2975,11 @@ function exportSeasonImage() {
         const width = columns.reduce((sum, value) => sum + value, 0) + padding * 2;
         const height = titleHeight + headerHeight + entries.length * rowHeight + padding;
         const canvas = document.createElement("canvas");
-        const scale = 2;
+        const scale = getExportScale(width, height);
         canvas.width = width * scale;
         canvas.height = height * scale;
         const context = canvas.getContext("2d");
+    if (!context) throw new Error("Memoria insufficiente per generare il PNG");
         context.scale(scale, scale);
         context.textBaseline = "middle";
         context.fillStyle = "#f7f9fc";
@@ -3010,13 +3013,13 @@ function exportSeasonImage() {
                     ? "650 16px system-ui, -apple-system, BlinkMacSystemFont, sans-serif"
                     : "600 16px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
                 context.fillStyle = columnIndex === 4 && entry.remaining > 0 ? "#ba2a31" : "#172236";
-                context.fillText(String(value), left + 15, y + rowHeight / 2);
+                context.fillText(String(value), left + 15, y + rowHeight / 2, columns[columnIndex] - 30);
                 left += columns[columnIndex];
             });
         });
 
         openExportPreview(
-            canvas.toDataURL("image/png"),
+            canvas,
             `riepilogo-stagione-${state.season.replace(/[^\w-]/g, "-")}.png`,
             "Riepilogo stagione"
         );
@@ -3026,23 +3029,104 @@ function exportSeasonImage() {
     }
 }
 
-function openExportPreview(imageUrl, fileName, title) {
-    openModal(
-        `${title} — anteprima`,
-        `
-            <div class="export-preview">
-                <p class="muted">L'immagine è pronta. Da telefono puoi scaricarla oppure tenerla premuta per salvarla o condividerla.</p>
-                <img src="${imageUrl}" alt="${escapeHtml(title)} esportati">
-                <div class="modal-actions">
-                    <button class="btn secondary" id="closeExportPreview" type="button">Chiudi</button>
-                    <a class="btn" href="${imageUrl}" download="${escapeHtml(fileName)}">Scarica PNG</a>
-                </div>
-            </div>
-        `
-    );
-
-    document.getElementById("closeExportPreview").onclick = closeModal;
+// Bound memory use on mobile, independently of devicePixelRatio.
+function getExportScale(width, height) {
+    return Math.min(2, Math.sqrt(4000000 / (width * height)), 4096 / width, 4096 / height);
 }
+
+let disposeExportPreview = null;
+
+async function openExportPreview(canvas, fileName, title) {
+    openModal(
+        `${escapeHtml(title)} — anteprima`,
+        `<div class="export-preview">
+            <p id="exportStatus" class="muted" role="status">Preparazione immagine…</p>
+            <div id="exportActions" class="modal-actions" hidden>
+                <button class="btn" id="shareExportImage" type="button" hidden>Condividi / Salva</button>
+                <a class="btn secondary" id="downloadExportImage">Scarica PNG</a>
+                <a class="btn secondary" id="openExportImage" target="_blank" rel="noopener">Apri immagine</a>
+            </div>
+            <img id="exportPreviewImage" alt="${escapeHtml(title)} esportati" hidden>
+            <button class="btn secondary" id="closeExportPreview" type="button">Chiudi</button>
+        </div>`
+    );
+    document.getElementById("closeExportPreview").onclick = closeModal;
+    const status = document.getElementById("exportStatus");
+    const actions = document.getElementById("exportActions");
+    const preview = document.getElementById("exportPreviewImage");
+    const shareButton = document.getElementById("shareExportImage");
+    const download = document.getElementById("downloadExportImage");
+    const open = document.getElementById("openExportImage");
+    let imageUrl;
+    let disposed = false;
+    let sharing = false;
+    disposeExportPreview = () => {
+        disposed = true;
+        preview.removeAttribute("src");
+        // Give an initiated download/new tab time to consume the Blob URL.
+        if (imageUrl) {
+            const releasedUrl = imageUrl;
+            setTimeout(() => URL.revokeObjectURL(releasedUrl), 60000);
+        }
+    };
+    try {
+        const blob = await new Promise((resolve, reject) => {
+            canvas.toBlob(value => value && value.size
+                ? resolve(value)
+                : reject(new Error("PNG non generato")), "image/png");
+        });
+        if (disposed || !status.isConnected) return;
+        imageUrl = URL.createObjectURL(blob);
+        preview.src = imageUrl;
+        preview.hidden = false;
+        download.href = imageUrl;
+        download.download = fileName;
+        open.href = imageUrl;
+        actions.hidden = false;
+
+        let file = null;
+        let canShare = false;
+        try {
+            file = new File([blob], fileName, { type: "image/png" });
+            canShare = typeof navigator.share === "function" &&
+                typeof navigator.canShare === "function" && navigator.canShare({ files: [file] });
+        } catch (_) { /* Download and image preview remain available. */ }
+        status.textContent = canShare
+            ? "Immagine pronta. Tocca Condividi / Salva: su iPhone scegli Salva immagine oppure Salva su File."
+            : "Immagine pronta. Scarica il PNG oppure apri l’immagine; su iPhone tienila premuta per salvarla.";
+        shareButton.hidden = !canShare;
+        shareButton.onclick = async () => {
+            if (sharing || disposed) return;
+            sharing = true;
+            shareButton.disabled = true;
+            try {
+                // The file is already prepared: invoke directly in the tap handler.
+                // Awaiting canvas/fetch here can lose Safari's user activation.
+                await navigator.share({ files: [file] });
+            } catch (error) {
+                if (error.name !== "AbortError" && !disposed) {
+                    status.textContent = "Condivisione non disponibile. Usa Scarica PNG oppure Apri immagine e tienila premuta per salvarla.";
+                }
+            } finally {
+                sharing = false;
+                if (!disposed) shareButton.disabled = false;
+            }
+        };
+        preview.onerror = () => {
+            status.textContent = "Anteprima non disponibile. Puoi comunque condividere o scaricare il PNG.";
+        };
+    } catch (error) {
+        console.error("Errore preparazione PNG:", error);
+        if (!disposed && status.isConnected) {
+            status.textContent = "Non è stato possibile creare l’immagine. Chiudi l’anteprima e riprova.";
+        }
+    } finally {
+        // Release the backing store, including when the preview closed mid-encode.
+        canvas.width = 1;
+        canvas.height = 1;
+    }
+}
+
 
 function openPlayerHistoryModal(player) {
     if (!state.players.includes(player)) {
@@ -3571,6 +3655,11 @@ function renderSettings() {
    ========================================================= */
 
 function openModal(title, content) {
+    if (disposeExportPreview) {
+        disposeExportPreview();
+        disposeExportPreview = null;
+    }
+
 
     const root =
         document.getElementById(
@@ -3633,6 +3722,11 @@ function openModal(title, content) {
 
 
 function closeModal() {
+    if (disposeExportPreview) {
+        disposeExportPreview();
+        disposeExportPreview = null;
+    }
+
 
     document.getElementById(
         "modalRoot"

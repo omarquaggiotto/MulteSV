@@ -3078,3 +3078,9 @@ body.modal-open .global-fab {
         margin-bottom: 14px;
     }
 }
+
+/* Export actions stay reachable before the image, including on narrow iPhones. */
+.export-preview .modal-actions { display: flex; flex-wrap: wrap; margin-top: 0; gap: 8px; }
+.export-preview .modal-actions .btn { flex: 1 1 140px; min-height: 44px; text-align: center; }
+.export-preview img { -webkit-touch-callout: default; user-select: auto; touch-action: auto; }
+.export-preview #exportStatus { line-height: 1.5; }

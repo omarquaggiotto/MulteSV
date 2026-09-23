@@ -3190,3 +3190,17 @@ body.modal-open::after { visibility: hidden; }
 .match-venue span { display:block; font-size:10px; line-height:1.5; color:#b8c8dc; margin-top:3px; }
 .match-maps { display:inline-flex; align-items:center; justify-content:center; gap:7px; min-height:44px; padding:0 12px; border-radius:12px; background:#71dec11a; border:1px solid #71dec147; color:#a4efdc; text-decoration:none; font-size:11px; font-weight:700; }
 .match-maps:focus-visible { outline:2px solid #71dec1; outline-offset:3px; }
+
+/* Anteprima locale: riepilogo mensile in un unico riquadro. */
+.home-stat-section { margin:0 0 24px; padding:20px; border:1px solid var(--border); border-radius:22px; background:var(--surface); box-shadow:0 6px 22px #071a3308; }
+.home-stat-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:0 0 18px; }
+.home-stat-heading span { font-size:10px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); }
+.home-stat-heading small { font-size:12px; font-weight:700; color:var(--text); background:var(--bg); padding:7px 11px; border-radius:20px; }
+.home-stat-section .grid.stats { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:0; margin:0; }
+.home-stat-section .card.stat { background:transparent; box-shadow:none; border:0; border-radius:0; margin:0; padding:14px 0; min-width:0; }
+.home-stat-section .card.stat:nth-child(even) { padding-left:20px; border-left:1px solid var(--border); }
+.home-stat-section .card.stat:nth-child(-n+2) { padding-top:0; border-bottom:1px solid var(--border); }
+.home-stat-section .card.stat:nth-child(n+3) { padding-bottom:0; }
+.home-stat-section .stat-label { font-size:10px; font-weight:600; letter-spacing:.04em; color:var(--muted); margin-bottom:7px; }
+.home-stat-section .stat-value { font-size:clamp(22px,6vw,30px); font-weight:750; line-height:1.15; letter-spacing:-.04em; overflow-wrap:anywhere; }
+@media(max-width:350px) { .home-stat-section { padding:16px; } .home-stat-heading { gap:6px; } .home-stat-heading small { font-size:11px; } }

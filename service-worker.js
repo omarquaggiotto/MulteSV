@@ -1,4 +1,4 @@
-const CACHE_NAME = "multefc-v38-month-card";
+const CACHE_NAME = "multefc-v39-fresh-assets";
 const APP_SHELL = [
     "./",
     "./index.html",
@@ -15,7 +15,7 @@ const APP_SHELL = [
 self.addEventListener("install", event => {
     event.waitUntil(
         caches.open(CACHE_NAME)
-            .then(cache => cache.addAll(APP_SHELL))
+            .then(cache => cache.addAll(APP_SHELL.map(url => new Request(url, { cache: "reload" }))))
     );
     self.skipWaiting();
 });
@@ -43,7 +43,14 @@ self.addEventListener("fetch", event => {
 
     if (request.mode === "navigate") {
         event.respondWith(
-            fetch(request).catch(() => caches.match("./index.html"))
+            fetch(request, { cache: "no-cache" })
+                .then(response => {
+                    if (!response.ok) throw new Error("Pagina non disponibile");
+                    const copy = response.clone();
+                    event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.put("./index.html", copy)));
+                    return response;
+                })
+                .catch(() => caches.match("./index.html"))
         );
         return;
     }
@@ -52,7 +59,7 @@ self.addEventListener("fetch", event => {
     // resta solo il fallback se manca la connessione, senza bloccare le novità.
     if (url.searchParams.has("v")) {
         event.respondWith(
-            fetch(request)
+            fetch(request, { cache: "no-cache" })
                 .then(response => {
                     if (response.ok) {
                         caches.open(CACHE_NAME)

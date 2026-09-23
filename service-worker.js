@@ -1,4 +1,4 @@
-const CACHE_NAME = "multefc-v33-team-link";
+const CACHE_NAME = "multefc-v34-team-background";
 const APP_SHELL = [
     "./",
     "./index.html",
@@ -7,6 +7,7 @@ const APP_SHELL = [
     "./manifest.json",
     "./assets/multe-sv-icon.png",
     "./san-vitale-logo.png",
+    "./san-vitale-background.png",
     "./vendor/html2canvas.min.js"
 ];
 

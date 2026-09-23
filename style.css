@@ -3113,3 +3113,17 @@ body.modal-open .global-fab {
 .export-preview .modal-actions .btn { flex: 1 1 140px; min-height: 44px; text-align: center; }
 .export-preview img { -webkit-touch-callout: default; user-select: auto; touch-action: auto; }
 .export-preview #exportStatus { line-height: 1.5; }
+
+/* Stemma squadra: filigrana decorativa non interattiva. */
+body::after {
+ content: "";
+ position: fixed;
+ inset: 100px 0 110px;
+ background: url("san-vitale-background.png") center / min(78vw, 520px) auto no-repeat;
+ opacity: .055;
+ pointer-events: none;
+ z-index: 19;
+}
+[data-theme="dark"] body::after, body[data-theme="dark"]::after { opacity: .075; }
+body.modal-open::after { visibility: hidden; }
+@media print { body::after { display: none; } }

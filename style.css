@@ -3127,3 +3127,35 @@ body::after {
 [data-theme="dark"] body::after, body[data-theme="dark"]::after { opacity: .075; }
 body.modal-open::after { visibility: hidden; }
 @media print { body::after { display: none; } }
+
+.team-pass {
+ position: relative; z-index: 20; overflow: hidden;
+ padding: 24px; border-radius: 26px;
+ color: #f8fafc; background: radial-gradient(ellipse at 100% 0%, #214d7c 0%, transparent 62%), linear-gradient(135deg, #142b49, #0b1729);
+ border: 1px solid #ffffff20; box-shadow: 0 16px 36px #071a3326;
+ margin-bottom: 26px;
+}
+.team-pass-header { display:flex; align-items:center; gap:13px; padding-bottom:22px; border-bottom:1px solid #ffffff18; }
+.team-pass-crest { flex-shrink:0; width:56px; display:grid; place-items:center; }
+.team-pass-crest img { object-fit:contain; }
+.team-pass-eyebrow { display:block; font-size:9px; letter-spacing:.15em; font-weight:700; color:#a6bedb; margin-bottom:5px; }
+.team-pass h2 { font-size:23px; line-height:1.15; letter-spacing:-.7px; margin:0; }
+.team-pass h2 span { font-weight:400; color:#bed1e8; }
+.team-pass-header p { font-size:12px; color:#a6bedb; margin:5px 0 0; }
+.team-pass-badge { margin-left:auto; padding:6px 8px; border:1px solid #ffffff24; border-radius:7px; font-size:8px; letter-spacing:.08em; white-space:nowrap; }
+.team-pass-total { padding:21px 0 18px; }
+.team-pass-total>span { display:flex; align-items:center; gap:10px; font-size:12px; color:#c2d0e2; }
+.team-pass-total small { color:#a6bedb; font-size:10px; }
+.team-pass-total>strong { display:block; font-size:44px; line-height:1.18; letter-spacing:-1.8px; margin-top:6px; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+.team-pass-balances { display:grid; grid-template-columns:1fr 1fr; padding:15px 0; border-top:1px solid #ffffff18; border-bottom:1px solid #ffffff18; }
+.team-pass-balances>div+div { border-left:1px solid #ffffff18; padding-left:20px; }
+.team-pass-balances span { color:#c2d0e2; display:flex; align-items:center; gap:6px; font-size:12px; }
+.team-pass-balances i { width:6px; height:6px; border-radius:50%; background:#71dec1; }
+.team-pass-balances .due-dot { background:#ffd293; }
+.team-pass-balances strong { display:block; margin-top:7px; font-size:25px; letter-spacing:-.6px; color:#71dec1; overflow-wrap:anywhere; }
+.team-pass-balances>div+div strong { color:#ffd293; }
+.team-pass-progress-label { display:flex; justify-content:space-between; margin:17px 0 8px; color:#c2d0e2; font-size:11px; }
+.team-pass-progress { background:#ffffff15; border-radius:20px; height:5px; overflow:hidden; }
+.team-pass-progress i { display:block; height:100%; background:linear-gradient(90deg,#55bda7,#a0f0cf); border-radius:20px; }
+.team-pass-footer { display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px; font-size:10px; color:#a6bedb; margin-top:13px; }
+@media(max-width:370px) { .team-pass { padding:20px; } .team-pass-badge { display:none; } .team-pass h2 { font-size:22px; } }

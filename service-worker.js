@@ -1,4 +1,4 @@
-const CACHE_NAME = "multefc-v34-team-background";
+const CACHE_NAME = "multefc-v35-team-pass";
 const APP_SHELL = [
     "./",
     "./index.html",

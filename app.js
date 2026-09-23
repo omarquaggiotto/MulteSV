@@ -1753,57 +1753,20 @@ function renderHome() {
              HERO
              ================================================ -->
 
-        <section class="card hero">
-
-            <div class="small">
-
-                ${escapeHtml(state.team)}
-
-                ·
-
-                Stagione
-                ${escapeHtml(state.season)}
+        <section class="team-pass" aria-label="Riepilogo economico squadra">
+            <div class="team-pass-header">
+                <div class="team-pass-crest"><img src="san-vitale-background.png" alt="Stemma San Vitale" width="48" height="58"></div>
+                <div><span class="team-pass-eyebrow">IL NOSTRO SPOGLIATOIO</span><h2>San Vitale <span>Next Gen</span></h2><p>Stagione ${escapeHtml(state.season)}</p></div>
 
             </div>
-
-            <h2>
-                Situazione multe
-            </h2>
-
-            <div class="hero-total">
-                ${money(total)}
+            <div class="team-pass-total"><span>Totale dovuto <small>Quote + multe</small></span><strong>${money(total)}</strong></div>
+            <div class="team-pass-balances">
+                <div><span><i class="paid-dot"></i>Versato</span><strong>${money(totalPaid)}</strong></div>
+                <div><span><i class="due-dot"></i>Da saldare</span><strong>${money(unpaid)}</strong></div>
             </div>
-
-            <div class="hero-subtitle">
-                Totale multe della stagione
-            </div>
-
-        </section>
-
-
-        <section class="home-stat-section">
-            <div class="home-stat-heading">
-                <span>Situazione generale</span>
-                <small>Stagione ${escapeHtml(state.season)}</small>
-            </div>
-            <div class="grid stats">
-                <div class="card stat">
-                    <div class="stat-label">VERSATO</div>
-                    <div class="stat-value" style="color:var(--green)">${money(totalPaid)}</div>
-                </div>
-                <div class="card stat">
-                    <div class="stat-label">DA SALDARE</div>
-                    <div class="stat-value" style="color:var(--red)">${money(unpaid)}</div>
-                </div>
-                <div class="card stat">
-                    <div class="stat-label">MULTE</div>
-                    <div class="stat-value">${fineCount}</div>
-                </div>
-                <div class="card stat">
-                    <div class="stat-label">GIOCATORI</div>
-                    <div class="stat-value">${finedPlayers}</div>
-                </div>
-            </div>
+            <div class="team-pass-progress-label"><span>Incassi</span><strong>${paymentPercentage}%</strong></div>
+            <div class="team-pass-progress" role="progressbar" aria-label="Percentuale incassata" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.min(100,Math.max(0,paymentPercentage))}"><i style="width:${Math.min(100,Math.max(0,paymentPercentage))}%"></i></div>
+            <div class="team-pass-footer"><span>${fineCount} multe · ${finedPlayers} giocatori multati</span><span>Riepilogo ad oggi</span></div>
         </section>
 
         <section class="home-stat-section">
@@ -1867,49 +1830,6 @@ function renderHome() {
         <!-- ================================================
              BARRA INCASSI
              ================================================ -->
-
-        <div class="card home-income-card">
-
-            <div class="row">
-
-                <div>
-
-                    <strong>
-                        💰 Incasso multe
-                    </strong>
-
-                    <div class="small muted">
-                        ${money(totalPaid)}
-                        di
-                        ${money(total)}
-                    </div>
-
-                </div>
-
-                <strong>
-                    ${paymentPercentage}%
-                </strong>
-
-            </div>
-
-
-            <div
-                class="progress"
-                style="
-                    margin-top:12px;
-                    height:10px;
-                "
-            >
-
-                <i
-                    style="
-                        width:${paymentPercentage}%;
-                    "
-                ></i>
-
-            </div>
-
-        </div>
 
         <div class="section-head home-monthly-heading">
             <div>

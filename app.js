@@ -1769,6 +1769,8 @@ function renderHome() {
             <div class="team-pass-footer"><span>${fineCount} multe · ${finedPlayers} giocatori multati</span><span>Riepilogo ad oggi</span></div>
         </section>
 
+        ${window.renderNextMatch ? window.renderNextMatch() : ""}
+
         <section class="home-stat-section">
             <div class="home-stat-heading">
                 <span>Questo mese</span>

@@ -1,9 +1,10 @@
-const CACHE_NAME = "multefc-v35-team-pass";
+const CACHE_NAME = "multefc-v36-next-match";
 const APP_SHELL = [
     "./",
     "./index.html",
     "./style.css",
     "./app.js",
+    "./next-match.js",
     "./manifest.json",
     "./assets/multe-sv-icon.png",
     "./san-vitale-logo.png",

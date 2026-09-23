@@ -2570,6 +2570,35 @@ body.modal-open .global-fab {
     display: flex;
     align-items: center;
     gap: 9px;
+    flex-shrink: 0;
+}
+
+.team-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: #fff;
+    touch-action: manipulation;
+}
+
+.team-link img {
+    display: block;
+    object-fit: contain;
+}
+
+.team-link:focus-visible {
+    outline: 3px solid var(--primary);
+    outline-offset: 3px;
+}
+
+.topbar {
+    gap: 12px;
+    flex-wrap: wrap;
 }
 
 .fine-quick-filters {

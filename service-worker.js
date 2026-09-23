@@ -1,4 +1,4 @@
-const CACHE_NAME = "multefc-v36-next-match";
+const CACHE_NAME = "multefc-v37-match-link";
 const APP_SHELL = [
     "./",
     "./index.html",

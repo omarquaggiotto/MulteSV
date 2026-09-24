@@ -5103,6 +5103,8 @@ function openPlayerModal() {
     const defaultStartMonth = playerStartOptions.includes(currentMonth)
         ? currentMonth
         : playerStartOptions[0];
+    let pendingPhoto = "";
+    let photoBusy = false;
 
     openModal(
 
@@ -5111,6 +5113,23 @@ function openPlayerModal() {
         `
 
         <div class="form">
+
+            <div class="photo-editor">
+                <div class="photo-editor-preview" id="newPlayerPhotoPreview">${playerPortrait("Nuovo giocatore", "")}</div>
+                <div class="photo-editor-actions">
+                    <label class="btn secondary photo-upload-button" for="newPlayerPhotoFile">Scegli foto</label>
+                    <input id="newPlayerPhotoFile" class="photo-file-input" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif">
+                    <button class="btn secondary" id="removeNewPlayerPhoto" type="button" disabled>Rimuovi</button>
+                </div>
+                <span class="small muted" id="newPlayerPhotoStatus">Puoi aggiungere e centrare subito la foto del giocatore.</span>
+            </div>
+
+            <div class="photo-crop-controls" id="photoCropControls" hidden>
+                <canvas id="photoCropCanvas" width="320" height="320" aria-label="Anteprima ritaglio foto"></canvas>
+                <label for="photoCropZoom">Zoom</label><input id="photoCropZoom" type="range" min="1" max="3" step="0.01" value="1">
+                <label for="photoCropX">Spostamento orizzontale</label><input id="photoCropX" type="range" min="-100" max="100" step="1" value="0">
+                <label for="photoCropY">Spostamento verticale</label><input id="photoCropY" type="range" min="-100" max="100" step="1" value="0">
+            </div>
 
             <div class="field">
 
@@ -5168,6 +5187,45 @@ function openPlayerModal() {
     );
 
 
+    const photoInput = document.getElementById("newPlayerPhotoFile");
+    const photoPreview = document.getElementById("newPlayerPhotoPreview");
+    const photoStatus = document.getElementById("newPlayerPhotoStatus");
+    const removePhoto = document.getElementById("removeNewPlayerPhoto");
+    const savePlayer = document.getElementById("savePlayer");
+
+    photoInput.onchange = async () => {
+        const file = photoInput.files?.[0];
+        if (!file || !requireOnlineAdmin()) return;
+        photoBusy = true;
+        savePlayer.disabled = true;
+        photoStatus.textContent = "Preparazione foto…";
+        try {
+            const result = await preparePlayerPhoto(file, data => {
+                pendingPhoto = data;
+                photoPreview.innerHTML = playerPortrait("Nuovo giocatore", data);
+            });
+            pendingPhoto = result;
+            photoPreview.innerHTML = playerPortrait("Nuovo giocatore", result);
+            removePhoto.disabled = false;
+            photoStatus.textContent = "Foto pronta. Premi Aggiungi per salvare tutto insieme.";
+        } catch (error) {
+            photoStatus.textContent = error?.message || "Impossibile preparare la foto.";
+        } finally {
+            photoBusy = false;
+            savePlayer.disabled = false;
+        }
+    };
+
+    removePhoto.onclick = () => {
+        pendingPhoto = "";
+        photoInput.value = "";
+        photoPreview.innerHTML = playerPortrait("Nuovo giocatore", "");
+        removePhoto.disabled = true;
+        photoStatus.textContent = "Puoi aggiungere e centrare subito la foto del giocatore.";
+        document.getElementById("photoCropControls").hidden = true;
+    };
+
+
     document
         .getElementById(
             "cancelPlayer"
@@ -5181,6 +5239,7 @@ function openPlayerModal() {
         )
         .onclick = () => {
             if (!requireOnlineAdmin()) return;
+            if (photoBusy) return showToast("Attendi la preparazione della foto.");
             const birthDate = document.getElementById("playerBirthDate").value;
             const startMonth = document.getElementById("playerStartMonth").value;
             if (birthDate && !validBirthday(birthDate)) return showToast("Inserisci una data di nascita valida.");
@@ -5221,6 +5280,8 @@ function openPlayerModal() {
             }
 
 
+            const previousState = structuredClone(state);
+
             state.players.push(
                 name
             );
@@ -5232,8 +5293,21 @@ function openPlayerModal() {
             };
 
 
+            if (pendingPhoto) {
+                state.playerPhotos = {
+                    ...(state.playerPhotos || {}),
+                    [name]: pendingPhoto
+                };
+            }
+
             if (birthDate) setBirthday(name, birthDate);
-            saveState();
+            try {
+                saveState();
+            } catch (error) {
+                state = previousState;
+                showToast("Spazio insufficiente: il giocatore non è stato aggiunto.");
+                return;
+            }
 
             closeModal();
 

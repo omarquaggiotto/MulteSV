@@ -3075,7 +3075,8 @@ function openPlayerHistoryModal(player) {
                 <div><span>Rimanente</span><strong>${money(remainingTotal)}</strong></div>
             </div>
 
-            <div class="section-head compact-section-head"><h3>Situazione mensile</h3></div>
+            <section class="player-history-section player-monthly-section">
+            <div class="section-head compact-section-head"><span class="history-section-icon" aria-hidden="true">▦</span><div><h3>Situazione mensile</h3><small>Quote, multe e versamenti mese per mese</small></div></div>
             <div class="player-history-list">
                 ${months.map(month => {
                     const summary = getPlayerMonthSummary(player, month);
@@ -3089,8 +3090,10 @@ function openPlayerHistoryModal(player) {
                     `;
                 }).join("")}
             </div>
+            </section>
 
-            <div class="section-head compact-section-head"><h3>Ultime multe</h3></div>
+            <section class="player-history-section player-fines-section">
+            <div class="section-head compact-section-head"><span class="history-section-icon" aria-hidden="true">!</span><div><h3>Ultime multe</h3><small>${playerFines.length} ${playerFines.length === 1 ? "multa registrata" : "multe registrate"}</small></div></div>
             <div class="player-history-list">
                 ${playerFines.length ? playerFines.map(fine => `
                     <div class="player-history-row">
@@ -3099,8 +3102,10 @@ function openPlayerHistoryModal(player) {
                     </div>
                 `).join("") : `<p class="muted small">Nessuna multa registrata.</p>`}
             </div>
+            </section>
         `
     );
+    document.querySelector("#modalRoot .modal")?.classList.add("player-profile-modal");
     const monthSelect=document.getElementById('playerShareMonth');if(months.length)monthSelect.value=months[months.length-1];
     document.getElementById('sharePlayerSummary').onclick=()=>exportPlayerSummary(player,monthSelect.value);
 }
@@ -3586,6 +3591,7 @@ function openFineModal(id = null) {
         );
 
 
+
     /* =========================
        MODALE
        ========================= */
@@ -3598,7 +3604,7 @@ function openFineModal(id = null) {
 
         `
 
-        <div class="form">
+        <div class="form fine-form-refresh"><section class="fine-form-section"><div class="fine-section-title"><span>01</span><h3>A chi la assegni?</h3></div>
 
             ${
                 !isEdit
@@ -3665,7 +3671,7 @@ function openFineModal(id = null) {
 
 </div>
 
-            <!-- CATEGORIA -->
+            </section><section class="fine-form-section"><div class="fine-section-title"><span>02</span><h3>Per quale motivo?</h3></div><!-- CATEGORIA -->
 
             <div class="field">
 
@@ -3807,7 +3813,7 @@ function openFineModal(id = null) {
             </div>
 
 
-            <!-- DATA -->
+            </section><section class="fine-form-section fine-details-section"><div class="fine-section-title"><span>03</span><h3>Data e importo</h3></div><!-- DATA -->
 
             <div class="field date-field">
 
@@ -3862,7 +3868,7 @@ function openFineModal(id = null) {
             </div>
 
 
-            <!-- AZIONI -->
+            </section><!-- AZIONI -->
 
             <div class="modal-actions">
 
@@ -3900,6 +3906,7 @@ function openFineModal(id = null) {
        ELEMENTI
        ========================= */
 
+    document.querySelector("#modalRoot .modal")?.classList.add("fine-modal-refresh");
     const categorySelect =
         document.getElementById(
             "fineCategory"

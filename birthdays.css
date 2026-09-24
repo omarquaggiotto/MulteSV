@@ -68,6 +68,89 @@
 .player-profile-status { padding:12px 4px; font-size:13px; font-weight:700; }
 @media(max-width:360px){.player-profile-hero{gap:12px;padding:16px 12px}.player-portrait{width:72px;height:72px}.photo-editor{padding:12px;gap:12px}}
 
+/* Schede giocatore: stessa misura e un solo scroll interno, senza barra visibile. */
+.modal-backdrop {
+ overflow:hidden;
+ padding-bottom:max(104px,calc(88px + env(safe-area-inset-bottom)));
+}
+.modal {
+ box-sizing:border-box;
+ scrollbar-width:none;
+ -ms-overflow-style:none;
+ overscroll-behavior:contain;
+}
+.modal::-webkit-scrollbar { display:none; width:0; height:0; }
+.player-profile-modal {
+ width:min(600px,100%);
+ height:min(760px,calc(100dvh - 142px - env(safe-area-inset-bottom)));
+ max-height:calc(100dvh - 142px - env(safe-area-inset-bottom));
+ overflow-y:auto;
+}
+.player-profile-modal > .row {
+ position:sticky;
+ top:-20px;
+ z-index:5;
+ margin:-20px -20px 16px;
+ padding:20px;
+ background:var(--surface);
+ border-bottom:1px solid var(--border);
+}
+.player-profile-modal .player-history-section {
+ margin-top:16px;
+ padding:0 16px 8px;
+ border:1px solid var(--border);
+ border-radius:18px;
+ background:var(--surface);
+ overflow:hidden;
+}
+.player-profile-modal .player-history-section .compact-section-head {
+ display:flex;
+ align-items:center;
+ justify-content:flex-start;
+ gap:11px;
+ margin:0 -16px 4px;
+ padding:14px 16px;
+ background:var(--surface-2);
+ border-bottom:1px solid var(--border);
+}
+.player-profile-modal .player-history-section .compact-section-head > div { min-width:0; text-align:left; }
+.player-profile-modal .player-history-section .compact-section-head h3 { margin:0; }
+.player-profile-modal .player-history-section .compact-section-head small {
+ display:block;
+ margin-top:3px;
+ color:var(--muted);
+ font-size:10px;
+ line-height:1.35;
+}
+.history-section-icon {
+ display:grid;
+ place-items:center;
+ flex:0 0 34px;
+ height:34px;
+ border-radius:11px;
+ background:color-mix(in srgb,var(--primary) 12%,var(--surface));
+ color:var(--primary);
+ font-size:16px;
+ font-weight:800;
+}
+.player-fines-section .history-section-icon {
+ background:color-mix(in srgb,var(--red) 10%,var(--surface));
+ color:var(--red);
+}
+.player-profile-modal .player-history-section .player-history-row:first-child { border-top:0; }
+.player-profile-modal .player-history-section > .player-history-list > p { padding:12px 0 6px; }
+@media(max-width:420px) {
+ .player-profile-modal {
+  height:calc(100dvh - 126px - env(safe-area-inset-bottom));
+  max-height:calc(100dvh - 126px - env(safe-area-inset-bottom));
+  border-radius:22px;
+ }
+ .player-profile-modal .player-history-summary { grid-template-columns:repeat(3,minmax(0,1fr)); }
+ .player-profile-modal .player-history-summary > div { padding:10px 8px; }
+ .player-profile-modal .player-history-summary span { font-size:9px; }
+ .player-profile-modal .player-history-summary strong { font-size:14px; }
+}
+
 .birthday-person[hidden]{display:none}
 .player-search-field{display:grid;gap:8px;margin:16px 0;font-size:12px;color:var(--muted)}
 #photoCropControls[hidden]{display:none} #photoCropControls{display:grid;gap:12px} #photoCropCanvas{width:100%;max-width:260px;height:auto;border-radius:20px;justify-self:center} #photoCropControls label{display:grid;gap:6px;font-size:12px} #photoCropControls input{width:100%;min-height:36px} .player-share-controls{display:grid;gap:8px;margin:12px 0 18px;font-size:12px;color:var(--muted)}

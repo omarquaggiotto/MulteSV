@@ -1,4 +1,4 @@
-const CACHE_NAME = "multefc-v47-nav-style";
+const CACHE_NAME = "multefc-v48-modal-profiles";
 const APP_SHELL = [
     "./",
     "./index.html",

@@ -3246,3 +3246,23 @@ body.modal-open::after { visibility: hidden; }
 .bottom-navigation .nav-button.active { color:#fff; background:linear-gradient(135deg,#ffffff26,#ffffff12); box-shadow:inset 0 0 0 1px #ffffff24; }
 .bottom-navigation .nav-button:focus-visible { outline:2px solid #d9eaff; outline-offset:1px; }
 .bottom-navigation .nav-button:hover { color:#fff; }
+
+/* Local preview: refreshed fine entry dialog. */
+.fine-modal-refresh { padding:0!important; overflow-x:hidden; border:1px solid var(--border); }
+.fine-modal-refresh > .row { margin:0; padding:22px; background:radial-gradient(ellipse at 100% 0%,#214d7c,transparent 65%),linear-gradient(135deg,#142b49,#0b1729); color:#f8fafc; }
+.fine-modal-refresh > .row h2 { color:#f8fafc; font-size:23px; }
+.fine-modal-refresh > .row button { background:#ffffff16; color:#fff; border:1px solid #ffffff18; }
+.fine-form-refresh { padding:18px; gap:14px; background:var(--bg); }
+.fine-form-section { display:grid; gap:12px; padding:16px; border-radius:18px; border:1px solid var(--border); background:var(--surface); min-width:0; }
+.fine-section-title { display:flex; align-items:center; gap:9px; margin-bottom:2px; }
+.fine-section-title > span { display:grid; place-items:center; width:28px; height:28px; border-radius:9px; background:var(--surface-2); color:var(--primary); font-size:11px; font-weight:800; }
+.fine-section-title h3 { margin:0; font-size:15px; color:var(--text); }
+.fine-form-refresh .field { margin:0; min-width:0; }
+.fine-form-refresh .field > label { font-size:10px; letter-spacing:.05em; color:var(--muted); margin-bottom:6px; }
+.fine-form-refresh select,.fine-form-refresh input,.fine-form-refresh .fine-select-trigger { border-radius:12px; min-height:46px; background:var(--surface-2); }
+.fine-details-section { grid-template-columns:minmax(0,1.3fr) minmax(0,1fr); align-items:start; }
+.fine-details-section .fine-section-title { grid-column:1/-1; }
+.fine-form-refresh #fineAmount { font-weight:800; font-size:20px; color:var(--text); }
+.fine-form-refresh .modal-actions { display:grid; grid-template-columns:1fr 1.6fr; gap:10px; margin:0; padding:2px 0 0; }
+.fine-form-refresh .modal-actions .btn { min-height:48px; border-radius:14px; }
+@media(max-width:360px){.fine-form-refresh{padding:12px;gap:12px}.fine-form-section{padding:12px}.fine-details-section{grid-template-columns:1fr}}

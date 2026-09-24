@@ -1,4 +1,4 @@
-const CACHE_NAME = "multefc-v50-player-create-photo";
+const CACHE_NAME = "multefc-v51-player-photo-width";
 const APP_SHELL = [
     "./",
     "./index.html",
@@ -79,4 +79,5 @@ self.addEventListener("fetch", event => {
             .then(cached => cached || fetch(request))
     );
 });
+
 

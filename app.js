@@ -5186,6 +5186,8 @@ function openPlayerModal() {
 
     );
 
+    document.querySelector("#modalRoot .modal")?.classList.add("player-create-modal");
+
 
     const photoInput = document.getElementById("newPlayerPhotoFile");
     const photoPreview = document.getElementById("newPlayerPhotoPreview");

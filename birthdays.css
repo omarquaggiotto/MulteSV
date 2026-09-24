@@ -68,6 +68,37 @@
 .player-profile-status { padding:12px 4px; font-size:13px; font-weight:700; }
 @media(max-width:360px){.player-profile-hero{gap:12px;padding:16px 12px}.player-portrait{width:72px;height:72px}.photo-editor{padding:12px;gap:12px}}
 
+/* Creazione giocatore: tutti i controlli restano dentro il popup mobile. */
+.player-create-modal,
+.player-create-modal .form,
+.player-create-modal .photo-editor,
+.player-create-modal .photo-editor-actions,
+.player-create-modal .photo-crop-controls {
+ min-width:0;
+ max-width:100%;
+ box-sizing:border-box;
+}
+.player-create-modal { overflow-x:hidden; }
+.player-create-modal .photo-editor-actions { display:flex; flex-wrap:wrap; gap:6px; flex:1 1 auto; }
+.player-create-modal .photo-editor-actions .btn { max-width:100%; white-space:normal; text-align:center; justify-content:center; }
+.player-create-modal #photoCropCanvas { display:block; width:min(260px,100%); max-width:100%; }
+.player-create-modal #photoCropControls input[type="range"] { display:block; width:100%; max-width:100%; min-width:0; box-sizing:border-box; }
+@media(max-width:420px) {
+ .player-create-modal { width:100%; }
+ .player-create-modal .photo-editor {
+  display:grid;
+  grid-template-columns:72px minmax(0,1fr);
+  align-items:center;
+  padding:12px;
+  gap:10px;
+ }
+ .player-create-modal .photo-editor-preview { grid-row:1 / span 2; min-width:0; }
+ .player-create-modal .photo-editor .player-portrait { width:68px; height:68px; border-radius:19px; }
+ .player-create-modal .photo-editor-actions { display:grid; grid-template-columns:minmax(0,1fr); width:100%; }
+ .player-create-modal .photo-editor-actions .btn { width:100%; min-width:0; margin:0; padding:9px 7px; min-height:38px; }
+ .player-create-modal #newPlayerPhotoStatus { grid-column:1/-1; overflow-wrap:anywhere; }
+}
+
 /* Schede giocatore: stessa misura e un solo scroll interno, senza barra visibile. */
 .modal-backdrop {
  overflow:hidden;

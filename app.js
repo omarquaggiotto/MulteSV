@@ -1577,9 +1577,7 @@ function renderHome() {
                                 ${positions[index] || `${index + 1}°`}
                             </div>
 
-                            <div class="avatar">
-                                ${initials(player.player)}
-                            </div>
+                            <button class="avatar player-avatar-button" type="button" data-player-history="${escapeHtml(player.player)}" aria-label="Apri situazione di ${escapeHtml(player.player)}">${playerListPortrait(player.player)}</button>
 
                             <div
                                 style="
@@ -1667,11 +1665,7 @@ function renderHome() {
                                     ${index + 6}
                                 </div>
 
-                                <div class="avatar">
-                                    ${initials(
-                                        player.player
-                                    )}
-                                </div>
+                                <button class="avatar player-avatar-button" type="button" data-player-history="${escapeHtml(player.player)}" aria-label="Apri situazione di ${escapeHtml(player.player)}">${playerListPortrait(player.player)}</button>
 
                                 <div
                                     style="
@@ -2525,11 +2519,7 @@ function renderPayments() {
                         data-player-history="${escapeHtml(player)}"
                         aria-label="Apri situazione di ${escapeHtml(player)}"
                     >
-                        <div class="player-avatar">
-                            ${escapeHtml(
-                                initials(player)
-                            )}
-                        </div>
+                        <span class="player-avatar">${playerListPortrait(player)}</span>
 
                         <div>
                             <strong>

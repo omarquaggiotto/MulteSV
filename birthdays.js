@@ -170,3 +170,5 @@ async function exportPlayerSummary(player,month){
  for(const {fine,lines} of rows){ctx.fillStyle='#0f172a';ctx.font='24px Arial';for(const line of lines){ctx.fillText(line,64,y,590);y+=30;}ctx.fillStyle='#64748b';ctx.font='18px Arial';ctx.fillText(formatDate(fine.date),64,y);ctx.textAlign='right';ctx.fillStyle='#0f172a';ctx.font='bold 24px Arial';ctx.fillText(money(fine.amount),836,y);ctx.textAlign='left';y+=50;}
  await openExportPreview(canvas,'scheda-'+player.replace(/[^a-z0-9]/gi,'-')+'-'+month+'.png','Scheda giocatore — '+label);
 }
+
+function playerListPortrait(name){const photo=getPlayerPhoto(name);return photo?'<img class="player-list-photo" src="'+photo+'" alt="" loading="lazy">':escapeHtml(initials(name));}

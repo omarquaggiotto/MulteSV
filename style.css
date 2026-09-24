@@ -3239,3 +3239,10 @@ body.modal-open::after { visibility: hidden; }
 .topbar-actions { margin-left:auto; }
 .bottom-navigation:not(.has-add-action) { grid-template-columns:repeat(4,minmax(0,1fr)); }
 .bottom-navigation:not(.has-add-action) .nav-add-slot { display:none; }
+
+/* Navigation shares the summary card palette in both themes. */
+.bottom-navigation { color:#f8fafc; background:radial-gradient(ellipse at 100% 0%,#214d7c 0%,transparent 62%),linear-gradient(135deg,#142b49,#0b1729); border:1px solid #ffffff20; box-shadow:0 16px 36px #071a3326; }
+.bottom-navigation .nav-button { color:#b9cce2; }
+.bottom-navigation .nav-button.active { color:#fff; background:linear-gradient(135deg,#ffffff26,#ffffff12); box-shadow:inset 0 0 0 1px #ffffff24; }
+.bottom-navigation .nav-button:focus-visible { outline:2px solid #d9eaff; outline-offset:1px; }
+.bottom-navigation .nav-button:hover { color:#fff; }

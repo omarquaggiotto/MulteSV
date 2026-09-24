@@ -55,6 +55,8 @@ const defaultState = {
         "Simone"
     ],
 
+    playerStartMonths: {},
+
     fines: [
 
        {
@@ -341,6 +343,20 @@ function loadState() {
                             player.trim()
                     )
                     : structuredClone(defaultState.players);
+
+            const seasonStartYear = Number(loaded.season.slice(0, 4)) || 2026;
+            const legacyStartMonth = `${seasonStartYear}-08`;
+            const savedStartMonths = loaded.playerStartMonths && typeof loaded.playerStartMonths === "object"
+                ? loaded.playerStartMonths
+                : {};
+            loaded.playerStartMonths = Object.fromEntries(
+                loaded.players.map(player => [
+                    player,
+                    typeof savedStartMonths[player] === "string" && /^\d{4}-\d{2}$/.test(savedStartMonths[player])
+                        ? savedStartMonths[player]
+                        : legacyStartMonth
+                ])
+            );
 
             loaded.rules =
                 Array.isArray(loaded.rules) &&
@@ -1107,11 +1123,25 @@ function getMonthlyBase(monthId) {
     return 5;
 }
 
+function getPlayerStartMonth(player) {
+    const months = getPaymentMonths();
+    const configured = state.playerStartMonths?.[player];
+    return months.includes(configured) ? configured : months[0];
+}
+
+function getPlayerMonthBase(player, monthId) {
+    return monthId < getPlayerStartMonth(player)
+        ? 0
+        : getMonthlyBase(monthId);
+}
+
 
 function getPlayerMonthFines(
     player,
     monthId
 ) {
+    if (monthId < getPlayerStartMonth(player)) return 0;
+
     return state.fines
         .filter(fine =>
             fine.player === player &&
@@ -1161,7 +1191,8 @@ function getPlayerArrears(
             months[index];
 
         const base =
-            getMonthlyBase(
+            getPlayerMonthBase(
+                player,
                 previousMonth
             );
 
@@ -1203,7 +1234,8 @@ function getPlayerMonthSummary(
     monthId
 ) {
     const base =
-        getMonthlyBase(
+        getPlayerMonthBase(
+            player,
             monthId
         );
 
@@ -1406,7 +1438,8 @@ function renderHome() {
     const totalFines = state.fines
         .filter(fine =>
             fine.date &&
-            fine.date.slice(0, 7) <= currentMonth
+            fine.date.slice(0, 7) <= currentMonth &&
+            fine.date.slice(0, 7) >= getPlayerStartMonth(fine.player)
         )
         .reduce(
             (sum, fine) => sum + Number(fine.amount || 0),
@@ -1414,8 +1447,10 @@ function renderHome() {
         );
 
     const totalBase = dueMonths.reduce(
-        (sum, month) =>
-            sum + getMonthlyBase(month) * state.players.length,
+        (sum, month) => sum + state.players.reduce(
+            (monthTotal, player) => monthTotal + getPlayerMonthBase(player, month),
+            0
+        ),
         0
     );
 
@@ -3054,7 +3089,7 @@ function openPlayerHistoryModal(player) {
         0
     );
     const baseTotal = months.reduce(
-        (total, month) => total + getMonthlyBase(month),
+        (total, month) => total + getPlayerMonthBase(player, month),
         0
     );
     const paidTotal = months.reduce(
@@ -4887,7 +4922,9 @@ function openRuleModal(id = null) {
     openModal(
         id ? "Modifica regola" : "Nuova regola",
         `
-            <div class="form">
+            <div class="form rule-form-refresh">
+                <section class="rule-form-section">
+                <div class="fine-section-title"><span>01</span><h3>Descrivi la regola</h3></div>
                 <div class="field">
                     <label>CATEGORIA</label>
                     <input id="ruleCategory" type="text" list="ruleCategories"
@@ -4906,7 +4943,10 @@ function openRuleModal(id = null) {
                         value="${escapeHtml(rule?.type || "")}"
                         placeholder="Es. Ritardo allenamento">
                 </div>
+                </section>
 
+                <section class="rule-form-section rule-calculation-section">
+                <div class="fine-section-title"><span>02</span><h3>Imposta il calcolo</h3></div>
                 <div class="field">
                     <label>TIPO DI CALCOLO</label>
                     <select id="ruleCalculation">
@@ -4946,6 +4986,7 @@ function openRuleModal(id = null) {
                     <input id="ruleMinimum" type="number" min="0" step="0.01"
                         value="${rule?.minAmount ?? rule?.amount ?? 0}">
                 </div>
+                </section>
 
                 <div class="modal-actions">
                     <button class="btn secondary" id="cancelRule" type="button">Annulla</button>
@@ -4954,6 +4995,7 @@ function openRuleModal(id = null) {
             </div>
         `
     );
+    document.querySelector("#modalRoot .modal")?.classList.add("rule-modal-refresh");
 
     const calculationSelect = document.getElementById("ruleCalculation");
     const calculationFields = {
@@ -5056,6 +5098,12 @@ function openPlayerModal() {
 
     if (!requireOnlineAdmin()) return;
 
+    const playerStartOptions = getPaymentMonths();
+    const currentMonth = birthdayToday().slice(0, 7);
+    const defaultStartMonth = playerStartOptions.includes(currentMonth)
+        ? currentMonth
+        : playerStartOptions[0];
+
     openModal(
 
         "Nuovo giocatore",
@@ -5080,6 +5128,18 @@ function openPlayerModal() {
 
 
             <div class="field"><label for="playerBirthDate">DATA DI NASCITA (facoltativa)</label><input id="playerBirthDate" type="date" min="1900-01-01" max="${birthdayToday()}"></div>
+
+            <div class="field">
+                <label for="playerStartMonth">CONTEGGIA QUOTE E MULTE DA</label>
+                <select id="playerStartMonth">
+                    ${playerStartOptions.map(month => `
+                        <option value="${month}" ${month === defaultStartMonth ? "selected" : ""}>
+                            ${escapeHtml(new Date(`${month}-01T12:00:00`).toLocaleDateString("it-IT", { month: "long", year: "numeric" }))}
+                        </option>
+                    `).join("")}
+                </select>
+                <span class="small muted">I mesi precedenti non genereranno quote o arretrati.</span>
+            </div>
             <div class="modal-actions">
 
                 <button
@@ -5122,7 +5182,9 @@ function openPlayerModal() {
         .onclick = () => {
             if (!requireOnlineAdmin()) return;
             const birthDate = document.getElementById("playerBirthDate").value;
+            const startMonth = document.getElementById("playerStartMonth").value;
             if (birthDate && !validBirthday(birthDate)) return showToast("Inserisci una data di nascita valida.");
+            if (!playerStartOptions.includes(startMonth)) return showToast("Seleziona una mensilità valida.");
 
             const name =
                 document
@@ -5162,6 +5224,12 @@ function openPlayerModal() {
             state.players.push(
                 name
             );
+
+
+            state.playerStartMonths = {
+                ...(state.playerStartMonths || {}),
+                [name]: startMonth
+            };
 
 
             if (birthDate) setBirthday(name, birthDate);

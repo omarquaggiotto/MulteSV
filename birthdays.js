@@ -62,7 +62,8 @@ function renderBirthdaySettings() {
 function openBirthdayEditor(name) {
  if(!requireOnlineAdmin() || !birthdayNames().includes(name))return;
  let pendingPhoto=getPlayerPhoto(name),photoBusy=false;
- openModal('Modifica giocatore',`<div class="form"><div class="photo-editor"><div id="playerPhotoPreview">${playerPortrait(name)}</div><div><label class="btn secondary" for="playerPhotoFile">Scegli foto</label><input id="playerPhotoFile" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" hidden><button type="button" class="btn secondary" id="removePlayerPhoto">Rimuovi foto</button><p class="small muted" id="photoStatus">La foto viene ridotta automaticamente.</p></div></div><div id="photoCropControls" hidden><canvas id="photoCropCanvas" width="320" height="320" aria-label="Anteprima ritaglio"></canvas><label>Zoom<input id="photoCropZoom" type="range" min="1" max="3" step="0.01" value="1"></label><label>Sposta a sinistra / destra<input id="photoCropX" type="range" min="0" max="1" step="0.01" value="0.5"></label><label>Sposta in alto / basso<input id="photoCropY" type="range" min="0" max="1" step="0.01" value="0.5"></label></div><div class="field"><label for="editPlayerName">Nome e cognome</label><input id="editPlayerName" type="text" value="${escapeHtml(name)}" autocomplete="off"></div><div class="field"><label for="birthdayDate">Data di nascita (facoltativa)</label><input id="birthdayDate" type="date" min="1900-01-01" max="${birthdayToday()}" value="${validBirthday(getBirthday(name))?getBirthday(name):''}"></div><p class="small muted">Multe e pagamenti resteranno collegati al giocatore anche se cambi il nome.</p><div class="modal-actions"><button class="btn secondary" id="cancelBirthday" type="button">Annulla</button><button class="btn" id="saveBirthday" type="button">Salva</button></div></div>`);
+ const startMonths=getPaymentMonths(),currentStart=getPlayerStartMonth(name);
+ openModal('Modifica giocatore',`<div class="form"><div class="photo-editor"><div id="playerPhotoPreview">${playerPortrait(name)}</div><div><label class="btn secondary" for="playerPhotoFile">Scegli foto</label><input id="playerPhotoFile" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" hidden><button type="button" class="btn secondary" id="removePlayerPhoto">Rimuovi foto</button><p class="small muted" id="photoStatus">La foto viene ridotta automaticamente.</p></div></div><div id="photoCropControls" hidden><canvas id="photoCropCanvas" width="320" height="320" aria-label="Anteprima ritaglio"></canvas><label>Zoom<input id="photoCropZoom" type="range" min="1" max="3" step="0.01" value="1"></label><label>Sposta a sinistra / destra<input id="photoCropX" type="range" min="0" max="1" step="0.01" value="0.5"></label><label>Sposta in alto / basso<input id="photoCropY" type="range" min="0" max="1" step="0.01" value="0.5"></label></div><div class="field"><label for="editPlayerName">Nome e cognome</label><input id="editPlayerName" type="text" value="${escapeHtml(name)}" autocomplete="off"></div><div class="field"><label for="birthdayDate">Data di nascita (facoltativa)</label><input id="birthdayDate" type="date" min="1900-01-01" max="${birthdayToday()}" value="${validBirthday(getBirthday(name))?getBirthday(name):''}"></div><div class="field"><label for="editPlayerStartMonth">Conteggia quote e multe da</label><select id="editPlayerStartMonth">${startMonths.map(month=>`<option value="${month}" ${month===currentStart?'selected':''}>${escapeHtml(new Date(month+'-01T12:00:00').toLocaleDateString('it-IT',{month:'long',year:'numeric'}))}</option>`).join('')}</select><span class="small muted">I mesi precedenti non generano quote o arretrati.</span></div><p class="small muted">Multe e pagamenti resteranno collegati al giocatore anche se cambi il nome.</p><div class="modal-actions"><button class="btn secondary" id="cancelBirthday" type="button">Annulla</button><button class="btn" id="saveBirthday" type="button">Salva</button></div></div>`);
  document.getElementById('playerPhotoFile').onchange=async event=>{
   const file=event.target.files[0];if(!file||!requireOnlineAdmin())return;
   photoBusy=true;document.getElementById('saveBirthday').disabled=true;
@@ -75,26 +76,28 @@ function openBirthdayEditor(name) {
  document.getElementById('cancelBirthday').onclick=closeModal;
  document.getElementById('saveBirthday').onclick=()=>{
   if(!requireOnlineAdmin())return;
-  const person=name,value=document.getElementById('birthdayDate').value,newName=document.getElementById('editPlayerName').value.trim();
+  const person=name,value=document.getElementById('birthdayDate').value,newName=document.getElementById('editPlayerName').value.trim(),startMonth=document.getElementById('editPlayerStartMonth').value;
   if(!birthdayNames().includes(person))return showToast('Persona non più presente. Riapri la scheda.');
   if(value&&!validBirthday(value))return showToast('Inserisci una data di nascita valida.');
+  if(!startMonths.includes(startMonth))return showToast('Seleziona una mensilità valida.');
   if(!newName)return showToast('Inserisci il nome.');
   if(photoBusy)return;
   const previous=state;
-  const error=renameBirthdayPlayer(person,newName,value);
+  const error=renameBirthdayPlayer(person,newName,value,startMonth);
   if(error)return showToast(error);
   state.playerPhotos={...(state.playerPhotos||{}),[newName]:pendingPhoto};
   try{saveState();}catch{state=previous;showToast('Spazio insufficiente: modifica non salvata. Prova una foto più piccola.');return;}
   closeModal();render();showToast('Giocatore aggiornato.');
  };
 }
-function renameBirthdayPlayer(oldName,newName,birthDate) {
+function renameBirthdayPlayer(oldName,newName,birthDate,startMonth=getPlayerStartMonth(oldName)) {
  if(!canMutate())return 'Modifica consentita solo ad Admin online.';
  if(!state.players.includes(oldName)||!newName.trim())return 'Giocatore o nome non valido.';
  if(birthDate&&!validBirthday(birthDate))return 'Data di nascita non valida.';
+ if(!getPaymentMonths().includes(startMonth))return 'Mensilità iniziale non valida.';
  if(newName!==oldName) {
   const equal=n=>typeof n==='string'&&n!==oldName&&n.trim().toLocaleLowerCase('it')===newName.toLocaleLowerCase('it');
-  const occupied=[...state.players,...state.fines.map(f=>f.player),...Object.values(state.payments||{}).flatMap(month=>Object.keys(month||{})),...Object.keys(state.playerBirthDates||{})];
+  const occupied=[...state.players,...state.fines.map(f=>f.player),...Object.values(state.payments||{}).flatMap(month=>Object.keys(month||{})),...Object.keys(state.playerBirthDates||{}),...Object.keys(state.playerStartMonths||{})];
   if(occupied.some(equal))return 'Nome già presente nella rosa o nello storico. Scegli un nome diverso.';
  }
  const next=structuredClone(state);
@@ -107,6 +110,8 @@ function renameBirthdayPlayer(oldName,newName,birthDate) {
  }
  next.playerBirthDates={...(next.playerBirthDates||{}),[newName]:birthDate};
  if(newName!==oldName)delete next.playerBirthDates[oldName];
+ next.playerStartMonths={...(next.playerStartMonths||{}),[newName]:startMonth};
+ if(newName!==oldName)delete next.playerStartMonths[oldName];
  if(newName!==oldName&&Object.hasOwn(next.playerPhotos||{},oldName)){next.playerPhotos={...next.playerPhotos,[newName]:next.playerPhotos[oldName]};delete next.playerPhotos[oldName];}
  state=next;
  if(newName!==oldName){

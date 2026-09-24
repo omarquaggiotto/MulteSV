@@ -3249,7 +3249,19 @@ body.modal-open::after { visibility: hidden; }
 
 /* Local preview: refreshed fine entry dialog. */
 .fine-modal-refresh { padding:0!important; overflow-x:hidden; border:1px solid var(--border); }
+.fine-modal-refresh {
+ align-self:flex-start;
+ margin-top:max(8px,env(safe-area-inset-top));
+ max-height:calc(100dvh - 126px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+ overflow-y:auto;
+ overscroll-behavior:contain;
+}
 .fine-modal-refresh > .row { margin:0; padding:22px; background:radial-gradient(ellipse at 100% 0%,#214d7c,transparent 65%),linear-gradient(135deg,#142b49,#0b1729); color:#f8fafc; }
+.fine-modal-refresh > .row {
+ position:sticky;
+ top:0;
+ z-index:8;
+}
 .fine-modal-refresh > .row h2 { color:#f8fafc; font-size:23px; }
 .fine-modal-refresh > .row button { background:#ffffff16; color:#fff; border:1px solid #ffffff18; }
 .fine-form-refresh { padding:18px; gap:14px; background:var(--bg); }
@@ -3266,3 +3278,47 @@ body.modal-open::after { visibility: hidden; }
 .fine-form-refresh .modal-actions { display:grid; grid-template-columns:1fr 1.6fr; gap:10px; margin:0; padding:2px 0 0; }
 .fine-form-refresh .modal-actions .btn { min-height:48px; border-radius:14px; }
 @media(max-width:360px){.fine-form-refresh{padding:12px;gap:12px}.fine-form-section{padding:12px}.fine-details-section{grid-template-columns:1fr}}
+
+/* Nuova regola usa la stessa struttura visiva di Nuova multa. */
+.rule-modal-refresh {
+ align-self:flex-start;
+ margin-top:max(8px,env(safe-area-inset-top));
+ max-height:calc(100dvh - 126px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+ padding:0!important;
+ overflow-y:auto;
+ overflow-x:hidden;
+ border:1px solid var(--border);
+ overscroll-behavior:contain;
+}
+.rule-modal-refresh > .row {
+ position:sticky;
+ top:0;
+ z-index:8;
+ margin:0;
+ padding:22px;
+ background:radial-gradient(ellipse at 100% 0%,#214d7c,transparent 65%),linear-gradient(135deg,#142b49,#0b1729);
+ color:#f8fafc;
+}
+.rule-modal-refresh > .row h2 { color:#f8fafc; font-size:23px; }
+.rule-modal-refresh > .row button { background:#ffffff16; color:#fff; border:1px solid #ffffff18; }
+.rule-form-refresh { padding:18px; gap:14px; background:var(--bg); }
+.rule-form-section {
+ display:grid;
+ grid-template-columns:repeat(2,minmax(0,1fr));
+ gap:12px;
+ padding:16px;
+ border-radius:18px;
+ border:1px solid var(--border);
+ background:var(--surface);
+ min-width:0;
+}
+.rule-form-section > .fine-section-title,
+.rule-form-section > #ruleCalculation { grid-column:1/-1; }
+.rule-form-section > .field:nth-of-type(1):not([hidden]) { min-width:0; }
+.rule-form-refresh .fine-section-title { grid-column:1/-1; }
+.rule-form-refresh .field { margin:0; min-width:0; }
+.rule-form-refresh .field > label { font-size:10px; letter-spacing:.05em; color:var(--muted); margin-bottom:6px; }
+.rule-form-refresh select,.rule-form-refresh input { min-height:46px; border-radius:12px; background:var(--surface-2); }
+.rule-form-refresh .modal-actions { display:grid; grid-template-columns:1fr 1.6fr; gap:10px; margin:0; }
+.rule-form-refresh .modal-actions .btn { min-height:48px; border-radius:14px; }
+@media(max-width:420px){.rule-form-section{grid-template-columns:1fr}.rule-form-refresh{padding:12px;gap:12px}.rule-form-section{padding:12px}}

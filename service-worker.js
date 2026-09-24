@@ -1,4 +1,4 @@
-const CACHE_NAME = "multefc-v48-modal-profiles";
+const CACHE_NAME = "multefc-v49-player-start";
 const APP_SHELL = [
     "./",
     "./index.html",

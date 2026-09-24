@@ -3117,11 +3117,7 @@ function renderFineRow(fine) {
 
                 <div class="row-left">
 
-                    <div class="avatar">
-                        ${initials(
-                            fine.player
-                        )}
-                    </div>
+                    <button class="avatar player-avatar-button" type="button" data-player-history="${escapeHtml(fine.player)}" aria-label="Apri situazione di ${escapeHtml(fine.player)}">${playerListPortrait(fine.player)}</button>
 
 
                     <div class="fine-row-copy">

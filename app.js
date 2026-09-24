@@ -460,6 +460,7 @@ function queueCloudSave() {
 
 function applyAccessMode() {
     const canEdit = canMutate();
+    document.querySelector(".bottom-navigation")?.classList.toggle("has-add-action",canEdit);
 
     const offlineIndicator = document.getElementById("offlineIndicator");
     if (offlineIndicator) {

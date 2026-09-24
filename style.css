@@ -3226,3 +3226,16 @@ body.modal-open::after { visibility: hidden; }
 .export-button-copy { flex:1; min-width:0; }.export-button-copy strong { display:block; font-size:14px; line-height:1.3; }.export-button-copy small { display:block; font-size:11px; font-weight:400; color:var(--muted); line-height:1.4; margin-top:4px; }
 .payment-export-button:active { transform:scale(.98); }.payment-export-button:focus-visible { outline:2px solid var(--primary); outline-offset:3px; }
 @media(max-width:800px){.payment-export-actions{grid-template-columns:1fr}}
+
+/* Four destinations and a central add action. */
+.bottom-navigation { grid-template-columns:minmax(0,1fr) minmax(0,1fr) 60px minmax(0,1fr) minmax(0,1fr); align-items:center; }
+.nav-add-slot { display:grid; place-items:center; min-height:56px; }
+.nav-add-slot .global-fab { position:static; width:52px; height:52px; margin:0; transform:none; border-radius:18px; }
+.nav-add-slot .global-fab[hidden] { display:none; }
+.topbar-actions .header-settings { display:grid; place-items:center; flex:0 0 40px; width:40px; height:40px; min-height:40px; padding:0; border-radius:13px; background:var(--surface-2); color:var(--text); }
+.topbar-actions .header-settings.active { background:var(--primary); color:white; }
+@media(max-width:420px){.topbar-actions{gap:5px}.topbar-actions .header-settings{width:36px;height:36px;min-height:36px;flex-basis:36px}.topbar h1{font-size:23px}.bottom-navigation{gap:2px;padding:6px;grid-template-columns:minmax(0,1fr) minmax(0,1fr) 54px minmax(0,1fr) minmax(0,1fr)}.bottom-navigation .nav-button{padding-left:2px;padding-right:2px}.bottom-navigation .nav-label{font-size:10px}}
+
+.topbar-actions { margin-left:auto; }
+.bottom-navigation:not(.has-add-action) { grid-template-columns:repeat(4,minmax(0,1fr)); }
+.bottom-navigation:not(.has-add-action) .nav-add-slot { display:none; }

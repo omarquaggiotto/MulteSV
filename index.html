@@ -17,7 +17,7 @@
 
     <link
         rel="stylesheet"
-        href="style.css?v=fine-photos-54"
+        href="style.css?v=navigation-55"
     >
 
     <link
@@ -35,7 +35,7 @@
         rel="apple-touch-icon"
         href="assets/multe-sv-icon.png"
     >
-<link rel="stylesheet" href="birthdays.css?v=fine-photos-54">
+<link rel="stylesheet" href="birthdays.css?v=navigation-55">
 </head>
 
 <body>
@@ -72,7 +72,7 @@
                     type="button"
                 >
                     ☀️
-                </button>
+                </button><button class="nav-button header-settings" data-page="settings" type="button" aria-label="Impostazioni" title="Impostazioni"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="m9 3-.6 2.4-2 .9L4 5.6 2 9l1.8 1.7v2.6L2 15l2 3.4 2.4-.7 2 .9L9 21h6l.6-2.4 2-.9 2.4.7 2-3.4-1.8-1.7v-2.6L22 9l-2-3.4-2.4.7-2-.9L15 3Z"/><circle cx="12" cy="12" r="3"/></svg></button>
             </div>
 
         </header>
@@ -115,7 +115,16 @@
     </button>
 
 
-    <button
+    <div class="nav-add-slot"><button
+            id="globalAddFine"
+            class="global-fab"
+            type="button"
+            aria-label="Nuova multa"
+            title="Nuova multa"
+        >
+            <svg class="fab-plus-icon" viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+        </button></div>
+<button
         class="nav-button"
         data-page="payments"
         type="button"
@@ -135,26 +144,11 @@
     </button>
 
 
-    <button
-        class="nav-button"
-        data-page="settings"
-        type="button"
-    >
-        <span class="nav-icon">⚙️</span>
-        <span class="nav-label">Impostazioni</span>
-    </button>
+    
 
         </nav>
 
-        <button
-            id="globalAddFine"
-            class="global-fab"
-            type="button"
-            aria-label="Nuova multa"
-            title="Nuova multa"
-        >
-            <svg class="fab-plus-icon" viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
-        </button>
+        
 
     </div>
 
@@ -194,9 +188,9 @@
 
     <script src="vendor/html2canvas.min.js?v=1.4.1"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="next-match.js?v=fine-photos-54"></script>
-    <script src="birthdays.js?v=fine-photos-54"></script>
-    <script src="app.js?v=fine-photos-54"></script>
+    <script src="next-match.js?v=navigation-55"></script>
+    <script src="birthdays.js?v=navigation-55"></script>
+    <script src="app.js?v=navigation-55"></script>
 
 </body>
 </html>

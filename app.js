@@ -2717,15 +2717,9 @@ function renderPayments() {
         </div>
 
         <div class="payment-export-actions">
-            <button id="exportPaymentsImage" class="btn" type="button">
-                🖼️ Esporta tabella completa
-            </button>
-            <button id="exportDuePaymentsImage" class="btn" type="button">
-                🖼️ Esporta solo da pagare
-            </button>
-            <button id="exportSeasonImage" class="btn" type="button">
-                🏁 Esporta riepilogo stagione
-            </button>
+            <button id="exportPaymentsImage" class="btn payment-export-button" type="button"><span class="export-button-icon" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m-4-4 4 4 4-4M5 16v4h14v-4"/></svg></span><span class="export-button-copy"><strong>Tabella completa</strong><small>Tutti i giocatori del mese</small></span><span aria-hidden="true">›</span></button>
+            <button id="exportDuePaymentsImage" class="btn payment-export-button" type="button"><span class="export-button-icon" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m-4-4 4 4 4-4M5 16v4h14v-4"/></svg></span><span class="export-button-copy"><strong>Solo da pagare</strong><small>Esclude chi ha saldato</small></span><span aria-hidden="true">›</span></button>
+            <button id="exportSeasonImage" class="btn payment-export-button" type="button"><span class="export-button-icon" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m-4-4 4 4 4-4M5 16v4h14v-4"/></svg></span><span class="export-button-copy"><strong>Riepilogo stagione</strong><small>Situazione completa della squadra</small></span><span aria-hidden="true">›</span></button>
         </div>
     `;
 }
@@ -3083,7 +3077,7 @@ function openPlayerHistoryModal(player) {
         `
             <div class="player-profile-hero">${playerPortrait(player)}<div><small>SAN VITALE NEXT GEN</small><h3>${escapeHtml(player)}</h3><p>Stagione ${escapeHtml(state.season)}</p>${validBirthday(getBirthday(player))?'<p>🎂 '+getBirthday(player).split('-').reverse().join('/')+'</p>':''}</div></div>
             <div class="player-profile-status">${remainingTotal>0?'Da saldare · '+money(remainingTotal):'✓ Tutto saldato'}</div>
-            <div class="player-history-summary">
+            <div class="player-share-controls"><label for="playerShareMonth">Mese da condividere</label><select id="playerShareMonth">${months.map(m=>`<option value="${m}">${escapeHtml(new Date(m+'-01T12:00:00').toLocaleDateString('it-IT',{month:'long',year:'numeric'}))}</option>`).join('')}</select><button class="btn secondary" id="sharePlayerSummary" type="button">Condividi scheda mensile</button></div><div class="player-history-summary">
                 <div><span>Dovuto stagione</span><strong>${money(dueTotal)}</strong></div>
                 <div><span>Versato</span><strong>${money(paidTotal)}</strong></div>
                 <div><span>Rimanente</span><strong>${money(remainingTotal)}</strong></div>
@@ -3115,6 +3109,8 @@ function openPlayerHistoryModal(player) {
             </div>
         `
     );
+    const monthSelect=document.getElementById('playerShareMonth');if(months.length)monthSelect.value=months[months.length-1];
+    document.getElementById('sharePlayerSummary').onclick=()=>exportPlayerSummary(player,monthSelect.value);
 }
 
 /* =========================================================

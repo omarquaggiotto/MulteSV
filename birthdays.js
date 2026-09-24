@@ -57,21 +57,21 @@ function refreshBirthdayBanners() {
  });
 }
 function renderBirthdaySettings() {
- return `<section class="card birthday-settings"><div class="section-title"><h2>👥 Giocatori e staff</h2><button class="btn" id="addPlayer" type="button" ${canMutate()?'':'disabled'}>+ Aggiungi</button></div><p class="small muted">Gestisci nomi e compleanni della rosa in un unico elenco. La data di nascita è facoltativa.</p><div class="birthday-list">${birthdayNames().map(name=>`<div class="birthday-person"><div><strong>${escapeHtml(name)}</strong><span>${validBirthday(getBirthday(name))?getBirthday(name).split('-').reverse().join('/'):'Data da inserire'}</span></div><div class="player-row-actions"><button type="button" class="btn secondary" data-birthday-edit="${escapeHtml(name)}" ${canMutate()?'':'disabled'}>Modifica</button><button type="button" class="btn secondary player-remove" data-delete-player="${escapeHtml(name)}" aria-label="Rimuovi ${escapeHtml(name)} dalla rosa" ${canMutate()?'':'disabled'}>×</button></div></div>`).join('')||'<p class="empty">Nessun giocatore. Aggiungi il primo nome alla rosa.</p>'}</div></section>`;
+ return `<section class="card birthday-settings"><div class="section-title"><h2>👥 Giocatori e staff</h2><button class="btn" id="addPlayer" type="button" ${canMutate()?'':'disabled'}>+ Aggiungi</button></div><p class="small muted">Gestisci nomi e compleanni della rosa in un unico elenco. La data di nascita è facoltativa.</p><label class="field player-search-field">Cerca giocatore o staff<input id="settingsPlayerSearch" type="search" placeholder="Scrivi un nome…" autocomplete="off"></label><p id="settingsSearchEmpty" class="small muted" hidden>Nessun risultato.</p><div class="birthday-list">${birthdayNames().map(name=>`<div class="birthday-person"><div><strong>${escapeHtml(name)}</strong><span>${validBirthday(getBirthday(name))?getBirthday(name).split('-').reverse().join('/'):'Data da inserire'}</span></div><div class="player-row-actions"><button type="button" class="btn secondary" data-birthday-edit="${escapeHtml(name)}" ${canMutate()?'':'disabled'}>Modifica</button><button type="button" class="btn secondary player-remove" data-delete-player="${escapeHtml(name)}" aria-label="Rimuovi ${escapeHtml(name)} dalla rosa" ${canMutate()?'':'disabled'}>×</button></div></div>`).join('')||'<p class="empty">Nessun giocatore. Aggiungi il primo nome alla rosa.</p>'}</div></section>`;
 }
 function openBirthdayEditor(name) {
  if(!requireOnlineAdmin() || !birthdayNames().includes(name))return;
  let pendingPhoto=getPlayerPhoto(name),photoBusy=false;
- openModal('Modifica giocatore',`<div class="form"><div class="photo-editor"><div id="playerPhotoPreview">${playerPortrait(name)}</div><div><label class="btn secondary" for="playerPhotoFile">Scegli foto</label><input id="playerPhotoFile" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" hidden><button type="button" class="btn secondary" id="removePlayerPhoto">Rimuovi foto</button><p class="small muted" id="photoStatus">La foto viene ridotta automaticamente.</p></div></div><div class="field"><label for="editPlayerName">Nome e cognome</label><input id="editPlayerName" type="text" value="${escapeHtml(name)}" autocomplete="off"></div><div class="field"><label for="birthdayDate">Data di nascita (facoltativa)</label><input id="birthdayDate" type="date" min="1900-01-01" max="${birthdayToday()}" value="${validBirthday(getBirthday(name))?getBirthday(name):''}"></div><p class="small muted">Multe e pagamenti resteranno collegati al giocatore anche se cambi il nome.</p><div class="modal-actions"><button class="btn secondary" id="cancelBirthday" type="button">Annulla</button><button class="btn" id="saveBirthday" type="button">Salva</button></div></div>`);
+ openModal('Modifica giocatore',`<div class="form"><div class="photo-editor"><div id="playerPhotoPreview">${playerPortrait(name)}</div><div><label class="btn secondary" for="playerPhotoFile">Scegli foto</label><input id="playerPhotoFile" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" hidden><button type="button" class="btn secondary" id="removePlayerPhoto">Rimuovi foto</button><p class="small muted" id="photoStatus">La foto viene ridotta automaticamente.</p></div></div><div id="photoCropControls" hidden><canvas id="photoCropCanvas" width="320" height="320" aria-label="Anteprima ritaglio"></canvas><label>Zoom<input id="photoCropZoom" type="range" min="1" max="3" step="0.01" value="1"></label><label>Sposta a sinistra / destra<input id="photoCropX" type="range" min="0" max="1" step="0.01" value="0.5"></label><label>Sposta in alto / basso<input id="photoCropY" type="range" min="0" max="1" step="0.01" value="0.5"></label></div><div class="field"><label for="editPlayerName">Nome e cognome</label><input id="editPlayerName" type="text" value="${escapeHtml(name)}" autocomplete="off"></div><div class="field"><label for="birthdayDate">Data di nascita (facoltativa)</label><input id="birthdayDate" type="date" min="1900-01-01" max="${birthdayToday()}" value="${validBirthday(getBirthday(name))?getBirthday(name):''}"></div><p class="small muted">Multe e pagamenti resteranno collegati al giocatore anche se cambi il nome.</p><div class="modal-actions"><button class="btn secondary" id="cancelBirthday" type="button">Annulla</button><button class="btn" id="saveBirthday" type="button">Salva</button></div></div>`);
  document.getElementById('playerPhotoFile').onchange=async event=>{
   const file=event.target.files[0];if(!file||!requireOnlineAdmin())return;
   photoBusy=true;document.getElementById('saveBirthday').disabled=true;
   const status=document.getElementById('photoStatus'),preview=document.getElementById('playerPhotoPreview');status.textContent='Preparazione foto…';
-  try{const result=await preparePlayerPhoto(file);if(!preview.isConnected)return;pendingPhoto=result;preview.innerHTML=playerPortrait(name,result);status.textContent='Foto pronta. Premi Salva per confermare.';}
+  try{const result=await preparePlayerPhoto(file,data=>{pendingPhoto=data;preview.innerHTML=playerPortrait(name,data);});if(!preview.isConnected)return;pendingPhoto=result;preview.innerHTML=playerPortrait(name,result);status.textContent='Foto pronta. Premi Salva per confermare.';}
   catch(error){if(status.isConnected)status.textContent=error.message;}
   finally{photoBusy=false;const save=document.getElementById('saveBirthday');if(save&&preview.isConnected)save.disabled=false;}
  };
- document.getElementById('removePlayerPhoto').onclick=()=>{if(photoBusy||!requireOnlineAdmin())return;pendingPhoto='';document.getElementById('playerPhotoPreview').innerHTML=playerPortrait(name,'');document.getElementById('photoStatus').textContent='La foto verrà rimossa al salvataggio.';};
+ document.getElementById('removePlayerPhoto').onclick=()=>{if(photoBusy||!requireOnlineAdmin())return;pendingPhoto='';document.getElementById('photoCropControls').hidden=true;document.getElementById('playerPhotoPreview').innerHTML=playerPortrait(name,'');document.getElementById('photoStatus').textContent='La foto verrà rimossa al salvataggio.';};
  document.getElementById('cancelBirthday').onclick=closeModal;
  document.getElementById('saveBirthday').onclick=()=>{
   if(!requireOnlineAdmin())return;
@@ -131,6 +131,7 @@ function openBirthdayImport() {
 }
 function bindBirthdayEvents() {
  refreshBirthdayBanners();
+ const search=document.getElementById('settingsPlayerSearch');if(search)search.oninput=()=>{const query=search.value.trim().toLocaleLowerCase('it');let count=0;document.querySelectorAll('.birthday-settings .birthday-person').forEach(row=>{const match=row.querySelector('strong').textContent.toLocaleLowerCase('it').includes(query);row.hidden=!match;if(match)count++;});document.getElementById('settingsSearchEmpty').hidden=count>0;};
  document.querySelectorAll('[data-birthday-edit]').forEach(b=>b.onclick=()=>openBirthdayEditor(b.dataset.birthdayEdit));
 
 }
@@ -140,9 +141,32 @@ window.addEventListener('pageshow',refreshBirthdayBanners);
 
 function getPlayerPhoto(name){const value=state.playerPhotos?.[name];return typeof value==='string'&&/^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(value)?value:'';}
 function playerPortrait(name,photo=getPlayerPhoto(name)){return photo?'<img class="player-portrait" src="'+photo+'" alt="Foto di '+escapeHtml(name)+'">':'<span class="player-portrait portrait-fallback" aria-hidden="true">'+escapeHtml(initials(name))+'</span>';}
-async function preparePlayerPhoto(file){
+
+async function preparePlayerPhoto(file,onChange){
  if(file.size>20*1024*1024)throw new Error('Scegli una foto inferiore a 20 MB.');
  const url=URL.createObjectURL(file);
- try{const img=new Image();img.src=url;await img.decode();const canvas=document.createElement('canvas');canvas.width=canvas.height=320;const ctx=canvas.getContext('2d');ctx.fillStyle='#eef2f7';ctx.fillRect(0,0,320,320);const side=Math.min(img.naturalWidth,img.naturalHeight);ctx.drawImage(img,(img.naturalWidth-side)/2,(img.naturalHeight-side)/2,side,side,0,0,320,320);for(const q of [.82,.65,.45,.28]){const data=canvas.toDataURL('image/jpeg',q);if(data.length<=45000)return data;}throw new Error('Foto troppo dettagliata: scegli un’immagine più semplice.');}
- catch(error){if(error.message.includes('Foto troppo'))throw error;throw new Error('Formato non leggibile. Prova una foto JPEG o PNG.');}finally{URL.revokeObjectURL(url);}
+ try{const img=new Image();img.src=url;await img.decode();
+ const controls=document.getElementById('photoCropControls');if(!controls?.isConnected)throw new Error('Editor chiuso');
+ const canvas=document.getElementById('photoCropCanvas'),ctx=canvas.getContext('2d');const zoom=document.getElementById('photoCropZoom'),x=document.getElementById('photoCropX'),y=document.getElementById('photoCropY');zoom.value=1;x.value=y.value=.5;
+ const draw=()=>{const side=Math.min(img.naturalWidth,img.naturalHeight)/Number(zoom.value);ctx.fillStyle='#eef2f7';ctx.fillRect(0,0,320,320);ctx.drawImage(img,(img.naturalWidth-side)*Number(x.value),(img.naturalHeight-side)*Number(y.value),side,side,0,0,320,320);for(const q of [.82,.65,.45,.28]){const data=canvas.toDataURL('image/jpeg',q);if(data.length<=45000)return data;}throw new Error('Foto troppo dettagliata: scegli un’altra immagine.');};
+ const initial=draw();controls.hidden=false;[zoom,x,y].forEach(input=>input.oninput=()=>{try{onChange?.(draw());}catch(error){document.getElementById('photoStatus').textContent=error.message;}});return initial;
+ }catch(error){throw new Error(error.message.includes('Foto troppo')?error.message:'Formato non leggibile. Prova una foto JPEG o PNG.');}finally{URL.revokeObjectURL(url);}
+}
+
+async function exportPlayerSummary(player,month){
+ if(!state.players.includes(player)||!getPaymentMonthsToDate().includes(month))return;
+ const summary=getPlayerMonthSummary(player,month),fines=state.fines.filter(f=>f.player===player&&String(f.date).slice(0,7)===month);
+ const label=new Date(month+'-01T12:00:00').toLocaleDateString('it-IT',{month:'long',year:'numeric'});
+ const canvas=document.createElement('canvas');canvas.width=900;const ctx=canvas.getContext('2d');
+ const wrap=(text,width)=>{const lines=[];let line='';for(const word of String(text).split(/\s+/)){if(ctx.measureText(line+' '+word).width>width&&line){lines.push(line);line=word;}else line+=(line?' ':'')+word;}if(line)lines.push(line);return lines;};
+ ctx.font='24px Arial';const rows=fines.map(f=>({fine:f,lines:wrap(f.type||'Multa',590)}));
+ canvas.height=640+rows.reduce((n,r)=>n+Math.max(92,50+r.lines.length*30),0);
+ ctx.fillStyle='#eef2f7';ctx.fillRect(0,0,900,canvas.height);ctx.fillStyle='#ffffff';ctx.fillRect(32,32,836,canvas.height-64);
+ ctx.fillStyle='#153b84';ctx.fillRect(32,32,836,176);ctx.fillStyle='#fff';ctx.font='bold 18px Arial';ctx.fillText('SAN VITALE NEXT GEN',64,72);ctx.font='bold 32px Arial';ctx.fillText(player,64,120,650);ctx.font='22px Arial';ctx.fillText(label,64,164);
+ const photo=getPlayerPhoto(player);if(photo){try{const img=new Image();img.src=photo;await img.decode();ctx.save();ctx.beginPath();ctx.roundRect(736,65,100,100,20);ctx.clip();ctx.drawImage(img,736,65,100,100);ctx.restore();}catch{}}
+ let y=260;for(const [title,value] of [['Quote del mese',summary.base],['Multe del mese',summary.fines],['Versato',summary.paid],['Rimanente (inclusi arretrati)',summary.remaining]]){ctx.fillStyle='#475569';ctx.font='24px Arial';ctx.fillText(title,64,y);ctx.fillStyle='#0f172a';ctx.font='bold 28px Arial';ctx.textAlign='right';ctx.fillText(money(value),836,y);ctx.textAlign='left';y+=58;}
+ ctx.fillStyle='#153b84';ctx.font='bold 26px Arial';ctx.fillText('Multe · '+label,64,y+24);y+=70;
+ if(!rows.length){ctx.fillStyle='#64748b';ctx.font='24px Arial';ctx.fillText('Nessuna multa nel mese.',64,y);}
+ for(const {fine,lines} of rows){ctx.fillStyle='#0f172a';ctx.font='24px Arial';for(const line of lines){ctx.fillText(line,64,y,590);y+=30;}ctx.fillStyle='#64748b';ctx.font='18px Arial';ctx.fillText(formatDate(fine.date),64,y);ctx.textAlign='right';ctx.fillStyle='#0f172a';ctx.font='bold 24px Arial';ctx.fillText(money(fine.amount),836,y);ctx.textAlign='left';y+=50;}
+ await openExportPreview(canvas,'scheda-'+player.replace(/[^a-z0-9]/gi,'-')+'-'+month+'.png','Scheda giocatore — '+label);
 }

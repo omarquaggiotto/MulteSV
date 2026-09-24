@@ -1357,10 +1357,11 @@ function render() {
    }
 
    if (currentPage === "settings") {
-    app.innerHTML = renderSettings();
+    app.innerHTML = renderSettings() + renderBirthdaySettings();
    }
 
     bindPageEvents();
+    bindBirthdayEvents();
     applyAccessMode();
 
 }
@@ -1753,6 +1754,7 @@ function renderHome() {
              HERO
              ================================================ -->
 
+        <div id="birthdayBanners">${renderBirthdayBanners()}</div>
         <section class="team-pass" aria-label="Riepilogo economico squadra">
             <div class="team-pass-header">
                 <div class="team-pass-crest"><img src="san-vitale-background.png" alt="Stemma San Vitale" width="48" height="58"></div>
@@ -5206,6 +5208,7 @@ function openPlayerModal() {
             </div>
 
 
+            <div class="field"><label for="playerBirthDate">DATA DI NASCITA (facoltativa)</label><input id="playerBirthDate" type="date" min="1900-01-01" max="${birthdayToday()}"></div>
             <div class="modal-actions">
 
                 <button
@@ -5246,6 +5249,9 @@ function openPlayerModal() {
             "savePlayer"
         )
         .onclick = () => {
+            if (!requireOnlineAdmin()) return;
+            const birthDate = document.getElementById("playerBirthDate").value;
+            if (birthDate && !validBirthday(birthDate)) return showToast("Inserisci una data di nascita valida.");
 
             const name =
                 document
@@ -5287,6 +5293,7 @@ function openPlayerModal() {
             );
 
 
+            if (birthDate) setBirthday(name, birthDate);
             saveState();
 
             closeModal();

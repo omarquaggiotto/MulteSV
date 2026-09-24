@@ -1,0 +1,15 @@
+.birthday-banner { display:flex; align-items:center; gap:14px; position:relative; z-index:20; padding:18px; margin:0 0 20px; border:1px solid #d8ab584d; border-radius:22px; background:linear-gradient(115deg,var(--surface),var(--surface-2)); box-shadow:0 6px 20px #00000008; }
+.birthday-cake { font-size:32px; flex-shrink:0; }
+.birthday-banner>div { flex:1; min-width:0; }
+.birthday-banner small { display:block; font-size:9px; font-weight:800; letter-spacing:.12em; color:var(--muted); }
+.birthday-banner strong { display:block; font-size:17px; line-height:1.4; margin:4px 0; overflow-wrap:anywhere; }
+.birthday-banner div>span { font-size:12px; color:var(--muted); }
+.birthday-banner button { flex-shrink:0; width:44px; height:44px; border:0; border-radius:50%; background:var(--surface-2); color:var(--text); font-size:24px; cursor:pointer; }
+.birthday-banner button:focus-visible { outline:2px solid var(--primary); }
+.birthday-person { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 0; border-bottom:1px solid var(--border); }
+.birthday-person>div { min-width:0; }
+.birthday-person strong { display:block; font-size:13px; overflow-wrap:anywhere; }
+.birthday-person span { display:block; font-size:12px; color:var(--muted); margin-top:4px; }
+.birthday-person button { flex-shrink:0; min-height:44px; font-size:12px; padding:8px 12px; }
+.birthday-actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:18px; }
+.birthday-settings { margin-top:20px; }

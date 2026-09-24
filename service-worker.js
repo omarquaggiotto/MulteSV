@@ -1,9 +1,11 @@
-const CACHE_NAME = "multefc-v39-fresh-assets";
+const CACHE_NAME = "multefc-v40-birthdays";
 const APP_SHELL = [
     "./",
     "./index.html",
     "./style.css",
     "./app.js",
+    "./birthdays.js",
+    "./birthdays.css",
     "./next-match.js",
     "./manifest.json",
     "./assets/multe-sv-icon.png",

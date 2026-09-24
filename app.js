@@ -1357,7 +1357,7 @@ function render() {
    }
 
    if (currentPage === "settings") {
-    app.innerHTML = renderSettings() + renderBirthdaySettings();
+    app.innerHTML = `<div class="settings-page">${renderSettings()}</div>`;
    }
 
     bindPageEvents();
@@ -3079,8 +3079,10 @@ function openPlayerHistoryModal(player) {
     const remainingTotal = Math.max(0, dueTotal - paidTotal);
 
     openModal(
-        `Situazione di ${escapeHtml(player)}`,
+        `Scheda giocatore`,
         `
+            <div class="player-profile-hero">${playerPortrait(player)}<div><small>SAN VITALE NEXT GEN</small><h3>${escapeHtml(player)}</h3><p>Stagione ${escapeHtml(state.season)}</p>${validBirthday(getBirthday(player))?'<p>🎂 '+getBirthday(player).split('-').reverse().join('/')+'</p>':''}</div></div>
+            <div class="player-profile-status">${remainingTotal>0?'Da saldare · '+money(remainingTotal):'✓ Tutto saldato'}</div>
             <div class="player-history-summary">
                 <div><span>Dovuto stagione</span><strong>${money(dueTotal)}</strong></div>
                 <div><span>Versato</span><strong>${money(paidTotal)}</strong></div>
@@ -3364,126 +3366,16 @@ function renderSettings() {
 
     return `
 
-        <!-- SQUADRA -->
-
-        <div class="card">
-
-            <h2>
-                ⚙️ Squadra
-            </h2>
-
-
-            <div class="form">
-
-        <div class="field">
-
-                    <label>
-                        NOME SQUADRA
-                    </label>
-
-                    <input
-                        id="teamName"
-                        type="text"
-                        value="${escapeHtml(
-                            state.team
-                        )}"
-                    >
-
-                </div>
-
-
-                <div class="field">
-
-                    <label>
-                        STAGIONE
-                    </label>
-
-                    <input
-                        id="season"
-                        type="text"
-                        value="${escapeHtml(
-                            state.season
-                        )}"
-                        placeholder="2026/27"
-                    >
-
-                </div>
-
-
-                <button
-                    class="btn"
-                    id="saveSettings"
-                    type="button"
-                >
-                    Salva impostazioni
-                </button>
-
-        </article>
-
-
-        <!-- GIOCATORI -->
-
-        <div class="section-head">
-
-            <h2>
-                👥 Giocatori
-            </h2>
-
-            <button
-                class="btn"
-                id="addPlayer"
-                type="button"
-            >
-                + Giocatore
-            </button>
-
-        </div>
-
-
-        <div class="card player-list">
-
-            ${
-                state.players.length
-
-                    ?
-
-                getSortedPlayers()
-                    .map(
-                        player => `
-
-                            <span
-                                class="player-chip"
-                            >
-
-                                ${escapeHtml(
-                                    player
-                                )}
-
-                                <button
-                                    type="button"
-                                    data-delete-player="${escapeHtml(player)}"
-                                    title="Rimuovi"
-                                >
-                                    ×
-                                </button>
-
-                            </span>
-
-                        `
-                    )
-                    .join("")
-
-                    :
-
-                `
-                    <div class="empty">
-                        Nessun giocatore.
-                    </div>
-                `
-            }
-
-        </div>
-
+        ${renderBirthdaySettings()}
+        <details class="card team-settings-details">
+          <summary><span class="settings-menu-icon" aria-hidden="true">⚙</span><span class="settings-menu-label"><strong>Squadra e stagione</strong><small>Preferenze della squadra</small></span><span class="settings-chevron" aria-hidden="true">⌄</span></summary>
+          <p class="small muted">La stagione determina i mesi dei pagamenti e i riepiloghi.</p>
+          <div class="form">
+            <div class="field"><label for="teamName">Nome squadra</label><input id="teamName" type="text" value="${escapeHtml(state.team)}"></div>
+            <div class="field"><label for="season">Stagione</label><input id="season" type="text" value="${escapeHtml(state.season)}" placeholder="2026/27"></div>
+            <button class="btn secondary" id="saveSettings" type="button">Salva</button>
+          </div>
+        </details>
 
         <!-- DATI -->
 
@@ -3498,11 +3390,7 @@ function renderSettings() {
 
         <div class="data-management">
 
-            <section class="card data-section">
-                <div class="data-section-heading">
-                    <h3>Backup</h3>
-                    <p>Salva o recupera una copia completa dei dati della squadra.</p>
-                </div>
+            <details class="card data-section settings-collapse"><summary><span class="settings-menu-icon" aria-hidden="true">↥</span><span class="settings-menu-label"><strong>Backup</strong><small>Salva e recupera i tuoi dati</small></span><span class="settings-chevron" aria-hidden="true">⌄</span></summary><div class="data-section-heading"><p>Salva o recupera una copia completa dei dati della squadra.</p></div>
 
                 <div class="data-action-row">
                     <div>
@@ -3527,13 +3415,9 @@ function renderSettings() {
                     </div>
                     <button class="btn secondary" id="exportAutoBackup" type="button">Esporta copia</button>
                 </div>
-            </section>
+            </details>
 
-            <section class="card data-section">
-                <div class="data-section-heading">
-                    <h3>Stagione</h3>
-                    <p>Prepara la nuova stagione mantenendo squadra e Multario.</p>
-                </div>
+            <details class="card data-section settings-collapse"><summary><span class="settings-menu-icon" aria-hidden="true">▦</span><span class="settings-menu-label"><strong>Stagione</strong><small>Gestisci il cambio stagione</small></span><span class="settings-chevron" aria-hidden="true">⌄</span></summary><div class="data-section-heading"><p>Prepara la nuova stagione mantenendo squadra e Multario.</p></div>
 
                 <div class="data-action-row">
                     <div>
@@ -3542,13 +3426,9 @@ function renderSettings() {
                     </div>
                     <button class="btn danger" id="resetSeason" type="button">Nuova stagione</button>
                 </div>
-            </section>
+            </details>
 
-            <section class="card data-section data-section-danger">
-                <div class="data-section-heading">
-                    <h3>Operazioni irreversibili</h3>
-                    <p>Usale soltanto se sei sicuro: i backup automatici restano disponibili per sicurezza.</p>
-                </div>
+            <details class="card data-section settings-collapse data-section-danger"><summary><span class="settings-menu-icon" aria-hidden="true">!</span><span class="settings-menu-label"><strong>Operazioni irreversibili</strong><small>Ripristino e reset dei dati</small></span><span class="settings-chevron" aria-hidden="true">⌄</span></summary><div class="data-section-heading"><p>Usale soltanto se sei sicuro: i backup automatici restano disponibili per sicurezza.</p></div>
 
                 <div class="data-action-row">
                     <div>
@@ -3565,7 +3445,7 @@ function renderSettings() {
                     </div>
                     <button class="btn danger" id="resetTotal" type="button">Reset totale</button>
                 </div>
-            </section>
+            </details>
 
         </div>
 

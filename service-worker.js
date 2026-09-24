@@ -1,4 +1,4 @@
-const CACHE_NAME = "multefc-v40-birthdays";
+const CACHE_NAME = "multefc-v41-player-profiles";
 const APP_SHELL = [
     "./",
     "./index.html",

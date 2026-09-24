@@ -57,11 +57,21 @@ function refreshBirthdayBanners() {
  });
 }
 function renderBirthdaySettings() {
- return `<section class="card birthday-settings"><div class="section-title"><h2>🎂 Compleanni squadra e staff</h2></div><p class="small muted">Date facoltative. Per il 29 febbraio gli auguri compaiono negli anni bisestili.</p><div class="birthday-list">${birthdayNames().map(name=>`<div class="birthday-person"><div><strong>${escapeHtml(name)}</strong><span>${validBirthday(getBirthday(name))?getBirthday(name).split('-').reverse().join('/'):'Data da inserire'}</span></div><button type="button" class="btn secondary" data-birthday-edit="${escapeHtml(name)}" ${canMutate()?'':'disabled'}>Modifica</button></div>`).join('')}</div><div class="birthday-actions"><button class="btn secondary" id="importBirthdayDates" type="button" ${canMutate()?'':'disabled'}>Date da Tuttocampo</button></div></section>`;
+ return `<section class="card birthday-settings"><div class="section-title"><h2>👥 Giocatori e staff</h2><button class="btn" id="addPlayer" type="button" ${canMutate()?'':'disabled'}>+ Aggiungi</button></div><p class="small muted">Gestisci nomi e compleanni della rosa in un unico elenco. La data di nascita è facoltativa.</p><div class="birthday-list">${birthdayNames().map(name=>`<div class="birthday-person"><div><strong>${escapeHtml(name)}</strong><span>${validBirthday(getBirthday(name))?getBirthday(name).split('-').reverse().join('/'):'Data da inserire'}</span></div><div class="player-row-actions"><button type="button" class="btn secondary" data-birthday-edit="${escapeHtml(name)}" ${canMutate()?'':'disabled'}>Modifica</button><button type="button" class="btn secondary player-remove" data-delete-player="${escapeHtml(name)}" aria-label="Rimuovi ${escapeHtml(name)} dalla rosa" ${canMutate()?'':'disabled'}>×</button></div></div>`).join('')||'<p class="empty">Nessun giocatore. Aggiungi il primo nome alla rosa.</p>'}</div></section>`;
 }
 function openBirthdayEditor(name) {
  if(!requireOnlineAdmin() || !birthdayNames().includes(name))return;
- openModal('Modifica giocatore',`<div class="form"><div class="field"><label for="editPlayerName">Nome e cognome</label><input id="editPlayerName" type="text" value="${escapeHtml(name)}" autocomplete="off"></div><div class="field"><label for="birthdayDate">Data di nascita (facoltativa)</label><input id="birthdayDate" type="date" min="1900-01-01" max="${birthdayToday()}" value="${validBirthday(getBirthday(name))?getBirthday(name):''}"></div><p class="small muted">Multe e pagamenti resteranno collegati al giocatore anche se cambi il nome.</p><div class="modal-actions"><button class="btn secondary" id="cancelBirthday" type="button">Annulla</button><button class="btn" id="saveBirthday" type="button">Salva</button></div></div>`);
+ let pendingPhoto=getPlayerPhoto(name),photoBusy=false;
+ openModal('Modifica giocatore',`<div class="form"><div class="photo-editor"><div id="playerPhotoPreview">${playerPortrait(name)}</div><div><label class="btn secondary" for="playerPhotoFile">Scegli foto</label><input id="playerPhotoFile" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" hidden><button type="button" class="btn secondary" id="removePlayerPhoto">Rimuovi foto</button><p class="small muted" id="photoStatus">La foto viene ridotta automaticamente.</p></div></div><div class="field"><label for="editPlayerName">Nome e cognome</label><input id="editPlayerName" type="text" value="${escapeHtml(name)}" autocomplete="off"></div><div class="field"><label for="birthdayDate">Data di nascita (facoltativa)</label><input id="birthdayDate" type="date" min="1900-01-01" max="${birthdayToday()}" value="${validBirthday(getBirthday(name))?getBirthday(name):''}"></div><p class="small muted">Multe e pagamenti resteranno collegati al giocatore anche se cambi il nome.</p><div class="modal-actions"><button class="btn secondary" id="cancelBirthday" type="button">Annulla</button><button class="btn" id="saveBirthday" type="button">Salva</button></div></div>`);
+ document.getElementById('playerPhotoFile').onchange=async event=>{
+  const file=event.target.files[0];if(!file||!requireOnlineAdmin())return;
+  photoBusy=true;document.getElementById('saveBirthday').disabled=true;
+  const status=document.getElementById('photoStatus'),preview=document.getElementById('playerPhotoPreview');status.textContent='Preparazione foto…';
+  try{const result=await preparePlayerPhoto(file);if(!preview.isConnected)return;pendingPhoto=result;preview.innerHTML=playerPortrait(name,result);status.textContent='Foto pronta. Premi Salva per confermare.';}
+  catch(error){if(status.isConnected)status.textContent=error.message;}
+  finally{photoBusy=false;const save=document.getElementById('saveBirthday');if(save&&preview.isConnected)save.disabled=false;}
+ };
+ document.getElementById('removePlayerPhoto').onclick=()=>{if(photoBusy||!requireOnlineAdmin())return;pendingPhoto='';document.getElementById('playerPhotoPreview').innerHTML=playerPortrait(name,'');document.getElementById('photoStatus').textContent='La foto verrà rimossa al salvataggio.';};
  document.getElementById('cancelBirthday').onclick=closeModal;
  document.getElementById('saveBirthday').onclick=()=>{
   if(!requireOnlineAdmin())return;
@@ -69,9 +79,13 @@ function openBirthdayEditor(name) {
   if(!birthdayNames().includes(person))return showToast('Persona non più presente. Riapri la scheda.');
   if(value&&!validBirthday(value))return showToast('Inserisci una data di nascita valida.');
   if(!newName)return showToast('Inserisci il nome.');
+  if(photoBusy)return;
+  const previous=state;
   const error=renameBirthdayPlayer(person,newName,value);
   if(error)return showToast(error);
-  saveState();closeModal();render();showToast('Giocatore aggiornato.');
+  state.playerPhotos={...(state.playerPhotos||{}),[newName]:pendingPhoto};
+  try{saveState();}catch{state=previous;showToast('Spazio insufficiente: modifica non salvata. Prova una foto più piccola.');return;}
+  closeModal();render();showToast('Giocatore aggiornato.');
  };
 }
 function renameBirthdayPlayer(oldName,newName,birthDate) {
@@ -93,6 +107,7 @@ function renameBirthdayPlayer(oldName,newName,birthDate) {
  }
  next.playerBirthDates={...(next.playerBirthDates||{}),[newName]:birthDate};
  if(newName!==oldName)delete next.playerBirthDates[oldName];
+ if(newName!==oldName&&Object.hasOwn(next.playerPhotos||{},oldName)){next.playerPhotos={...next.playerPhotos,[newName]:next.playerPhotos[oldName]};delete next.playerPhotos[oldName];}
  state=next;
  if(newName!==oldName){
   const dismissed=birthdayDismissals();if(Object.hasOwn(dismissed,oldName)){
@@ -117,8 +132,17 @@ function openBirthdayImport() {
 function bindBirthdayEvents() {
  refreshBirthdayBanners();
  document.querySelectorAll('[data-birthday-edit]').forEach(b=>b.onclick=()=>openBirthdayEditor(b.dataset.birthdayEdit));
- const imp=document.getElementById('importBirthdayDates');if(imp)imp.onclick=openBirthdayImport;
+
 }
 setInterval(refreshBirthdayBanners,30000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshBirthdayBanners();});
 window.addEventListener('pageshow',refreshBirthdayBanners);
+
+function getPlayerPhoto(name){const value=state.playerPhotos?.[name];return typeof value==='string'&&/^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(value)?value:'';}
+function playerPortrait(name,photo=getPlayerPhoto(name)){return photo?'<img class="player-portrait" src="'+photo+'" alt="Foto di '+escapeHtml(name)+'">':'<span class="player-portrait portrait-fallback" aria-hidden="true">'+escapeHtml(initials(name))+'</span>';}
+async function preparePlayerPhoto(file){
+ if(file.size>20*1024*1024)throw new Error('Scegli una foto inferiore a 20 MB.');
+ const url=URL.createObjectURL(file);
+ try{const img=new Image();img.src=url;await img.decode();const canvas=document.createElement('canvas');canvas.width=canvas.height=320;const ctx=canvas.getContext('2d');ctx.fillStyle='#eef2f7';ctx.fillRect(0,0,320,320);const side=Math.min(img.naturalWidth,img.naturalHeight);ctx.drawImage(img,(img.naturalWidth-side)/2,(img.naturalHeight-side)/2,side,side,0,0,320,320);for(const q of [.82,.65,.45,.28]){const data=canvas.toDataURL('image/jpeg',q);if(data.length<=45000)return data;}throw new Error('Foto troppo dettagliata: scegli un’immagine più semplice.');}
+ catch(error){if(error.message.includes('Foto troppo'))throw error;throw new Error('Formato non leggibile. Prova una foto JPEG o PNG.');}finally{URL.revokeObjectURL(url);}
+}

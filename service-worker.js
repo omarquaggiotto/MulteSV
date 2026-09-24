@@ -1,4 +1,4 @@
-const CACHE_NAME = "multefc-v45-navigation";
+const CACHE_NAME = "multefc-v46-settings-toggle";
 const APP_SHELL = [
     "./",
     "./index.html",

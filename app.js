@@ -287,6 +287,7 @@ let state = loadState();
 let deviceTheme = getDeviceTheme(state.theme);
 
 let currentPage = "home";
+let pageBeforeSettings = "home";
 let selectedMonth = "all";
 let selectedPaymentMonth = "2026-08";
 let selectedFinePlayer = "all";
@@ -5190,6 +5191,12 @@ function bindPageEvents() {
 
             button.onclick = () => {
 
+                if (button.dataset.page === "settings" && currentPage === "settings") {
+                    currentPage = pageBeforeSettings;
+                    render();
+                    return;
+                }
+
                 if (button.dataset.page === "settings" && !isAdmin) {
                     showToast("Per aprire Impostazioni devi accedere come amministratore.");
                     return;
@@ -5200,8 +5207,8 @@ function bindPageEvents() {
                     return;
                 }
 
-                currentPage =
-                    button.dataset.page;
+                if (button.dataset.page === "settings") pageBeforeSettings = currentPage;
+                currentPage = button.dataset.page;
 
                 render();
 

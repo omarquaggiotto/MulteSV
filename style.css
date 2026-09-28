@@ -1456,6 +1456,46 @@ body.modal-open .global-fab {
     margin-bottom: 16px;
 }
 
+.payment-filter-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(220px, 0.8fr);
+    align-items: end;
+    gap: 18px;
+    overflow: hidden;
+    border-color: color-mix(in srgb, var(--primary) 22%, var(--border));
+    background:
+        radial-gradient(circle at 0 0, color-mix(in srgb, var(--primary) 15%, transparent), transparent 52%),
+        var(--surface);
+    box-shadow: 0 12px 30px rgba(15, 35, 63, 0.08);
+}
+
+.payment-filter-intro {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.payment-filter-icon {
+    display: grid;
+    place-items: center;
+    flex: 0 0 48px;
+    width: 48px;
+    height: 48px;
+    border-radius: 15px;
+    background: linear-gradient(145deg, var(--primary), color-mix(in srgb, var(--primary) 72%, #153b74));
+    color: #fff;
+    font-size: 22px;
+    box-shadow: 0 9px 22px color-mix(in srgb, var(--primary) 25%, transparent);
+}
+
+.payment-filter-intro div { min-width: 0; }
+.payment-filter-intro div > span { display: block; margin-bottom: 4px; color: var(--primary); font-size: 10px; font-weight: 900; letter-spacing: .11em; }
+.payment-filter-intro strong { display: block; font-size: 16px; line-height: 1.25; }
+.payment-month-field { position: relative; }
+.payment-month-field .form-label { color: var(--muted); font-size: 10px; font-weight: 850; letter-spacing: .055em; text-transform: uppercase; }
+.payment-month-field .form-input { min-height: 50px; border: 1px solid color-mix(in srgb, var(--primary) 24%, var(--border)); border-radius: 14px; background-color: var(--surface-2); font-weight: 800; }
+
 .payment-summary-grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1766,7 +1806,7 @@ body.modal-open .global-fab {
 
 .payment-filter-grid {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1fr);
     gap: 14px;
 }
 
@@ -3059,6 +3099,12 @@ body.modal-open .global-fab {
 }
 
 @media (max-width: 600px) {
+    .payment-filter-card {
+        grid-template-columns: 1fr;
+        gap: 15px;
+        padding: 16px;
+    }
+
     .payment-filter-grid {
         grid-template-columns: 1fr;
         gap: 10px;

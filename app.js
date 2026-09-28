@@ -296,7 +296,6 @@ let selectedFinePlayer = "all";
 let showAllRanking = false;
 let showMonthlySummary = false;
 let fineSearchQuery = "";
-let paymentSearchQuery = "";
 let undoSnapshot = null;
 let undoTimer = null;
 
@@ -2518,12 +2517,7 @@ function renderPayments() {
             return { player, summary };
         });
 
-    const paymentQuery = paymentSearchQuery.trim().toLocaleLowerCase("it");
-
     const rows = paymentEntries
-        .filter(({ player }) =>
-            !paymentQuery || player.toLocaleLowerCase("it").includes(paymentQuery)
-        )
         .map(({ player, summary }) => `
                 <div class="payment-row" data-payment-remaining="${summary.remaining}">
                     <button
@@ -2609,9 +2603,16 @@ function renderPayments() {
 
     return `
         <div class="card payment-month-card payment-filter-card">
-            <div class="payment-filter-grid">
+            <div class="payment-filter-intro">
+                <span class="payment-filter-icon" aria-hidden="true">▦</span>
                 <div>
-                    <label for="paymentMonthSelect" class="form-label">Mese</label>
+                    <span>PERIODO PAGAMENTI</span>
+                    <strong>Scegli il mese da consultare</strong>
+                </div>
+            </div>
+            <div class="payment-filter-grid">
+                <div class="payment-month-field">
+                    <label for="paymentMonthSelect" class="form-label">Mese selezionato</label>
                     <select id="paymentMonthSelect" class="form-input">
                 ${months
                     .map(month => {
@@ -2647,17 +2648,6 @@ function renderPayments() {
                     })
                     .join("")}
                     </select>
-                </div>
-                <div>
-                    <label for="paymentSearch" class="form-label">🔎 Cerca giocatore</label>
-                    <input
-                        id="paymentSearch"
-                        class="form-input"
-                        type="search"
-                        value="${escapeHtml(paymentSearchQuery)}"
-                        placeholder="Scrivi un nome"
-                        autocomplete="off"
-                    >
                 </div>
             </div>
         </div>
@@ -2869,87 +2859,7 @@ function exportPaymentsImage(mode = "all") {
 }
 
 function exportSeasonImage() {
-    try {
-        const months = getPaymentMonths();
-        const today = new Date();
-        const todayMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
-        const finalIndex = months.includes(todayMonth)
-            ? months.indexOf(todayMonth)
-            : todayMonth < months[0] ? 0 : months.length - 1;
-        const includedMonths = months.slice(0, finalIndex + 1);
-        const entries = getSortedPlayers().map(player => {
-            const totals = includedMonths.reduce((sum, month) => {
-                const summary = getPlayerMonthSummary(player, month);
-                sum.base += summary.base;
-                sum.fines += summary.fines;
-                sum.paid += summary.paid;
-                return sum;
-            }, { base: 0, fines: 0, paid: 0 });
-            const total = totals.base + totals.fines;
-            return { player, ...totals, total, remaining: Math.max(0, total - totals.paid) };
-        });
-
-        const columns = [300, 150, 150, 155, 180];
-        const labels = ["Giocatore", "Quote", "Multe", "Versato", "Da saldare"];
-        const padding = 44;
-        const titleHeight = 108;
-        const headerHeight = 46;
-        const rowHeight = 52;
-        const width = columns.reduce((sum, value) => sum + value, 0) + padding * 2;
-        const height = titleHeight + headerHeight + entries.length * rowHeight + padding;
-        const canvas = document.createElement("canvas");
-        const scale = getExportScale(width, height);
-        canvas.width = width * scale;
-        canvas.height = height * scale;
-        const context = canvas.getContext("2d");
-    if (!context) throw new Error("Memoria insufficiente per generare il PNG");
-        context.scale(scale, scale);
-        context.textBaseline = "middle";
-        context.fillStyle = "#f7f9fc";
-        context.fillRect(0, 0, width, height);
-        context.fillStyle = "#13213a";
-        context.font = "700 27px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
-        context.fillText(`Riepilogo stagione — ${state.season}`, padding, 43);
-        context.fillStyle = "#5b677a";
-        context.font = "500 15px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
-        context.fillText(`${state.team} · aggiornato a ${new Date().toLocaleDateString("it-IT")}`, padding, 74);
-        const tableWidth = width - padding * 2;
-        context.fillStyle = "#203657";
-        context.fillRect(padding, titleHeight, tableWidth, headerHeight);
-        context.fillStyle = "#fff";
-        context.font = "700 14px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
-        let left = padding;
-        labels.forEach((label, index) => {
-            context.fillText(label, left + 15, titleHeight + headerHeight / 2);
-            left += columns[index];
-        });
-        entries.forEach((entry, index) => {
-            const y = titleHeight + headerHeight + index * rowHeight;
-            context.fillStyle = index % 2 === 0 ? "#fff" : "#eef3f9";
-            context.fillRect(padding, y, tableWidth, rowHeight);
-            context.strokeStyle = "#d7e0ec";
-            context.strokeRect(padding, y, tableWidth, rowHeight);
-            const values = [entry.player, money(entry.base), money(entry.fines), money(entry.paid), money(entry.remaining)];
-            left = padding;
-            values.forEach((value, columnIndex) => {
-                context.font = columnIndex === 0
-                    ? "650 16px system-ui, -apple-system, BlinkMacSystemFont, sans-serif"
-                    : "600 16px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
-                context.fillStyle = columnIndex === 4 && entry.remaining > 0 ? "#ba2a31" : "#172236";
-                context.fillText(String(value), left + 15, y + rowHeight / 2, columns[columnIndex] - 30);
-                left += columns[columnIndex];
-            });
-        });
-
-        openExportPreview(
-            canvas,
-            `riepilogo-stagione-${state.season.replace(/[^\w-]/g, "-")}.png`,
-            "Riepilogo stagione"
-        );
-    } catch (error) {
-        console.error("Errore export stagione:", error);
-        showToast("Errore durante l'esportazione della stagione");
-    }
+    openSeasonReport(false);
 }
 
 function exportSeasonDetailedImage() {
@@ -3052,6 +2962,10 @@ function exportSeasonDetailedImage() {
 }
 
 function openSeasonDetailedReport() {
+    openSeasonReport(true);
+}
+
+function openSeasonReport(includePlayerPages = true) {
     const months = getPaymentMonths();
     const today = new Date();
     const todayMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
@@ -3079,6 +2993,7 @@ function openSeasonDetailedReport() {
         remaining: sum.remaining + entry.remaining
     }), { base: 0, fines: 0, total: 0, paid: 0, remaining: 0 });
     const totalFinesCount = (state.fines || []).length;
+    const pageCount = includePlayerPages ? entries.length + 4 : 4;
     const ranking = [...entries].sort((a, b) => b.fines - a.fines || compareItalian(a.player, b.player));
     const reportHeader = (label = "Riepilogo stagione") => `
         <header class="season-pdf-header">
@@ -3111,17 +3026,17 @@ function openSeasonDetailedReport() {
             <table class="season-report-table season-player-fines"><thead><tr><th>Data</th><th>Descrizione</th><th>Categoria</th><th>Importo</th></tr></thead><tbody>
                 ${entry.finesList.length ? entry.finesList.map(fine => `<tr><td>${escapeHtml(formatDate(fine.date))}</td><td>${escapeHtml(fine.type || "Multa")}</td><td>${escapeHtml(fine.category || "Altro")}</td><td>${money(fine.amount)}</td></tr>`).join("") : `<tr><td colspan="4">Nessuna multa registrata</td></tr>`}
             </tbody></table>
-            <footer>Multe SV - San Vitale Next Gen <span>Pagina ${index + 5} di ${entries.length + 4}</span></footer>
+            <footer>Multe SV - San Vitale Next Gen <span>Pagina ${index + 5} di ${pageCount}</span></footer>
         </section>`).join("");
 
-    openModal("Riepilogo stagione", `
-        <div class="season-report-toolbar"><p>Anteprima completa: ${entries.length + 4} pagine</p><button class="btn" id="printSeasonReport" type="button">Salva / stampa PDF</button></div>
-        <div class="season-report-document">
-            <section class="season-report-page season-cover-page"><img src="san-vitale-logo.png" alt="Stemma San Vitale"><h1>Multe <span>SV</span></h1><h2>San Vitale Next Gen</h2><hr><p>Riepilogo stagione</p><strong>${escapeHtml(state.season)}</strong><small>Stessi amici.<br>Più responsabilità.</small><footer>Generato il ${today.toLocaleDateString("it-IT")} <span>Pagina 1 di ${entries.length + 4}</span></footer></section>
-            <section class="season-report-page">${reportHeader()}<h2 class="season-report-section-title">Panoramica generale</h2><div class="season-overview-grid">${metric("Quote", money(teamTotals.base), "green")}${metric("Multe", money(teamTotals.fines), "red")}${metric("Totale dovuto", money(teamTotals.total), "blue")}${metric("Totale versato", money(teamTotals.paid), "green")}${metric("Da incassare", money(teamTotals.remaining), "orange")}${metric("Numero multe", totalFinesCount, "purple")}</div><h2 class="season-report-section-title">Andamento mensile</h2><div class="season-month-chart">${monthBars}</div><footer>Multe SV - San Vitale Next Gen <span>Pagina 2 di ${entries.length + 4}</span></footer></section>
-            <section class="season-report-page">${reportHeader()}<h2 class="season-report-section-title">Riepilogo pagamenti</h2><table class="season-report-table"><thead><tr><th>#</th><th>Giocatore</th><th>Quote</th><th>Multe</th><th>Totale</th><th>Versato</th><th>Rimanente</th></tr></thead><tbody>${paymentRows}</tbody><tfoot><tr><th colspan="2">Totale squadra</th><th>${money(teamTotals.base)}</th><th>${money(teamTotals.fines)}</th><th>${money(teamTotals.total)}</th><th>${money(teamTotals.paid)}</th><th>${money(teamTotals.remaining)}</th></tr></tfoot></table><footer>Multe SV - San Vitale Next Gen <span>Pagina 3 di ${entries.length + 4}</span></footer></section>
-            <section class="season-report-page">${reportHeader()}<h2 class="season-report-section-title">Classifica generale multe</h2><table class="season-report-table season-ranking-table"><thead><tr><th>#</th><th>Giocatore</th><th>N° multe</th><th>Totale multe</th></tr></thead><tbody>${rankingRows}</tbody></table><footer>Multe SV - San Vitale Next Gen <span>Pagina 4 di ${entries.length + 4}</span></footer></section>
-            ${playerPages}
+    openModal(includePlayerPages ? "Riepilogo stagione completo" : "Riepilogo stagione", `
+        <div class="season-report-toolbar"><p>${includePlayerPages ? "Anteprima completa" : "Anteprima compatta"}: ${pageCount} pagine</p><button class="btn" id="printSeasonReport" type="button">Salva / stampa PDF</button></div>
+        <div class="season-report-document ${includePlayerPages ? "season-report-detailed" : "season-report-compact"}">
+            <section class="season-report-page season-cover-page"><img src="san-vitale-logo.png" alt="Stemma San Vitale"><h1>Multe <span>SV</span></h1><h2>San Vitale Next Gen</h2><hr><p>Riepilogo stagione</p><strong>${escapeHtml(state.season)}</strong><small>Stessi amici.<br>Più responsabilità.</small><footer>Generato il ${today.toLocaleDateString("it-IT")} <span>Pagina 1 di ${pageCount}</span></footer></section>
+            <section class="season-report-page">${reportHeader()}<h2 class="season-report-section-title">Panoramica generale</h2><div class="season-overview-grid">${metric("Quote", money(teamTotals.base), "green")}${metric("Multe", money(teamTotals.fines), "red")}${metric("Totale dovuto", money(teamTotals.total), "blue")}${metric("Totale versato", money(teamTotals.paid), "green")}${metric("Da incassare", money(teamTotals.remaining), "orange")}${metric("Numero multe", totalFinesCount, "purple")}</div><h2 class="season-report-section-title">Andamento mensile</h2><div class="season-month-chart">${monthBars}</div><footer>Multe SV - San Vitale Next Gen <span>Pagina 2 di ${pageCount}</span></footer></section>
+            <section class="season-report-page">${reportHeader()}<h2 class="season-report-section-title">Riepilogo pagamenti</h2><table class="season-report-table"><thead><tr><th>#</th><th>Giocatore</th><th>Quote</th><th>Multe</th><th>Totale</th><th>Versato</th><th>Rimanente</th></tr></thead><tbody>${paymentRows}</tbody><tfoot><tr><th colspan="2">Totale squadra</th><th>${money(teamTotals.base)}</th><th>${money(teamTotals.fines)}</th><th>${money(teamTotals.total)}</th><th>${money(teamTotals.paid)}</th><th>${money(teamTotals.remaining)}</th></tr></tfoot></table><footer>Multe SV - San Vitale Next Gen <span>Pagina 3 di ${pageCount}</span></footer></section>
+            <section class="season-report-page">${reportHeader()}<h2 class="season-report-section-title">Classifica generale multe</h2><table class="season-report-table season-ranking-table"><thead><tr><th>#</th><th>Giocatore</th><th>N° multe</th><th>Totale multe</th></tr></thead><tbody>${rankingRows}</tbody></table><footer>Multe SV - San Vitale Next Gen <span>Pagina 4 di ${pageCount}</span></footer></section>
+            ${includePlayerPages ? playerPages : ""}
         </div>`);
     document.querySelector("#modalRoot .modal")?.classList.add("season-report-modal");
     document.getElementById("printSeasonReport").onclick = () => window.print();
@@ -5589,19 +5504,6 @@ document
            render();
 
     });
-
-    document
-       .getElementById("paymentSearch")
-       ?.addEventListener("input", event => {
-           paymentSearchQuery = event.target.value;
-           render();
-           requestAnimationFrame(() => {
-               const input = document.getElementById("paymentSearch");
-               input?.focus();
-               input?.setSelectionRange(paymentSearchQuery.length, paymentSearchQuery.length);
-           });
-       });
-
 
     /* =========================
        NUOVA MULTA

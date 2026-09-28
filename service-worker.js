@@ -1,4 +1,4 @@
-const CACHE_NAME = "multefc-v53-fines-mobile";
+const CACHE_NAME = "multefc-v54-season-compact";
 const APP_SHELL = [
     "./",
     "./index.html",

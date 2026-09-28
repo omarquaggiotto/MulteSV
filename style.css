@@ -3322,3 +3322,121 @@ body.modal-open::after { visibility: hidden; }
 .rule-form-refresh .modal-actions { display:grid; grid-template-columns:1fr 1.6fr; gap:10px; margin:0; }
 .rule-form-refresh .modal-actions .btn { min-height:48px; border-radius:14px; }
 @media(max-width:420px){.rule-form-section{grid-template-columns:1fr}.rule-form-refresh{padding:12px;gap:12px}.rule-form-section{padding:12px}}
+
+/* Pagine interne: il titolo vive nella topbar, qui mostriamo solo il contesto utile. */
+.page-context-strip {
+ display:flex;
+ align-items:center;
+ justify-content:space-between;
+ gap:14px;
+ margin-bottom:14px;
+ padding:13px 15px;
+ border:1px solid var(--border);
+ border-radius:17px;
+ background:var(--surface);
+}
+.page-context-strip > div { min-width:0; }
+.page-context-label { display:block; margin-bottom:3px; color:var(--muted); font-size:10px; font-weight:850; letter-spacing:.06em; text-transform:uppercase; }
+.page-context-strip strong { display:block; font-size:14px; line-height:1.35; }
+.page-context-strip .primary-btn { flex:0 0 auto; }
+
+/* Pagamenti: gerarchia più netta e tabella più leggibile. */
+.payments-table-card { border:1px solid color-mix(in srgb,var(--primary) 16%,var(--border)); box-shadow:0 10px 28px #10233f0b; }
+.payments-table-header {
+ background:radial-gradient(ellipse at 100% 0%,#214d7c 0%,transparent 68%),linear-gradient(135deg,#142b49,#0b1729);
+ color:#d9e7f7;
+ letter-spacing:.035em;
+ text-transform:uppercase;
+}
+.payments-table-header .payment-sticky { background:#142b49; color:#fff; }
+.payment-row:nth-child(even) { background:color-mix(in srgb,var(--surface-2) 55%,var(--surface)); }
+.payment-row:hover { background:color-mix(in srgb,var(--primary) 6%,var(--surface)); }
+.payment-row .payment-sticky { align-self:stretch; padding-block:5px; }
+.payment-value { font-variant-numeric:tabular-nums; }
+.payment-paid-input { border-radius:11px; font-weight:750; }
+
+.season-report-card {
+ display:grid;
+ grid-template-columns:minmax(0,1fr) minmax(360px,1.2fr);
+ align-items:center;
+ gap:22px;
+ margin-top:20px;
+ padding:22px;
+ overflow:hidden;
+ border:1px solid #ffffff24;
+ background:radial-gradient(ellipse at 100% 0%,#2d6199 0%,transparent 62%),linear-gradient(135deg,#142b49,#0b1729);
+ color:#f8fafc;
+}
+.season-report-copy { min-width:0; }
+.season-report-kicker { display:block; margin-bottom:7px; color:#9ec8ff; font-size:10px; font-weight:900; letter-spacing:.14em; }
+.season-report-card h2 { margin:0; color:#fff; font-size:22px; }
+.season-report-card p { margin:7px 0 0; color:#bfd0e4; font-size:12px; line-height:1.5; }
+.season-report-actions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+.season-report-card .season-report-button { min-width:0; padding:13px; border-color:#ffffff20; background:#ffffff0e; color:#fff; box-shadow:none; }
+.season-report-card .season-report-button:hover { background:#ffffff18; }
+.season-report-card .season-report-button .export-button-icon { background:#ffffff16; color:#fff; }
+.season-report-card .season-report-button small { color:#bfd0e4; }
+.payment-month-exports { grid-template-columns:repeat(2,minmax(0,1fr)); }
+
+.multario-intro { padding:15px 17px; }
+.multario-intro-copy p { margin:0; }
+
+@media(max-width:700px) {
+ .page-context-strip { padding:11px 12px; }
+ .page-context-strip .primary-btn { padding:10px 12px; font-size:12px; }
+ .payments-table-header,.payment-row {
+  min-width:650px;
+  grid-template-columns:170px 86px 92px 70px 70px 78px;
+  gap:6px;
+ }
+ .payments-table-header { padding:11px 10px; font-size:10px; }
+ .payment-row { padding:10px; }
+ .payment-player strong { font-size:12px; }
+ .player-avatar { width:32px; height:32px; flex-basis:32px; }
+ .payment-value { font-size:12px; }
+ .payment-paid-input { width:72px; }
+ .season-report-card { grid-template-columns:1fr; padding:18px; gap:16px; }
+ .season-report-actions { grid-template-columns:1fr; }
+ .payment-month-exports { grid-template-columns:1fr; }
+}
+
+/* Report stagione multipagina, ispirato al modello approvato. */
+.season-report-modal { width:min(980px,100%); padding:0; overflow-x:hidden; }
+.season-report-modal > .row { position:sticky; top:0; z-index:12; margin:0; padding:16px 18px; background:var(--surface); border-bottom:1px solid var(--border); }
+.season-report-toolbar { position:sticky; top:65px; z-index:11; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 18px; background:var(--surface); border-bottom:1px solid var(--border); }
+.season-report-toolbar p { margin:0; color:var(--muted); font-size:12px; }
+.season-report-document { display:grid; gap:18px; padding:18px; background:#dfe6ee; }
+.season-report-page { position:relative; box-sizing:border-box; width:min(794px,100%); min-height:1123px; margin:auto; padding:32px 36px 52px; overflow:hidden; background:#fff; color:#142238; box-shadow:0 12px 35px #10233f18; font-family:Inter,system-ui,-apple-system,sans-serif; }
+.season-pdf-header { display:flex; align-items:center; justify-content:space-between; gap:20px; padding-bottom:14px; border-bottom:1px solid #cfdae6; }
+.season-pdf-brand { display:flex; align-items:center; gap:10px; }
+.season-pdf-brand img { width:54px; height:54px; object-fit:contain; }
+.season-pdf-brand div { display:grid; }
+.season-pdf-brand strong { font-size:24px; line-height:1; }.season-pdf-brand strong span,.season-cover-page h1 span { color:#63a5ff; }
+.season-pdf-brand small { margin-top:4px; font-size:10px; }
+.season-pdf-header > div:last-child { display:grid; text-align:right; }.season-pdf-header > div:last-child small { font-size:10px; }.season-pdf-header > div:last-child strong { color:#245fbd; font-size:22px; }
+.season-report-section-title { margin:22px 0 14px; font-size:18px; text-transform:uppercase; letter-spacing:.015em; }
+.season-overview-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+.season-pdf-metric { min-width:0; padding:16px; border-radius:12px; background:#f3f7fb; }
+.season-pdf-metric small { display:block; margin-bottom:7px; font-size:10px; font-weight:750; }.season-pdf-metric strong { display:block; font-size:20px; overflow-wrap:anywhere; }
+.season-pdf-metric.green { background:#edf5ff; color:#245fbd; }.season-pdf-metric.red { background:#fff0f1; color:#bd2630; }.season-pdf-metric.blue { background:#e7f0ff; color:#174f9e; }.season-pdf-metric.orange { background:#fff5e7; color:#de4a16; }.season-pdf-metric.purple { background:#f1efff; color:#5c48bd; }
+.season-month-chart { display:flex; align-items:end; gap:12px; height:255px; padding:18px 18px 0; border-left:1px solid #d7e1ec; border-bottom:1px solid #d7e1ec; background:repeating-linear-gradient(to bottom,#fff 0,#fff 50px,#e9eef4 51px); }
+.season-chart-column { display:grid; grid-template-rows:1fr 24px; flex:1; align-self:stretch; min-width:0; text-align:center; }.season-chart-bars { display:flex; align-items:end; justify-content:center; gap:3px; min-height:0; }.season-chart-bars i,.season-chart-bars b { display:block; width:34%; max-width:18px; border-radius:4px 4px 0 0; }.season-chart-bars i { background:#4384ff; }.season-chart-bars b { background:#f04450; }.season-chart-column span { padding-top:7px; font-size:9px; text-transform:capitalize; }
+.season-report-table { width:100%; border-collapse:collapse; font-size:10px; }.season-report-table th,.season-report-table td { padding:7px 6px; border:1px solid #d5dfe9; text-align:right; }.season-report-table th:nth-child(2),.season-report-table td:nth-child(2) { text-align:left; }.season-report-table thead { background:#edf3f8; }.season-report-table tbody tr:nth-child(even) { background:#f7f9fc; }.season-report-table tfoot { background:#e9f0f7; font-weight:850; text-transform:uppercase; }.season-report-table .is-due { background:#fff1cf; color:#bd3a21; font-weight:850; }
+.season-ranking-table { font-size:12px; }.season-ranking-table th,.season-ranking-table td { padding:9px 10px; }.season-ranking-table th:first-child,.season-ranking-table td:first-child { width:42px; text-align:center; }.season-ranking-table th:nth-child(3),.season-ranking-table td:nth-child(3),.season-ranking-table th:nth-child(4),.season-ranking-table td:nth-child(4) { text-align:center; }
+.season-player-hero { display:flex; align-items:center; gap:16px; margin-top:18px; padding:14px; border:1px solid #d8e2ec; border-radius:15px; }.season-player-hero .player-portrait { width:64px; height:64px; border-radius:50%; }.season-player-hero > div { flex:1; min-width:0; }.season-player-hero h2 { margin:0; font-size:23px; }.season-player-hero p { margin:5px 0 0; color:#6d798a; font-size:11px; }.season-player-hero > b { align-self:flex-start; font-size:14px; }
+.season-player-metrics { display:grid; grid-template-columns:repeat(4,1fr); gap:9px; margin:14px 0; }.season-player-metrics .season-pdf-metric { padding:12px; text-align:center; }.season-player-metrics .season-pdf-metric:nth-last-child(-n+2) { grid-column:span 2; }.season-player-fines { font-size:10px; }.season-player-fines th:nth-child(1),.season-player-fines td:nth-child(1) { width:82px; text-align:left; }.season-player-fines th:nth-child(3),.season-player-fines td:nth-child(3) { width:110px; text-align:left; }.season-player-fines th:last-child,.season-player-fines td:last-child { width:65px; }
+.season-report-page footer,.season-cover-page footer { position:absolute; left:36px; right:36px; bottom:20px; display:flex; justify-content:space-between; padding-top:9px; border-top:1px solid #d5dfe9; color:#566579; font-size:8px; }
+.season-cover-page { display:flex; flex-direction:column; align-items:center; justify-content:center; color:#fff; text-align:center; background:radial-gradient(circle at 50% 85%,#214d7c 0,transparent 36%),linear-gradient(155deg,#07172b 0%,#102b4d 58%,#1d4f8d 100%); }.season-cover-page > img { width:190px; height:190px; object-fit:contain; }.season-cover-page h1 { margin:24px 0 0; font-size:62px; line-height:1; }.season-cover-page h2 { margin:9px 0; color:#a9ceff; font-size:23px; }.season-cover-page hr { width:80%; margin:24px 0; border:0; border-top:5px solid #4384ff; }.season-cover-page p { margin:0; font-size:26px; }.season-cover-page > strong { margin-top:6px; font-size:49px; }.season-cover-page > small { margin-top:90px; font-size:21px; font-style:italic; line-height:1.5; }.season-cover-page footer { border-color:#ffffff45; color:#d9e9ff; }
+@media(max-width:700px) { .season-report-document { padding:8px; gap:10px; }.season-report-page { min-height:720px; padding:20px 18px 42px; }.season-report-toolbar { top:59px; }.season-report-toolbar p { display:none; }.season-report-toolbar .btn { width:100%; }.season-pdf-brand strong { font-size:18px; }.season-pdf-brand img { width:42px; height:42px; }.season-overview-grid { grid-template-columns:repeat(2,1fr); }.season-player-metrics { grid-template-columns:repeat(2,1fr); }.season-player-metrics .season-pdf-metric:nth-last-child(-n+2) { grid-column:span 1; }.season-report-page footer { left:18px; right:18px; }.season-cover-page h1 { font-size:45px; }.season-cover-page > img { width:130px; height:130px; } }
+
+@media print {
+ @page { size:A4 portrait; margin:0; }
+ body,body.modal-open { position:static!important; top:auto!important; width:auto!important; height:auto!important; margin:0!important; overflow:visible!important; background:#fff!important; }
+ body > .app,body > #toast,body > #importFile { display:none!important; }
+ #modalRoot { position:static!important; inset:auto!important; width:auto!important; height:auto!important; overflow:visible!important; pointer-events:auto!important; }
+ .modal-backdrop,.season-report-modal,.season-report-document { position:static!important; display:block!important; width:auto!important; max-width:none!important; height:auto!important; max-height:none!important; margin:0!important; padding:0!important; overflow:visible!important; background:#fff!important; }
+ .season-report-modal > .row,.season-report-toolbar { display:none!important; }
+ .season-report-page { width:210mm!important; height:297mm!important; min-height:297mm!important; margin:0!important; padding:12mm 11mm 14mm!important; break-after:page; page-break-after:always; box-shadow:none!important; }
+ .season-report-page:last-child { break-after:auto; page-break-after:auto; }
+ .season-report-page footer { left:11mm; right:11mm; bottom:6mm; }
+}

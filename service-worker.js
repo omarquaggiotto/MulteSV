@@ -1,4 +1,4 @@
-const CACHE_NAME = "multefc-v57-equal-crests";
+const CACHE_NAME = "multefc-v58-sharp-aligned-crests";
 const APP_SHELL = [
     "./",
     "./index.html",

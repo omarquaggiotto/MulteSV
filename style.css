@@ -3240,7 +3240,7 @@ body.modal-open::after { visibility: hidden; }
 .next-match-team { min-width:0; display:flex; flex-direction:column; align-items:center; gap:8px; }
 .next-match-crest { width:42px; height:50px; display:grid; place-items:center; }
 .next-match-crest img { display:block; width:42px; height:50px; object-fit:contain; }
-.next-match-team strong { font-size:12px; line-height:1.4; }
+.next-match-team strong { width:100%; min-height:34px; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; font-size:12px; line-height:1.4; text-align:center; }
 .next-match-team strong span { display:block; font-size:10px; font-weight:400; color:#b8c8dc; }
 .next-match-time>span { color:#b8c8dc; font-size:9px; letter-spacing:.1em; }
 .next-match-time>strong { display:block; margin:4px 0; font-size:28px; letter-spacing:-1px; }

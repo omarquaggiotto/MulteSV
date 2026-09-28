@@ -1242,6 +1242,30 @@ body.modal-open .global-fab {
     display: none;
 }
 
+.app-update-notice {
+    position: fixed;
+    left: 50%;
+    bottom: calc(92px + env(safe-area-inset-bottom));
+    z-index: 100010;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    width: min(430px, calc(100% - 28px));
+    padding: 13px 14px;
+    border: 1px solid #ffffff24;
+    border-radius: 18px;
+    background: linear-gradient(135deg, #142b49, #0b1729);
+    color: #fff;
+    box-shadow: 0 18px 50px rgba(5, 16, 32, .32);
+    transform: translateX(-50%);
+}
+
+.app-update-notice > div { display: grid; flex: 1; min-width: 0; gap: 2px; }
+.app-update-notice strong { font-size: 13px; }
+.app-update-notice span { color: #bfd0e4; font-size: 11px; }
+.app-update-notice button { flex: 0 0 auto; min-height: 40px; padding: 8px 13px; border: 0; border-radius: 12px; background: var(--primary); color: #fff; font-weight: 850; }
+.app-update-notice button:disabled { opacity: .65; }
+
 .nav-button {
 
     display: grid;

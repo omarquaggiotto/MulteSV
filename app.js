@@ -298,6 +298,7 @@ let showMonthlySummary = false;
 let fineSearchQuery = "";
 let undoSnapshot = null;
 let undoTimer = null;
+let reloadForServiceWorkerUpdate = false;
 
 
 /* =========================================================
@@ -610,20 +611,6 @@ async function initializeCloud() {
 
     subscribeToCloud();
 
-    window.addEventListener("online", async () => {
-        const refreshed = await loadCloudState();
-        cloudReady = refreshed !== null;
-        await refreshAccess();
-        render();
-        showToast("Connessione ristabilita.");
-    });
-
-    window.addEventListener("offline", () => {
-        closeModal();
-        render();
-        showToast("Sei offline: le modifiche sono bloccate.");
-    });
-
     render();
 
     supabaseClient.auth.onAuthStateChange(() => {
@@ -635,6 +622,22 @@ async function initializeCloud() {
             render();
         }, 0);
     });
+}
+
+async function handleConnectionRestored() {
+    if (supabaseClient) {
+        const refreshed = await loadCloudState();
+        cloudReady = refreshed !== null;
+        await refreshAccess();
+    }
+    render();
+    showToast("Connessione ristabilita.");
+}
+
+function handleConnectionLost() {
+    closeModal();
+    render();
+    showToast("Sei offline: le modifiche sono bloccate.");
 }
 
 function openAuthModal() {
@@ -6310,6 +6313,40 @@ function showToast(message) {
 
 }
 
+function showAppUpdateNotice(registration) {
+    if (!registration?.waiting || document.getElementById("appUpdateNotice")) return;
+
+    const notice = document.createElement("div");
+    notice.id = "appUpdateNotice";
+    notice.className = "app-update-notice";
+    notice.setAttribute("role", "status");
+    notice.innerHTML = `
+        <div><strong>Nuova versione disponibile</strong><span>Aggiorna quando sei pronto.</span></div>
+        <button type="button" id="applyAppUpdate">Aggiorna</button>
+    `;
+    document.body.appendChild(notice);
+    document.getElementById("applyAppUpdate").onclick = () => {
+        notice.querySelector("button").disabled = true;
+        reloadForServiceWorkerUpdate = true;
+        registration.waiting.postMessage({ type: "SKIP_WAITING" });
+    };
+}
+
+function watchServiceWorkerUpdate(registration) {
+    if (registration.waiting && navigator.serviceWorker.controller) {
+        showAppUpdateNotice(registration);
+    }
+
+    registration.addEventListener("updatefound", () => {
+        const worker = registration.installing;
+        worker?.addEventListener("statechange", () => {
+            if (worker.state === "installed" && navigator.serviceWorker.controller) {
+                showAppUpdateNotice(registration);
+            }
+        });
+    });
+}
+
 
 /* =========================================================
    TEMA
@@ -6341,16 +6378,26 @@ document
    ========================================================= */
 
 render();
+window.addEventListener("online", handleConnectionRestored);
+window.addEventListener("offline", handleConnectionLost);
 initializeCloud();
 if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {
         navigator.serviceWorker
             .register("./service-worker.js")
-            .then(() => {
+            .then(registration => {
                 console.log("MulteFC: Service Worker attivo");
+                watchServiceWorkerUpdate(registration);
+                registration.update().catch(() => {});
             })
             .catch(error => {
                 console.error("MulteFC: errore Service Worker", error);
             });
+    });
+
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+        if (!reloadForServiceWorkerUpdate) return;
+        reloadForServiceWorkerUpdate = false;
+        window.location.reload();
     });
 }

@@ -22,7 +22,8 @@ window.TEAM_FIXTURES = {"updatedAt":"2026-09-23","season":"2026/27","competition
    const t=data.teams.find(t=>t.id===id);
    const isSanVitale=id===1199590;
    const name=isSanVitale?'San Vitale':t.name;
-   return `<div class="next-match-team ${isSanVitale?'is-san-vitale-team':'is-opponent-team'}"><span class="next-match-crest"><img src="${escape(t.logo)}" alt="Stemma ${escape(t.name)}"></span><strong>${escape(name)}${isSanVitale?'<span>Next Gen</span>':''}</strong></div>`;
+   const logo=isSanVitale?'san-vitale-logo.png':t.logo;
+   return `<div class="next-match-team ${isSanVitale?'is-san-vitale-team':'is-opponent-team'}"><span class="next-match-crest"><img src="${escape(logo)}" alt="Stemma ${escape(t.name)}"></span><strong>${escape(name)}${isSanVitale?'<span>Next Gen</span>':''}</strong></div>`;
  }
  function directions(m) {
    if(m.awayId!==1199590) return '';

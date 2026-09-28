@@ -1,4 +1,4 @@
-const CACHE_NAME = "multefc-v55-offline-update";
+const CACHE_NAME = "multefc-v56-crests-month";
 const APP_SHELL = [
     "./",
     "./index.html",

@@ -1,4 +1,4 @@
-const CACHE_NAME = "multefc-v60-season-manager";
+const CACHE_NAME = "multefc-v61-calendar-import-fix";
 const APP_SHELL = [
     "./",
     "./index.html",
@@ -82,6 +82,7 @@ self.addEventListener("fetch", event => {
             .then(cached => cached || fetch(request))
     );
 });
+
 
 
 

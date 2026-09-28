@@ -516,8 +516,8 @@ function normalizeIncomingState(raw) {
 
 function isValidTuttocampoCalendarUrl(value) {
     try {
-        const url = new URL(value);
-        return url.protocol === "https:" && url.hostname === "www.tuttocampo.it" &&
+        const url = new URL(/^https?:\/\//i.test(value) ? value : `https://${value}`);
+        return url.protocol === "https:" && /^(?:www\.)?tuttocampo\.it$/i.test(url.hostname) &&
             /\/(Calendario|Risultati)\/?$/i.test(url.pathname);
     } catch {
         return false;
@@ -569,7 +569,14 @@ async function importCalendarFromLink(type, url) {
         const { data, error } = await supabaseClient.functions.invoke("import-tuttocampo-calendar", {
             body: { type, url, teamId: 1199590 }
         });
-        if (error) throw new Error(error.message || "Importazione non riuscita.");
+        if (error) {
+            let message = error.message || "Importazione non riuscita.";
+            try {
+                const details = await error.context?.clone?.().json();
+                if (details?.error) message = details.error;
+            } catch (_) {}
+            throw new Error(message);
+        }
         payload = data;
     }
     return validateImportedCalendar(payload?.calendar, type);

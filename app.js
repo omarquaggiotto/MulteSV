@@ -613,6 +613,22 @@ function applyImportedCalendar() {
     }
 }
 
+function getRuntimeCalendarSnapshot(type) {
+    const calendar = window.MatchCalendar?.getData?.();
+    if (!calendar || !Array.isArray(calendar.matches) || !Array.isArray(calendar.teams)) return null;
+    const matches = calendar.matches.filter(match => type === "cup"
+        ? match.competitionType === "cup"
+        : match.competitionType !== "cup");
+    if (!matches.length) return null;
+    const teamIds = new Set(matches.flatMap(match => [Number(match.homeId), Number(match.awayId)]));
+    return {
+        ...calendar,
+        teams: calendar.teams.filter(team => teamIds.has(Number(team.id))),
+        matches: structuredClone(matches),
+        venues: structuredClone(calendar.venues || {})
+    };
+}
+
 function applyLocalCupPreview() {
     const preview = new URLSearchParams(location.search).get("preview");
     if (!/^(?:localhost|127\.0\.0\.1)$/i.test(location.hostname) || preview !== "cup-calendar") return;
@@ -6839,7 +6855,9 @@ function openSeasonSetupModal(editCurrent = false) {
         const existingCup = state.seasonConfig?.calendarSources?.find(source => source.type === "cup");
         const leagueSnapshot = pendingCalendarImports.league?.url === leagueUrl
             ? pendingCalendarImports.league.snapshot
-            : (existingLeague?.url === leagueUrl ? existingLeague.snapshot : null);
+            : (existingLeague?.url === leagueUrl
+                ? (existingLeague.snapshot || (editCurrent ? getRuntimeCalendarSnapshot("league") : null))
+                : null);
         const cupSnapshot = pendingCalendarImports.cup?.url === cupUrl
             ? pendingCalendarImports.cup.snapshot
             : (existingCup?.url === cupUrl ? existingCup.snapshot : null);
@@ -6875,8 +6893,8 @@ function openSeasonSetupModal(editCurrent = false) {
                 ]
             };
             saveState();
-            applyImportedCalendar();
             closeModal();
+            applyImportedCalendar();
             render();
             showToast("Configurazione stagione aggiornata.");
             return;

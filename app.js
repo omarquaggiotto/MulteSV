@@ -2221,24 +2221,11 @@ if (fineSearchQuery.trim()) {
 
         <section class="page-context-strip fines-context-strip">
 
-            <div>
-                <span class="page-context-label">${escapeHtml(title)}</span>
-                <strong>${subtitle}</strong>
+            <div class="fines-context-summary">
+                <span class="page-context-label">Riepilogo del periodo</span>
+                <strong>${escapeHtml(title)}</strong>
+                <span>${subtitle}</span>
             </div>
-
-
-            ${
-                isAdmin
-                    ? `
-                        <button
-                            class="primary-btn"
-                            id="addFine"
-                        >
-                            ＋ Nuova multa
-                        </button>
-                    `
-                    : ""
-            }
 
         </section>
 

@@ -897,7 +897,7 @@ h3 {
         );
 
     max-height:
-        calc(100vh - 160px);
+        calc(100dvh - 160px);
 
     overflow-y: auto;
 
@@ -1739,6 +1739,8 @@ body.modal-open .global-fab {
 .fines-filters-card {
     margin-top: 12px !important;
     margin-bottom: 16px;
+    background: var(--surface);
+    box-shadow: 0 10px 28px rgba(15, 35, 63, 0.08);
 }
 
 .fines-filters-header {
@@ -2602,21 +2604,16 @@ body.modal-open .global-fab {
 }
 
 .fine-quick-filters {
-    display: flex;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 8px;
-    overflow-x: auto;
     padding: 2px 0 12px;
-    scrollbar-width: none;
-}
-
-.fine-quick-filters::-webkit-scrollbar {
-    display: none;
 }
 
 .fine-quick-filters button {
-    flex: 0 0 auto;
+    min-width: 0;
     min-height: 38px;
-    padding: 8px 12px;
+    padding: 8px 9px;
     border: 1px solid var(--border);
     border-radius: 999px;
     background: var(--surface);
@@ -3339,6 +3336,11 @@ body.modal-open::after { visibility: hidden; }
 .page-context-label { display:block; margin-bottom:3px; color:var(--muted); font-size:10px; font-weight:850; letter-spacing:.06em; text-transform:uppercase; }
 .page-context-strip strong { display:block; font-size:14px; line-height:1.35; }
 .page-context-strip .primary-btn { flex:0 0 auto; }
+.fines-context-strip { justify-content:flex-start; }
+.fines-context-summary { display:grid; grid-template-columns:auto 1fr; align-items:baseline; column-gap:8px; width:100%; }
+.fines-context-summary .page-context-label { grid-column:1/-1; }
+.fines-context-summary strong { font-size:15px; }
+.fines-context-summary > span:last-child { color:var(--muted); font-size:13px; }
 
 /* Pagamenti: gerarchia più netta e tabella più leggibile. */
 .payments-table-card { border:1px solid color-mix(in srgb,var(--primary) 16%,var(--border)); box-shadow:0 10px 28px #10233f0b; }
@@ -3399,9 +3401,14 @@ body.modal-open::after { visibility: hidden; }
  .season-report-actions { grid-template-columns:1fr; }
  .payment-month-exports { grid-template-columns:1fr; }
 }
+@media(max-width:360px) {
+ .fine-quick-filters { grid-template-columns:repeat(2,minmax(0,1fr)); }
+ .fine-quick-filters button:last-child { grid-column:1/-1; }
+ .fines-context-summary { grid-template-columns:1fr; row-gap:2px; }
+}
 
 /* Report stagione multipagina, ispirato al modello approvato. */
-.season-report-modal { width:min(980px,100%); padding:0; overflow-x:hidden; }
+.season-report-modal { width:min(980px,100%); padding:0; overflow-x:hidden; overscroll-behavior:contain; }
 .season-report-modal > .row { position:sticky; top:0; z-index:12; margin:0; padding:16px 18px; background:var(--surface); border-bottom:1px solid var(--border); }
 .season-report-toolbar { position:sticky; top:65px; z-index:11; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 18px; background:var(--surface); border-bottom:1px solid var(--border); }
 .season-report-toolbar p { margin:0; color:var(--muted); font-size:12px; }
@@ -3427,7 +3434,27 @@ body.modal-open::after { visibility: hidden; }
 .season-player-metrics { display:grid; grid-template-columns:repeat(4,1fr); gap:9px; margin:14px 0; }.season-player-metrics .season-pdf-metric { padding:12px; text-align:center; }.season-player-metrics .season-pdf-metric:nth-last-child(-n+2) { grid-column:span 2; }.season-player-fines { font-size:10px; }.season-player-fines th:nth-child(1),.season-player-fines td:nth-child(1) { width:82px; text-align:left; }.season-player-fines th:nth-child(3),.season-player-fines td:nth-child(3) { width:110px; text-align:left; }.season-player-fines th:last-child,.season-player-fines td:last-child { width:65px; }
 .season-report-page footer,.season-cover-page footer { position:absolute; left:36px; right:36px; bottom:20px; display:flex; justify-content:space-between; padding-top:9px; border-top:1px solid #d5dfe9; color:#566579; font-size:8px; }
 .season-cover-page { display:flex; flex-direction:column; align-items:center; justify-content:center; color:#fff; text-align:center; background:radial-gradient(circle at 50% 85%,#214d7c 0,transparent 36%),linear-gradient(155deg,#07172b 0%,#102b4d 58%,#1d4f8d 100%); }.season-cover-page > img { width:190px; height:190px; object-fit:contain; }.season-cover-page h1 { margin:24px 0 0; font-size:62px; line-height:1; }.season-cover-page h2 { margin:9px 0; color:#a9ceff; font-size:23px; }.season-cover-page hr { width:80%; margin:24px 0; border:0; border-top:5px solid #4384ff; }.season-cover-page p { margin:0; font-size:26px; }.season-cover-page > strong { margin-top:6px; font-size:49px; }.season-cover-page > small { margin-top:90px; font-size:21px; font-style:italic; line-height:1.5; }.season-cover-page footer { border-color:#ffffff45; color:#d9e9ff; }
-@media(max-width:700px) { .season-report-document { padding:8px; gap:10px; }.season-report-page { min-height:720px; padding:20px 18px 42px; }.season-report-toolbar { top:59px; }.season-report-toolbar p { display:none; }.season-report-toolbar .btn { width:100%; }.season-pdf-brand strong { font-size:18px; }.season-pdf-brand img { width:42px; height:42px; }.season-overview-grid { grid-template-columns:repeat(2,1fr); }.season-player-metrics { grid-template-columns:repeat(2,1fr); }.season-player-metrics .season-pdf-metric:nth-last-child(-n+2) { grid-column:span 1; }.season-report-page footer { left:18px; right:18px; }.season-cover-page h1 { font-size:45px; }.season-cover-page > img { width:130px; height:130px; } }
+@media(max-width:700px) {
+ .modal-backdrop { align-items:flex-start; padding:max(8px,env(safe-area-inset-top)) 8px max(8px,env(safe-area-inset-bottom)); }
+ .modal { max-height:calc(100dvh - max(16px,env(safe-area-inset-top)) - max(16px,env(safe-area-inset-bottom))); }
+ .season-report-modal { width:100%; height:calc(100dvh - max(16px,env(safe-area-inset-top)) - max(16px,env(safe-area-inset-bottom))); max-height:none; border-radius:20px; }
+ .season-report-modal > .row { top:0; min-height:60px; padding:12px 14px; }
+ .season-report-modal > .row h2 { margin:0; font-size:18px; }
+ .season-report-modal > .row .icon-mini { flex:0 0 42px; width:42px; height:42px; }
+ .season-report-document { padding:8px; gap:10px; }
+ .season-report-page { min-height:720px; padding:20px 18px 42px; }
+ .season-report-toolbar { top:60px; }
+ .season-report-toolbar p { display:none; }
+ .season-report-toolbar .btn { width:100%; }
+ .season-pdf-brand strong { font-size:18px; }
+ .season-pdf-brand img { width:42px; height:42px; }
+ .season-overview-grid { grid-template-columns:repeat(2,1fr); }
+ .season-player-metrics { grid-template-columns:repeat(2,1fr); }
+ .season-player-metrics .season-pdf-metric:nth-last-child(-n+2) { grid-column:span 1; }
+ .season-report-page footer { left:18px; right:18px; }
+ .season-cover-page h1 { font-size:45px; }
+ .season-cover-page > img { width:130px; height:130px; }
+}
 
 @media print {
  @page { size:A4 portrait; margin:0; }

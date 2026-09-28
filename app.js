@@ -31,6 +31,8 @@ let cloudReady = false;
 let cloudChannel = null;
 let cloudSaveTimer = null;
 let modalScrollPosition = 0;
+let pendingCalendarImports = { league: null, cup: null };
+let pendingTeamLogo = null;
 
 
 
@@ -42,7 +44,25 @@ const defaultState = {
 
     team: "Multe FC",
 
+    teamLogo: "san-vitale-logo.png",
+
     season: "2026/27",
+
+    seasonConfig: {
+        monthlyBase: 5,
+        paymentStartMonth: 8,
+        paymentEndMonth: 5,
+        paymentFrequency: "monthly",
+        paymentMode: "due_day",
+        paymentDueDay: 15,
+        monthOverrides: { "08": 10 },
+        calendarSources: [
+            { type: "league", name: "Campionato", enabled: true, url: "https://www.tuttocampo.it/Veneto/TerzaCategoria/GironeAVicenza/Squadra/SanVitale1995SqB/1199590/Calendario" },
+            { type: "cup", name: "Coppa", enabled: false, dynamic: true, refreshPolicy: "after_match", url: "" }
+        ]
+    },
+
+    seasonArchives: [],
 
     theme: "light",
 
@@ -286,6 +306,8 @@ rules: [
    ========================================================= */
 
 let state = loadState();
+applyImportedCalendar();
+applyLocalCupPreview();
 let deviceTheme = getDeviceTheme(state.theme);
 
 let currentPage = "home";
@@ -324,11 +346,50 @@ function loadState() {
                     ? loaded.team
                     : defaultState.team;
 
+            loaded.teamLogo = typeof loaded.teamLogo === "string" && (loaded.teamLogo === "san-vitale-logo.png" || /^data:image\/(png|webp|jpeg);base64,/i.test(loaded.teamLogo))
+                ? loaded.teamLogo
+                : defaultState.teamLogo;
+
             loaded.season =
                 typeof loaded.season === "string" &&
                 loaded.season.trim()
                     ? loaded.season
                     : defaultState.season;
+
+            const savedSeasonConfig = loaded.seasonConfig && typeof loaded.seasonConfig === "object"
+                ? loaded.seasonConfig
+                : {};
+            loaded.seasonConfig = {
+                monthlyBase: Math.max(0, Number(savedSeasonConfig.monthlyBase ?? 5) || 0),
+                paymentStartMonth: Math.min(12, Math.max(1, Number(savedSeasonConfig.paymentStartMonth ?? 8) || 8)),
+                paymentEndMonth: Math.min(12, Math.max(1, Number(savedSeasonConfig.paymentEndMonth ?? 5) || 5)),
+                paymentFrequency: "monthly",
+                paymentMode: savedSeasonConfig.paymentMode === "rolling" ? "rolling" : "due_day",
+                paymentDueDay: Math.min(28, Math.max(1, Number(savedSeasonConfig.paymentDueDay ?? 15) || 15)),
+                monthOverrides: savedSeasonConfig.monthOverrides && typeof savedSeasonConfig.monthOverrides === "object"
+                    ? { ...savedSeasonConfig.monthOverrides }
+                    : { "08": 10 },
+                calendarSources: Array.isArray(savedSeasonConfig.calendarSources)
+                    ? savedSeasonConfig.calendarSources.map(source => ({
+                        type: source?.type === "cup" ? "cup" : "league",
+                        name: String(source?.name || (source?.type === "cup" ? "Coppa" : "Campionato")),
+                        enabled: source?.enabled !== false,
+                        dynamic: source?.type === "cup" ? source?.dynamic !== false : false,
+                        refreshPolicy: source?.type === "cup" ? "after_match" : "weekly",
+                        url: typeof source?.url === "string" ? source.url : "",
+                        lastCheckedAt: typeof source?.lastCheckedAt === "string" ? source.lastCheckedAt : "",
+                        snapshot: source?.snapshot && typeof source.snapshot === "object"
+                            ? structuredClone(source.snapshot)
+                            : null
+                    }))
+                    : [
+                        { type: "league", name: "Campionato", enabled: true, url: typeof savedSeasonConfig.calendarUrl === "string" ? savedSeasonConfig.calendarUrl : defaultState.seasonConfig.calendarSources[0].url },
+                        { type: "cup", name: "Coppa", enabled: false, dynamic: true, refreshPolicy: "after_match", url: "" }
+                    ]
+            };
+            loaded.seasonArchives = Array.isArray(loaded.seasonArchives)
+                ? loaded.seasonArchives
+                : [];
 
             loaded.theme =
                 loaded.theme === "dark"
@@ -414,6 +475,233 @@ function requireOnlineAdmin() {
             : "Offline: l'app è in sola lettura."
     );
     return false;
+}
+
+function normalizeIncomingState(raw) {
+    const loaded = { ...structuredClone(defaultState), ...(raw && typeof raw === "object" ? structuredClone(raw) : {}) };
+    loaded.team = typeof loaded.team === "string" && loaded.team.trim() ? loaded.team : defaultState.team;
+    loaded.teamLogo = typeof loaded.teamLogo === "string" && (loaded.teamLogo === "san-vitale-logo.png" || /^data:image\/(png|webp|jpeg);base64,/i.test(loaded.teamLogo)) ? loaded.teamLogo : defaultState.teamLogo;
+    loaded.season = typeof loaded.season === "string" && loaded.season.trim() ? loaded.season : defaultState.season;
+    loaded.theme = loaded.theme === "dark" ? "dark" : "light";
+    loaded.players = Array.isArray(loaded.players) ? loaded.players.filter(player => typeof player === "string" && player.trim()) : structuredClone(defaultState.players);
+    loaded.rules = Array.isArray(loaded.rules) && loaded.rules.length ? loaded.rules.filter(rule => rule && typeof rule === "object") : structuredClone(defaultState.rules);
+    loaded.fines = Array.isArray(loaded.fines) ? loaded.fines.filter(fine => fine && typeof fine === "object") : [];
+    loaded.payments = loaded.payments && typeof loaded.payments === "object" && !Array.isArray(loaded.payments) ? loaded.payments : {};
+    loaded.seasonArchives = Array.isArray(loaded.seasonArchives) ? loaded.seasonArchives : [];
+    const savedConfig = loaded.seasonConfig && typeof loaded.seasonConfig === "object" ? loaded.seasonConfig : {};
+    loaded.seasonConfig = {
+        monthlyBase: Math.max(0, Number(savedConfig.monthlyBase ?? 5) || 0),
+        paymentStartMonth: Math.min(12, Math.max(1, Number(savedConfig.paymentStartMonth ?? 8) || 8)),
+        paymentEndMonth: Math.min(12, Math.max(1, Number(savedConfig.paymentEndMonth ?? 5) || 5)),
+        paymentFrequency: "monthly",
+        paymentMode: savedConfig.paymentMode === "rolling" ? "rolling" : "due_day",
+        paymentDueDay: Math.min(28, Math.max(1, Number(savedConfig.paymentDueDay ?? 15) || 15)),
+        monthOverrides: savedConfig.monthOverrides && typeof savedConfig.monthOverrides === "object" && !Array.isArray(savedConfig.monthOverrides) ? { ...savedConfig.monthOverrides } : { "08": 10 },
+        calendarSources: Array.isArray(savedConfig.calendarSources) ? savedConfig.calendarSources.map(source => ({
+            type: source?.type === "cup" ? "cup" : "league",
+            name: String(source?.name || (source?.type === "cup" ? "Coppa" : "Campionato")),
+            enabled: source?.enabled !== false,
+            dynamic: source?.type === "cup" ? source?.dynamic !== false : false,
+            refreshPolicy: source?.type === "cup" ? "after_match" : "weekly",
+            url: typeof source?.url === "string" ? source.url : "",
+            lastCheckedAt: typeof source?.lastCheckedAt === "string" ? source.lastCheckedAt : "",
+            snapshot: source?.snapshot && typeof source.snapshot === "object" ? structuredClone(source.snapshot) : null
+        })) : structuredClone(defaultState.seasonConfig.calendarSources)
+    };
+    const year = Number(loaded.season.slice(0, 4)) || 2026;
+    const starts = loaded.playerStartMonths && typeof loaded.playerStartMonths === "object" ? loaded.playerStartMonths : {};
+    loaded.playerStartMonths = Object.fromEntries(loaded.players.map(player => [player, typeof starts[player] === "string" && /^\d{4}-\d{2}$/.test(starts[player]) ? starts[player] : `${year}-08`]));
+    return loaded;
+}
+
+function isValidTuttocampoCalendarUrl(value) {
+    try {
+        const url = new URL(value);
+        return url.protocol === "https:" && url.hostname === "www.tuttocampo.it" &&
+            /\/(Calendario|Risultati)\/?$/i.test(url.pathname);
+    } catch {
+        return false;
+    }
+}
+
+function validateImportedCalendar(calendar, expectedType) {
+    if (!calendar || typeof calendar !== "object") throw new Error("Risposta calendario non valida.");
+    if (calendar.type !== expectedType) throw new Error("La competizione ricevuta non corrisponde al campo scelto.");
+    if (!Array.isArray(calendar.matches) || calendar.matches.length < 1) throw new Error("Nessuna partita trovata nel link.");
+    if (!Array.isArray(calendar.teams) || calendar.teams.length < 2) throw new Error("Squadre del calendario non riconosciute.");
+    const teamIds = new Set();
+    calendar.teams.forEach(team => {
+        const id = Number(team?.id);
+        if (!Number.isFinite(id) || !String(team?.name || "").trim() || teamIds.has(id)) throw new Error("Elenco squadre non valido.");
+        teamIds.add(id);
+        if (id !== 1199590 && team.logo) {
+            const logo = new URL(team.logo, location.href);
+            if (logo.protocol !== "https:" || !/(^|\.)tuttocampo\.it$/i.test(logo.hostname)) throw new Error("Origine di uno stemma non valida.");
+        }
+    });
+    const seen = new Set();
+    calendar.matches.forEach(match => {
+        if (!match || !/^\d{4}-\d{2}-\d{2}$/.test(match.date || "") || !/^\d{2}:\d{2}$/.test(match.time || "")) {
+            throw new Error("Il calendario contiene una partita senza data o orario valido.");
+        }
+        if (!Number.isFinite(Number(match.homeId)) || !Number.isFinite(Number(match.awayId)) || match.homeId === match.awayId) {
+            throw new Error("Il calendario contiene squadre non valide.");
+        }
+        if (!teamIds.has(Number(match.homeId)) || !teamIds.has(Number(match.awayId))) throw new Error("Una partita fa riferimento a una squadra mancante.");
+        const key = match.key || `${match.date}|${match.time}|${match.homeId}|${match.awayId}`;
+        if (seen.has(key)) throw new Error("Il calendario contiene partite duplicate.");
+        seen.add(key);
+    });
+    if (!calendar.matches.some(match => Number(match.homeId) === 1199590 || Number(match.awayId) === 1199590)) {
+        throw new Error("Il link non contiene partite del San Vitale 1995 Sq. B.");
+    }
+    return structuredClone(calendar);
+}
+
+async function importCalendarFromLink(type, url) {
+    if (!requireOnlineAdmin()) return null;
+    if (!isValidTuttocampoCalendarUrl(url)) throw new Error("Inserisci un link Calendario o Risultati di Tuttocampo.");
+    let payload;
+    if (typeof window.__MULTE_SV_CALENDAR_IMPORT_MOCK__ === "function") {
+        payload = await window.__MULTE_SV_CALENDAR_IMPORT_MOCK__({ type, url, teamId: 1199590 });
+    } else {
+        if (!supabaseClient) throw new Error("Servizio di importazione non disponibile.");
+        const { data, error } = await supabaseClient.functions.invoke("import-tuttocampo-calendar", {
+            body: { type, url, teamId: 1199590 }
+        });
+        if (error) throw new Error(error.message || "Importazione non riuscita.");
+        payload = data;
+    }
+    return validateImportedCalendar(payload?.calendar, type);
+}
+
+function getCombinedImportedCalendar() {
+    const sources = (state.seasonConfig?.calendarSources || []).filter(source => source.enabled && source.snapshot);
+    if (!sources.length) return null;
+    const teams = new Map();
+    const matches = new Map();
+    const venues = {};
+    sources.forEach(source => {
+        (source.snapshot.teams || []).forEach(team => teams.set(Number(team.id), team));
+        (source.snapshot.matches || []).forEach(match => matches.set(match.key || `${match.date}|${match.time}|${match.homeId}|${match.awayId}`, match));
+        Object.assign(venues, source.snapshot.venues || {});
+    });
+    return {
+        season: state.season,
+        source: sources.map(source => source.url).join(" | "),
+        teams: [...teams.values()],
+        matches: [...matches.values()],
+        venues
+    };
+}
+
+function applyImportedCalendar() {
+    const calendar = getCombinedImportedCalendar();
+    if (calendar) {
+        const ownTeam = calendar.teams.find(team => Number(team.id) === 1199590);
+        if (ownTeam) ownTeam.logo = getTeamLogo();
+        window.MatchCalendar?.setData(calendar);
+    } else {
+        window.MatchCalendar?.setTeamLogo?.(getTeamLogo());
+    }
+}
+
+function applyLocalCupPreview() {
+    const preview = new URLSearchParams(location.search).get("preview");
+    if (!/^(?:localhost|127\.0\.0\.1)$/i.test(location.hostname) || preview !== "cup-calendar") return;
+    const calendar = window.MatchCalendar?.getData?.();
+    if (!calendar) return;
+    const cupMatches = [
+        { round: 1, homeId: 1238518, awayId: 1199590, date: "2027-03-18", time: "20:30", place: "Montecchio Maggiore", status: "scheduled", url: "https://www.tuttocampo.it/Veneto/TerzaCategoria/GironeCoppaGianmauroAnniVicenza/Partita/1.13/montecchio-s-pietro-sq-b-san-vitale-1995-sq-b" },
+        { round: 1, homeId: 1199590, awayId: 1199567, date: "2027-04-01", time: "20:30", place: "Montecchio Maggiore", status: "scheduled", url: "https://www.tuttocampo.it/Veneto/TerzaCategoria/GironeCoppaGianmauroAnniVicenza/Partita/1.15/san-vitale-1995-sq-b-riviera-berica-sq-b" },
+        { round: 1, homeId: 1199590, awayId: 1283491, date: "2027-04-15", time: "20:30", place: "Montecchio Maggiore", status: "scheduled", url: "https://www.tuttocampo.it/Veneto/TerzaCategoria/GironeCoppaGianmauroAnniVicenza/Partita/1.18/san-vitale-1995-sq-b-atletico-montebello-vicentino" }
+    ].map(match => ({ ...match, key: `cup|${match.date}|${match.homeId}|${match.awayId}`, competitionType: "cup" }));
+    const existing = (calendar.matches || []).filter(match => match.competitionType !== "cup");
+    window.MatchCalendar.setData({ ...calendar, matches: [...existing, ...cupMatches] });
+}
+
+function getTeamLogo() {
+    return state?.teamLogo || "san-vitale-logo.png";
+}
+
+function applyTeamBranding() {
+    document.querySelectorAll("[data-team-logo]").forEach(image => { image.src = getTeamLogo(); });
+    document.documentElement.style.setProperty("--team-logo-image", `url("${getTeamLogo().replace(/["\\]/g, "\\$&")}")`);
+    window.MatchCalendar?.setTeamLogo?.(getTeamLogo());
+}
+
+function prepareTeamLogo(file) {
+    return new Promise((resolve, reject) => {
+        if (!file || !/^image\/(png|jpeg|webp)$/i.test(file.type)) return reject(new Error("Usa un’immagine PNG, JPG o WebP."));
+        if (file.size > 8 * 1024 * 1024) return reject(new Error("L’immagine supera 8 MB."));
+        const reader = new FileReader();
+        reader.onerror = () => reject(new Error("Impossibile leggere l’immagine."));
+        reader.onload = () => {
+            const image = new Image();
+            image.onerror = () => reject(new Error("Immagine non valida."));
+            image.onload = () => {
+                if (Math.max(image.naturalWidth, image.naturalHeight) > 12000) return reject(new Error("L’immagine è troppo grande. Usa un file sotto 12000 pixel per lato."));
+                const working = document.createElement("canvas");
+                const sourceScale = Math.min(1, 1024 / Math.max(image.naturalWidth, image.naturalHeight));
+                working.width = Math.max(1, Math.round(image.naturalWidth * sourceScale));
+                working.height = Math.max(1, Math.round(image.naturalHeight * sourceScale));
+                const workingContext = working.getContext("2d", { willReadFrequently: true });
+                workingContext.drawImage(image, 0, 0, working.width, working.height);
+                const pixels = workingContext.getImageData(0, 0, working.width, working.height);
+                const data = pixels.data;
+                const pixelIndex = (x, y) => (y * working.width + x) * 4;
+                const corners = [[0, 0], [working.width - 1, 0], [0, working.height - 1], [working.width - 1, working.height - 1]]
+                    .map(([x, y]) => { const index = pixelIndex(x, y); return [data[index], data[index + 1], data[index + 2], data[index + 3]]; });
+                const opaqueCorners = corners.filter(color => color[3] > 20);
+                const cornerDistance = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+                const uniformBackground = opaqueCorners.length >= 3 && opaqueCorners.every(color => cornerDistance(color, opaqueCorners[0]) < 72);
+                if (opaqueCorners.length >= 3 && !uniformBackground) return reject(new Error("Lo sfondo è troppo complesso da rimuovere automaticamente. Usa uno stemma PNG o una foto con sfondo uniforme."));
+                if (uniformBackground) {
+                    const background = [0, 1, 2].map(channel => opaqueCorners.reduce((sum, color) => sum + color[channel], 0) / opaqueCorners.length);
+                    const visited = new Uint8Array(working.width * working.height);
+                    const queue = [];
+                    const enqueue = (x, y) => {
+                        if (x < 0 || y < 0 || x >= working.width || y >= working.height) return;
+                        const position = y * working.width + x;
+                        if (visited[position]) return;
+                        const index = position * 4;
+                        if (data[index + 3] <= 20 || Math.hypot(data[index] - background[0], data[index + 1] - background[1], data[index + 2] - background[2]) <= 58) {
+                            visited[position] = 1;
+                            queue.push(position);
+                        }
+                    };
+                    for (let x = 0; x < working.width; x++) { enqueue(x, 0); enqueue(x, working.height - 1); }
+                    for (let y = 0; y < working.height; y++) { enqueue(0, y); enqueue(working.width - 1, y); }
+                    for (let cursor = 0; cursor < queue.length; cursor++) {
+                        const position = queue[cursor];
+                        const x = position % working.width, y = Math.floor(position / working.width);
+                        data[position * 4 + 3] = 0;
+                        enqueue(x - 1, y); enqueue(x + 1, y); enqueue(x, y - 1); enqueue(x, y + 1);
+                    }
+                    workingContext.putImageData(pixels, 0, 0);
+                }
+                const cleaned = workingContext.getImageData(0, 0, working.width, working.height).data;
+                let minX = working.width, minY = working.height, maxX = -1, maxY = -1;
+                for (let y = 0; y < working.height; y++) for (let x = 0; x < working.width; x++) {
+                    if (cleaned[pixelIndex(x, y) + 3] > 20) {
+                        minX = Math.min(minX, x); minY = Math.min(minY, y); maxX = Math.max(maxX, x); maxY = Math.max(maxY, y);
+                    }
+                }
+                if (maxX < minX || maxY < minY) return reject(new Error("Non riesco a distinguere lo stemma dallo sfondo."));
+                const canvas = document.createElement("canvas");
+                canvas.width = 512; canvas.height = 512;
+                const context = canvas.getContext("2d");
+                context.clearRect(0, 0, 512, 512);
+                const cropWidth = maxX - minX + 1, cropHeight = maxY - minY + 1;
+                const scale = Math.min(472 / cropWidth, 472 / cropHeight);
+                const width = cropWidth * scale, height = cropHeight * scale;
+                context.drawImage(working, minX, minY, cropWidth, cropHeight, (512 - width) / 2, (512 - height) / 2, width, height);
+                resolve(canvas.toDataURL("image/webp", 0.92));
+            };
+            image.src = reader.result;
+        };
+        reader.readAsDataURL(file);
+    });
 }
 
 function saveLocalState() {
@@ -560,10 +848,7 @@ async function loadCloudState() {
     }
 
     if (data?.data && Object.keys(data.data).length) {
-        state = {
-            ...structuredClone(defaultState),
-            ...data.data
-        };
+        state = normalizeIncomingState(data.data);
         saveLocalState();
         return true;
     }
@@ -586,10 +871,7 @@ function subscribeToCloud() {
             },
             payload => {
                 if (!payload.new?.data) return;
-                state = {
-                    ...structuredClone(defaultState),
-                    ...payload.new.data
-                };
+                state = normalizeIncomingState(payload.new.data);
                 saveLocalState();
                 render();
                 showToast("Dati aggiornati online.");
@@ -1055,41 +1337,21 @@ function getSeasonMonths() {
 }
 
 function getPaymentMonths() {
-    const startYear =
-        getSeasonStartYear();
-
+    const startYear = getSeasonStartYear();
+    const startMonth = Math.min(12, Math.max(1, Number(state.seasonConfig?.paymentStartMonth ?? 8) || 8));
+    const endMonth = Math.min(12, Math.max(1, Number(state.seasonConfig?.paymentEndMonth ?? 5) || 5));
     const months = [];
-
-    // Agosto → Dicembre
-    for (
-        let month = 8;
-        month <= 12;
-        month++
-    ) {
-        const monthNumber =
-            String(month)
-                .padStart(2, "0");
-
-        months.push(
-            `${startYear}-${monthNumber}`
-        );
+    let year = startYear;
+    let month = startMonth;
+    for (let index = 0; index < 12; index++) {
+        months.push(`${year}-${String(month).padStart(2, "0")}`);
+        if (month === endMonth) break;
+        month++;
+        if (month === 13) {
+            month = 1;
+            year++;
+        }
     }
-
-    // Gennaio → Maggio
-    for (
-        let month = 1;
-        month <= 5;
-        month++
-    ) {
-        const monthNumber =
-            String(month)
-                .padStart(2, "0");
-
-        months.push(
-            `${startYear + 1}-${monthNumber}`
-        );
-    }
-
     return months;
 }
 
@@ -1108,21 +1370,33 @@ function getPaymentMonthsToDate() {
         : months.slice(0, currentIndex + 1);
 }
 
+function getRollingPaymentMonth() {
+    const months = getPaymentMonths();
+    for (const month of months) {
+        const summaries = getSortedPlayers().map(player => getPlayerMonthSummary(player, month));
+        const active = summaries.filter(summary => summary.total > 0 || summary.paid > 0);
+        if (active.some(summary => summary.remaining > 0)) return month;
+    }
+    return months[months.length - 1];
+}
+
+function getDisplayedPaymentMonth() {
+    const months = getPaymentMonths();
+    return state.seasonConfig?.paymentMode === "rolling"
+        ? getRollingPaymentMonth()
+        : months.includes(selectedPaymentMonth)
+            ? selectedPaymentMonth
+            : months[0];
+}
+
 
 function getMonthlyBase(monthId) {
-    const startYear =
-        getSeasonStartYear();
-
-    const augustId =
-        `${startYear}-08`;
-
-    // Agosto = 10 €
-    if (monthId === augustId) {
-        return 10;
+    const monthNumber = String(monthId || "").slice(5, 7);
+    const override = state.seasonConfig?.monthOverrides?.[monthNumber];
+    if (override !== undefined && override !== null && override !== "") {
+        return Math.max(0, Number(override) || 0);
     }
-
-    // Tutti gli altri mesi della stagione = 5 €
-    return 5;
+    return Math.max(0, Number(state.seasonConfig?.monthlyBase ?? 5) || 0);
 }
 
 function getPlayerStartMonth(player) {
@@ -1399,6 +1673,7 @@ function render() {
     bindPageEvents();
     bindBirthdayEvents();
     applyAccessMode();
+    applyTeamBranding();
 
 }
 
@@ -1471,15 +1746,17 @@ function renderHome() {
 
     const unpaid = Math.max(0, total - totalPaid);
 
-    // Dal giorno 15 diventa esigibile il mese precedente.
-    const overdueReference = today.getDate() >= 15
+    // Dal giorno configurato diventa esigibile il mese precedente.
+    const paymentDueDay = Math.min(28, Math.max(1, Number(state.seasonConfig?.paymentDueDay ?? 15) || 15));
+    const rollingPayments = state.seasonConfig?.paymentMode === "rolling";
+    const overdueReference = !rollingPayments && today.getDate() >= paymentDueDay
         ? new Date(today.getFullYear(), today.getMonth() - 1, 1)
         : null;
-    const overdueMonth = overdueReference
-        ? `${overdueReference.getFullYear()}-${String(
-            overdueReference.getMonth() + 1
-        ).padStart(2, "0")}`
-        : null;
+    const overdueMonth = rollingPayments
+        ? getRollingPaymentMonth()
+        : overdueReference
+            ? `${overdueReference.getFullYear()}-${String(overdueReference.getMonth() + 1).padStart(2, "0")}`
+            : null;
     const overduePlayers = overdueMonth && paymentMonths.includes(overdueMonth)
         ? getSortedPlayers().map(player => ({
             player,
@@ -1790,7 +2067,7 @@ function renderHome() {
         <div id="birthdayBanners">${renderBirthdayBanners()}</div>
         <section class="team-pass" aria-label="Riepilogo economico squadra">
             <div class="team-pass-header">
-                <div class="team-pass-crest"><img src="san-vitale-background.png" alt="Stemma San Vitale" width="48" height="58"></div>
+                <div class="team-pass-crest"><img src="${escapeHtml(getTeamLogo())}" data-team-logo alt="Stemma San Vitale" width="48" height="58"></div>
                 <div><span class="team-pass-eyebrow">IL NOSTRO SPOGLIATOIO</span><h2>San Vitale <span>Next Gen</span></h2><p>Stagione ${escapeHtml(state.season)}</p></div>
 
             </div>
@@ -1840,7 +2117,7 @@ function renderHome() {
                             <div class="payment-due-icon">€</div>
                             <div>
                                 <strong>Da saldare</strong>
-                                <div class="small muted">${escapeHtml(overdueMonthLabel)} · dal 15 del mese successivo</div>
+                                <div class="small muted">${escapeHtml(overdueMonthLabel)} · ${rollingPayments ? "passa al mese successivo quando tutti hanno pagato" : `dal giorno ${paymentDueDay} del mese successivo`}</div>
                             </div>
                             <span class="payment-due-count">${overduePlayers.length}</span>
                         </div>
@@ -2482,12 +2759,8 @@ function renderPayments() {
     const months =
         getPaymentMonths();
 
-    const currentMonth =
-       months.includes(
-        selectedPaymentMonth
-    )
-        ? selectedPaymentMonth
-        : months[0];
+    const rollingPayments = state.seasonConfig?.paymentMode === "rolling";
+    const currentMonth = getDisplayedPaymentMonth();
 
     const monthLabel =
         new Date(
@@ -2610,13 +2883,13 @@ function renderPayments() {
                 <span class="payment-filter-icon" aria-hidden="true">▦</span>
                 <div>
                     <span>PERIODO PAGAMENTI</span>
-                    <strong>Scegli il mese da consultare</strong>
+                    <strong>${rollingPayments ? "Il mese avanza quando tutti hanno pagato" : "Scegli il mese da consultare"}</strong>
                 </div>
             </div>
             <div class="payment-filter-grid">
                 <div class="payment-month-field">
-                    <label for="paymentMonthSelect" class="form-label">Mese selezionato</label>
-                    <select id="paymentMonthSelect" class="form-input">
+                    <label for="paymentMonthSelect" class="form-label">${rollingPayments ? "Mese corrente automatico" : "Mese selezionato"}</label>
+                    <select id="paymentMonthSelect" class="form-input" ${rollingPayments ? "disabled" : ""}>
                 ${months
                     .map(month => {
                         const label =
@@ -2722,11 +2995,20 @@ function renderPayments() {
     `;
 }
 
+function drawTeamLogoOnCanvas(context, x, y, width, height) {
+    const image = [...document.querySelectorAll("[data-team-logo]")]
+        .find(candidate => candidate.complete && candidate.naturalWidth > 0);
+    if (!image) return false;
+    const scale = Math.min(width / image.naturalWidth, height / image.naturalHeight);
+    const drawWidth = image.naturalWidth * scale, drawHeight = image.naturalHeight * scale;
+    context.drawImage(image, x + (width - drawWidth) / 2, y + (height - drawHeight) / 2, drawWidth, drawHeight);
+    return true;
+}
+
 function createPaymentsExportCanvas(mode = "all") {
 
     const exportMode = mode === "due" ? "due" : "all";
-    const month = getPaymentMonths().includes(selectedPaymentMonth)
-        ? selectedPaymentMonth : getPaymentMonths()[0];
+    const month = getDisplayedPaymentMonth();
     const players = getSortedPlayers()
         .map(player => ({
             player,
@@ -2777,16 +3059,18 @@ function createPaymentsExportCanvas(mode = "all") {
     context.fillStyle = "#f7f9fc";
     context.fillRect(0, 0, logicalWidth, logicalHeight);
 
+    const hasLogo = drawTeamLogoOnCanvas(context, tableLeft, 25, 54, 54);
+    const titleLeft = tableLeft + (hasLogo ? 70 : 0);
     context.fillStyle = "#13213a";
     context.font = "700 27px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
-    context.fillText(title, tableLeft, 43);
+    context.fillText(title, titleLeft, 43);
     context.fillStyle = "#5b677a";
     context.font = "500 15px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
     context.fillText(
         exportMode === "due"
             ? "Solo i giocatori con un importo ancora da versare"
             : "Riepilogo quote, multe e versamenti",
-        tableLeft,
+        titleLeft,
         74
     );
 
@@ -2848,7 +3132,7 @@ function exportPaymentsImage(mode = "all") {
         }
 
         const fileName =
-            `${exportMode === "due" ? "da-pagare" : "pagamenti"}-${getPaymentMonths().includes(selectedPaymentMonth) ? selectedPaymentMonth : getPaymentMonths()[0]}.png`;
+            `${exportMode === "due" ? "da-pagare" : "pagamenti"}-${getDisplayedPaymentMonth()}.png`;
 
         openExportPreview(
             canvas,
@@ -2860,6 +3144,78 @@ function exportPaymentsImage(mode = "all") {
         showToast("Errore durante l'esportazione");
     }
 }
+
+function openTeamCalendar() {
+    const calendar = window.MatchCalendar?.getData?.();
+    if (!calendar || !Array.isArray(calendar.matches)) {
+        showToast("Calendario non disponibile.");
+        return;
+    }
+    const teams = new Map((calendar.teams || []).map(team => [Number(team.id), team]));
+    const matches = calendar.matches
+        .filter(match => (Number(match.homeId) === 1199590 || Number(match.awayId) === 1199590) && /^\d{4}-\d{2}-\d{2}$/.test(String(match.date || "")) && /^\d{2}:\d{2}$/.test(String(match.time || "")))
+        .map(match => ({ ...match, kickoff: window.MatchCalendar.kickoff(match) }))
+        .filter(match => Number.isFinite(match.kickoff))
+        .sort((left, right) => left.kickoff - right.kickoff);
+    const hasLeague = matches.some(match => match.competitionType !== "cup");
+    const hasCup = matches.some(match => match.competitionType === "cup");
+    const safeExternalUrl = value => {
+        try { const url = new URL(value); return url.protocol === "https:" ? url.href : ""; } catch { return ""; }
+    };
+    openModal("Calendario partite", `
+        <div class="team-calendar">
+            <div class="team-calendar-toolbar" role="tablist" aria-label="Filtra calendario">
+                <button class="team-calendar-filter active" type="button" data-calendar-filter="upcoming">Prossime</button>
+                <button class="team-calendar-filter" type="button" data-calendar-filter="all">Tutte</button>
+                ${hasLeague ? `<button class="team-calendar-filter" type="button" data-calendar-filter="league">Campionato</button>` : ""}
+                ${hasCup ? `<button class="team-calendar-filter" type="button" data-calendar-filter="cup">Coppa</button>` : ""}
+            </div>
+            <div id="teamCalendarList" aria-live="polite"></div>
+        </div>
+    `);
+    document.querySelector("#modalRoot .modal")?.classList.add("team-calendar-modal");
+    const list = document.getElementById("teamCalendarList");
+    const draw = filter => {
+        const now = Date.now();
+        const filtered = matches.filter(match => filter === "all" || (filter === "upcoming" ? match.kickoff >= now && match.status !== "played" : (match.competitionType === "cup") === (filter === "cup")));
+        if (!filtered.length) {
+            list.innerHTML = `<div class="team-calendar-empty"><strong>${filter === "upcoming" ? "Nessuna partita in programma" : "Nessuna partita disponibile"}</strong><p>${filter === "upcoming" ? "Il calendario non prevede altre gare." : "Non risultano gare per questo filtro."}</p></div>`;
+            return;
+        }
+        const groups = new Map();
+        filtered.forEach(match => {
+            const key = match.date.slice(0, 7);
+            if (!groups.has(key)) groups.set(key, []);
+            groups.get(key).push(match);
+        });
+        list.innerHTML = [...groups.entries()].map(([month, monthMatches]) => {
+            const monthLabel = new Date(`${month}-01T12:00:00`).toLocaleDateString("it-IT", { month: "long", year: "numeric" });
+            return `<section class="team-calendar-month"><h3>${escapeHtml(monthLabel)}</h3>${monthMatches.map(match => {
+                const home = teams.get(Number(match.homeId))?.name || "Squadra casa";
+                const away = teams.get(Number(match.awayId))?.name || "Squadra ospite";
+                const opponent = Number(match.homeId) === 1199590 ? away : home;
+                const awayMatch = Number(match.awayId) === 1199590;
+                const date = new Date(`${match.date}T12:00:00`);
+                const venue = match.venue || calendar.venues?.[match.homeId];
+                const mapsUrl = awayMatch && venue?.address ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${venue.name || "Campo"}, ${venue.address}, Italia`)}` : "";
+                const matchUrl = safeExternalUrl(match.url);
+                const played = match.status === "played" || Boolean(match.result);
+                return `<article class="team-calendar-match" data-calendar-type="${match.competitionType === "cup" ? "cup" : "league"}">
+                    <div class="team-calendar-date"><strong>${date.getDate()}</strong><small>${date.toLocaleDateString("it-IT", { month: "short" })}</small></div>
+                    <div class="team-calendar-copy"><small>${match.competitionType === "cup" ? "Coppa" : "Campionato"} · ${awayMatch ? "Trasferta" : "Casa"}</small><strong>${escapeHtml(opponent)}</strong><span>${escapeHtml(match.place || venue?.name || "Campo da definire")}</span></div>
+                    <div class="team-calendar-result"><strong>${played ? escapeHtml(match.result || "—") : escapeHtml(match.time)}</strong><span>${played ? "FINALE" : `${Number(match.round) || "—"}ª G.`}</span></div>
+                    ${(mapsUrl || matchUrl) ? `<div class="team-calendar-actions">${mapsUrl ? `<a href="${escapeHtml(mapsUrl)}" target="_blank" rel="noopener noreferrer">Apri Maps</a>` : ""}${matchUrl ? `<a href="${escapeHtml(matchUrl)}" target="_blank" rel="noopener noreferrer">Tuttocampo ↗</a>` : ""}</div>` : ""}
+                </article>`;
+            }).join("")}</section>`;
+        }).join("");
+    };
+    document.querySelectorAll("[data-calendar-filter]").forEach(button => button.onclick = () => {
+        document.querySelectorAll("[data-calendar-filter]").forEach(item => item.classList.toggle("active", item === button));
+        draw(button.dataset.calendarFilter);
+    });
+    draw("upcoming");
+}
+window.openTeamCalendar = openTeamCalendar;
 
 function exportSeasonImage() {
     openSeasonReport(false);
@@ -2909,12 +3265,13 @@ function exportSeasonDetailedImage() {
         context.fillRect(0, 0, width, height);
         context.fillStyle = "#10233f";
         context.fillRect(0, 0, width, 124);
+        drawTeamLogoOnCanvas(context, padding, 24, 76, 76);
         context.fillStyle = "#ffffff";
         context.font = "800 30px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
-        context.fillText(`Schede giocatori — ${state.season}`, padding, 43);
+        context.fillText(`Schede giocatori — ${state.season}`, padding + 94, 43);
         context.fillStyle = "#bcd0e8";
         context.font = "500 15px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
-        context.fillText(`${state.team} · aggiornato a ${today.toLocaleDateString("it-IT")}`, padding, 79);
+        context.fillText(`${state.team} · aggiornato a ${today.toLocaleDateString("it-IT")}`, padding + 94, 79);
 
         entries.forEach((entry, index) => {
             const column = index % columns;
@@ -3000,7 +3357,7 @@ function openSeasonReport(includePlayerPages = true) {
     const ranking = [...entries].sort((a, b) => b.fines - a.fines || compareItalian(a.player, b.player));
     const reportHeader = (label = "Riepilogo stagione") => `
         <header class="season-pdf-header">
-            <div class="season-pdf-brand"><img src="san-vitale-logo.png" alt=""><div><strong>Multe <span>SV</span></strong><small>San Vitale Next Gen</small></div></div>
+            <div class="season-pdf-brand"><img src="${escapeHtml(getTeamLogo())}" data-team-logo alt=""><div><strong>Multe <span>SV</span></strong><small>San Vitale Next Gen</small></div></div>
             <div><small>${label}</small><strong>${escapeHtml(state.season)}</strong></div>
         </header>`;
     const metric = (label, value, tone) => `<div class="season-pdf-metric ${tone}"><small>${label}</small><strong>${value}</strong></div>`;
@@ -3035,7 +3392,7 @@ function openSeasonReport(includePlayerPages = true) {
     openModal(includePlayerPages ? "Riepilogo stagione completo" : "Riepilogo stagione", `
         <div class="season-report-toolbar"><p>${includePlayerPages ? "Anteprima completa" : "Anteprima compatta"}: ${pageCount} pagine</p><button class="btn" id="printSeasonReport" type="button">Salva / stampa PDF</button></div>
         <div class="season-report-document ${includePlayerPages ? "season-report-detailed" : "season-report-compact"}">
-            <section class="season-report-page season-cover-page"><img src="san-vitale-logo.png" alt="Stemma San Vitale"><h1>Multe <span>SV</span></h1><h2>San Vitale Next Gen</h2><hr><p>Riepilogo stagione</p><strong>${escapeHtml(state.season)}</strong><small>Stessi amici.<br>Più responsabilità.</small><footer>Generato il ${today.toLocaleDateString("it-IT")} <span>Pagina 1 di ${pageCount}</span></footer></section>
+            <section class="season-report-page season-cover-page"><img src="${escapeHtml(getTeamLogo())}" data-team-logo alt="Stemma San Vitale"><h1>Multe <span>SV</span></h1><h2>San Vitale Next Gen</h2><hr><p>Riepilogo stagione</p><strong>${escapeHtml(state.season)}</strong><small>Stessi amici.<br>Più responsabilità.</small><footer>Generato il ${today.toLocaleDateString("it-IT")} <span>Pagina 1 di ${pageCount}</span></footer></section>
             <section class="season-report-page">${reportHeader()}<h2 class="season-report-section-title">Panoramica generale</h2><div class="season-overview-grid">${metric("Quote", money(teamTotals.base), "green")}${metric("Multe", money(teamTotals.fines), "red")}${metric("Totale dovuto", money(teamTotals.total), "blue")}${metric("Totale versato", money(teamTotals.paid), "green")}${metric("Da incassare", money(teamTotals.remaining), "orange")}${metric("Numero multe", totalFinesCount, "purple")}</div><h2 class="season-report-section-title">Andamento mensile</h2><div class="season-month-chart">${monthBars}</div><footer>Multe SV - San Vitale Next Gen <span>Pagina 2 di ${pageCount}</span></footer></section>
             <section class="season-report-page">${reportHeader()}<h2 class="season-report-section-title">Riepilogo pagamenti</h2><table class="season-report-table"><thead><tr><th>#</th><th>Giocatore</th><th>Quote</th><th>Multe</th><th>Totale</th><th>Versato</th><th>Rimanente</th></tr></thead><tbody>${paymentRows}</tbody><tfoot><tr><th colspan="2">Totale squadra</th><th>${money(teamTotals.base)}</th><th>${money(teamTotals.fines)}</th><th>${money(teamTotals.total)}</th><th>${money(teamTotals.paid)}</th><th>${money(teamTotals.remaining)}</th></tr></tfoot></table><footer>Multe SV - San Vitale Next Gen <span>Pagina 3 di ${pageCount}</span></footer></section>
             <section class="season-report-page">${reportHeader()}<h2 class="season-report-section-title">Classifica generale multe</h2><table class="season-report-table season-ranking-table"><thead><tr><th>#</th><th>Giocatore</th><th>N° multe</th><th>Totale multe</th></tr></thead><tbody>${rankingRows}</tbody></table><footer>Multe SV - San Vitale Next Gen <span>Pagina 4 di ${pageCount}</span></footer></section>
@@ -3454,6 +3811,48 @@ function renderRules() {
    IMPOSTAZIONI
    ========================================================= */
 
+function openChangeAdminPasswordModal() {
+    if (!requireOnlineAdmin() || !authUser || !supabaseClient) return;
+    openModal("Cambia password Admin", `
+        <div class="form admin-password-form">
+            <p class="muted">La modifica riguarda lo stesso account Admin usato dal pulsante Accedi.</p>
+            <div class="field"><label for="currentAdminPassword">PASSWORD ATTUALE</label><input id="currentAdminPassword" type="password" autocomplete="current-password"></div>
+            <div class="field"><label for="newAdminPassword">NUOVA PASSWORD</label><input id="newAdminPassword" type="password" minlength="8" autocomplete="new-password"></div>
+            <div class="field"><label for="confirmAdminPassword">CONFERMA NUOVA PASSWORD</label><input id="confirmAdminPassword" type="password" minlength="8" autocomplete="new-password"></div>
+            <div class="modal-actions"><button class="btn secondary" id="cancelAdminPassword" type="button">Annulla</button><button class="btn" id="saveAdminPassword" type="button">Aggiorna password</button></div>
+        </div>
+    `);
+    document.getElementById("cancelAdminPassword").onclick = closeModal;
+    document.getElementById("saveAdminPassword").onclick = async () => {
+        const currentPassword = document.getElementById("currentAdminPassword").value;
+        const nextPassword = document.getElementById("newAdminPassword").value;
+        const confirmation = document.getElementById("confirmAdminPassword").value;
+        if (!currentPassword) return showToast("Inserisci la password attuale.");
+        if (nextPassword.length < 8) return showToast("La nuova password deve avere almeno 8 caratteri.");
+        if (nextPassword !== confirmation) return showToast("Le nuove password non coincidono.");
+        if (currentPassword === nextPassword) return showToast("Scegli una password diversa da quella attuale.");
+        const button = document.getElementById("saveAdminPassword");
+        button.disabled = true;
+        button.textContent = "Aggiornamento…";
+        const { error: signInError } = await supabaseClient.auth.signInWithPassword({ email: ADMIN_EMAIL, password: currentPassword });
+        if (signInError) {
+            button.disabled = false;
+            button.textContent = "Aggiorna password";
+            showToast("La password attuale non è corretta.");
+            return;
+        }
+        const { error } = await supabaseClient.auth.updateUser({ password: nextPassword });
+        if (error) {
+            button.disabled = false;
+            button.textContent = "Aggiorna password";
+            showToast("Cambio password non riuscito.");
+            return;
+        }
+        closeModal();
+        showToast("Password Admin aggiornata.");
+    };
+}
+
 function renderSettings() {
 
     return `
@@ -3509,14 +3908,36 @@ function renderSettings() {
                 </div>
             </details>
 
-            <details class="card data-section settings-collapse"><summary><span class="settings-menu-icon" aria-hidden="true">▦</span><span class="settings-menu-label"><strong>Stagione</strong><small>Gestisci il cambio stagione</small></span><span class="settings-chevron" aria-hidden="true">⌄</span></summary><div class="data-section-heading"><p>Prepara la nuova stagione mantenendo squadra e Multario.</p></div>
+            <details class="card data-section settings-collapse"><summary><span class="settings-menu-icon" aria-hidden="true">▦</span><span class="settings-menu-label"><strong>Gestione stagione</strong><small>Quote, calendario e nuova annata</small></span><span class="settings-chevron" aria-hidden="true">⌄</span></summary><div class="data-section-heading"><p>Configura la quota mensile e prepara la prossima stagione mantenendo giocatori e Multario.</p></div>
+
+                <div class="season-settings-overview">
+                    <div><span>Stagione attiva</span><strong>${escapeHtml(state.season)}</strong></div>
+                    <div><span>Quota ordinaria</span><strong>${money(state.seasonConfig?.monthlyBase ?? 5)}</strong></div>
+                    <div><span>Scadenza multe</span><strong>${state.seasonConfig?.paymentMode === "rolling" ? "Mese corrente automatico" : `Mensile · giorno ${Math.min(28, Math.max(1, Number(state.seasonConfig?.paymentDueDay ?? 15) || 15))}`}</strong></div>
+                    <div><span>Archiviate</span><strong>${state.seasonArchives?.length || 0}</strong></div>
+                </div>
+
+                <div class="data-action-row">
+                    <div>
+                        <strong>Configurazione attuale</strong>
+                        <div class="small muted">Modifica quote e calendari anche a stagione già iniziata, senza azzerare dati.</div>
+                    </div>
+                    <button class="btn secondary" id="editSeasonConfig" type="button">Modifica</button>
+                </div>
 
                 <div class="data-action-row">
                     <div>
                         <strong>Nuova stagione</strong>
-                        <div class="small muted">Azzera multe e pagamenti stagionali e scarica prima un backup automatico.</div>
+                        <div class="small muted">Anteprima, quote personalizzabili, calendario e backup prima del passaggio.</div>
                     </div>
-                    <button class="btn danger" id="resetSeason" type="button">Nuova stagione</button>
+                    <button class="btn secondary" id="resetSeason" type="button">Configura</button>
+                </div>
+            </details>
+
+            <details class="card data-section settings-collapse"><summary><span class="settings-menu-icon" aria-hidden="true">🔐</span><span class="settings-menu-label"><strong>Sicurezza Admin</strong><small>Password dell’account amministratore</small></span><span class="settings-chevron" aria-hidden="true">⌄</span></summary><div class="data-section-heading"><p>Cambia la password dell’account Admin già esistente.</p></div>
+                <div class="data-action-row">
+                    <div><strong>Cambia password</strong><div class="small muted">Richiede la password attuale e una nuova password di almeno 8 caratteri.</div></div>
+                    <button class="btn secondary" id="changeAdminPassword" type="button">Modifica</button>
                 </div>
             </details>
 
@@ -5952,6 +6373,14 @@ document
         ?.addEventListener("click", resetSeason);
 
     document
+        .getElementById("editSeasonConfig")
+        ?.addEventListener("click", () => openSeasonSetupModal(true));
+
+    document
+        .getElementById("changeAdminPassword")
+        ?.addEventListener("click", openChangeAdminPasswordModal);
+
+    document
         .getElementById("resetTotal")
         ?.addEventListener("click", resetTotal);
 /* =========================
@@ -5979,8 +6408,7 @@ document
                     event.target.dataset
                         .paymentPlayer;
 
-                const month =
-                    selectedPaymentMonth;
+                const month = getDisplayedPaymentMonth();
 
                 const amount =
                     Math.max(
@@ -6046,7 +6474,14 @@ function downloadBackup(prefix, backupState = state) {
 
     const data =
         JSON.stringify(
-            backupState,
+            {
+                ...structuredClone(backupState),
+                _backupMetadata: {
+                    app: "Multe SV",
+                    format: 2,
+                    exportedAt: new Date().toISOString()
+                }
+            },
             null,
             2
         );
@@ -6105,6 +6540,43 @@ function downloadBackup(prefix, backupState = state) {
    BACKUP IMPORT
    ========================================================= */
 
+function validateBackupState(imported) {
+    if (!imported || typeof imported !== "object" || Array.isArray(imported)) throw new Error("Il file non contiene un backup valido.");
+    if (!Array.isArray(imported.players) || !Array.isArray(imported.fines) || !Array.isArray(imported.rules)) throw new Error("Nel backup mancano giocatori, multe o regole.");
+    if (imported.players.length > 1000 || imported.fines.length > 200000 || imported.rules.length > 5000) throw new Error("Il backup supera i limiti di sicurezza.");
+    if (imported.players.some(player => typeof player !== "string" || !player.trim())) throw new Error("Il backup contiene un giocatore non valido.");
+    if (imported.fines.some(fine => !fine || typeof fine !== "object" || Array.isArray(fine))) throw new Error("Il backup contiene una multa non valida.");
+    if (imported.rules.some(rule => !rule || typeof rule !== "object" || Array.isArray(rule))) throw new Error("Il backup contiene una regola non valida.");
+    if (imported.payments !== undefined && (!imported.payments || typeof imported.payments !== "object" || Array.isArray(imported.payments))) throw new Error("La sezione pagamenti non è valida.");
+    if (imported.teamLogo !== undefined && !(imported.teamLogo === "san-vitale-logo.png" || /^data:image\/(png|webp|jpeg);base64,[A-Za-z0-9+/=]+$/i.test(imported.teamLogo))) throw new Error("Lo stemma nel backup non è valido.");
+    return true;
+}
+
+function commitImportedBackup(imported) {
+    validateBackupState(imported);
+    const previousSerialized = localStorage.getItem(STORAGE_KEY);
+    const previousState = structuredClone(state);
+    try {
+        const normalized = normalizeIncomingState(imported);
+        validateBackupState(normalized);
+        const normalizedSerialized = JSON.stringify(normalized);
+        localStorage.setItem(AUTO_BACKUP_STORAGE_KEY, JSON.stringify({ savedAt: new Date().toISOString(), reason: "before_import", data: previousState }));
+        localStorage.setItem(STORAGE_KEY, normalizedSerialized);
+        state = normalized;
+        queueCloudSave();
+        applyImportedCalendar();
+        deviceTheme = getDeviceTheme(state.theme);
+        selectedPaymentMonth = getPaymentMonths()[0];
+        render();
+        return true;
+    } catch (error) {
+        state = previousState;
+        if (previousSerialized === null) localStorage.removeItem(STORAGE_KEY);
+        else localStorage.setItem(STORAGE_KEY, previousSerialized);
+        throw error;
+    }
+}
+
 document
     .getElementById(
         "importFile"
@@ -6118,8 +6590,7 @@ document
             return;
         }
 
-            const file =
-                event.target.files[0];
+            const file = event.target.files[0];
 
 
             if (!file) {
@@ -6129,8 +6600,13 @@ document
             }
 
 
-            const reader =
-                new FileReader();
+            if (file.size > 25 * 1024 * 1024) {
+                showToast("Il backup supera 25 MB.");
+                event.target.value = "";
+                return;
+            }
+
+            const reader = new FileReader();
 
 
             reader.onload = () => {
@@ -6143,26 +6619,7 @@ document
                         );
 
 
-                    if (
-                        !imported.players ||
-                        !imported.fines ||
-                        !imported.rules
-                    ) {
-
-                        throw new Error(
-                            "Backup non valido"
-                        );
-
-                    }
-
-
-                    state =
-                        imported;
-
-
-                    saveState();
-
-                    render();
+                    commitImportedBackup(imported);
 
                     showToast(
                         "Backup importato"
@@ -6174,18 +6631,15 @@ document
                         error
                     );
 
-                    showToast(
-                        "Backup non valido"
-                    );
+                    showToast(error.message || "Backup non valido");
 
                 }
 
             };
 
 
-            reader.readAsText(
-                file
-            );
+            reader.onerror = () => showToast("Impossibile leggere il backup.");
+            reader.readAsText(file);
 
 
             event.target.value = "";
@@ -6198,25 +6652,271 @@ document
    RESET
    ========================================================= */
 
-function resetSeason() {
+function getSuggestedNextSeason() {
+    const nextStart = getSeasonStartYear() + 1;
+    return `${nextStart}/${String(nextStart + 1).slice(-2)}`;
+}
+
+function openSeasonSetupModal(editCurrent = false) {
     if (!requireOnlineAdmin()) return;
 
-    const confirmed = confirm(
-        "Avviare una nuova stagione?\n\n" +
-        "Saranno azzerate multe e pagamenti. Giocatori e Multario resteranno invariati."
-    );
+    const nextSeason = editCurrent ? state.season : getSuggestedNextSeason();
+    const monthLabels = [
+        ["08", "Agosto"], ["09", "Settembre"], ["10", "Ottobre"],
+        ["11", "Novembre"], ["12", "Dicembre"], ["01", "Gennaio"],
+        ["02", "Febbraio"], ["03", "Marzo"], ["04", "Aprile"], ["05", "Maggio"],
+        ["06", "Giugno"], ["07", "Luglio"]
+    ];
+    const base = Math.max(0, Number(state.seasonConfig?.monthlyBase ?? 5) || 0);
+    const paymentStartMonth = Number(state.seasonConfig?.paymentStartMonth ?? 8);
+    const paymentEndMonth = Number(state.seasonConfig?.paymentEndMonth ?? 5);
+    const paymentMode = state.seasonConfig?.paymentMode === "rolling" ? "rolling" : "due_day";
+    const paymentDueDay = Math.min(28, Math.max(1, Number(state.seasonConfig?.paymentDueDay ?? 15) || 15));
+    const calendarMonthOptions = Array.from({ length: 12 }, (_, index) => {
+        const month = index + 1;
+        return `<option value="${month}">${getMonthName(month)}</option>`;
+    }).join("");
 
-    if (!confirmed) return;
+    openModal(editCurrent ? "Modifica stagione" : "Prepara nuova stagione", `
+        <div class="season-setup">
+            <section class="season-setup-hero">
+                <span>${editCurrent ? "CONFIGURAZIONE ATTUALE" : "PASSAGGIO GUIDATO"}</span>
+                <h3>${editCurrent ? `<strong id="seasonPreviewLabel">${escapeHtml(state.season)}</strong>` : `${escapeHtml(state.season)} <b aria-hidden="true">→</b> <strong id="seasonPreviewLabel">${escapeHtml(nextSeason)}</strong>`}</h3>
+                <p>${editCurrent ? "Quote e calendari possono essere aggiornati senza modificare multe o pagamenti." : "La stagione attuale verrà archiviata. Giocatori e Multario resteranno disponibili."}</p>
+            </section>
 
-    downloadBackup("multefc-backup-prima-nuova-stagione");
-    state = {
-        ...state,
-        fines: [],
-        payments: {}
+            <section class="season-setup-section">
+                <div class="season-setup-title"><span>01</span><div><h3>Nuova annata</h3><p>Imposta stagione e collegamento al calendario.</p></div></div>
+                <div class="season-setup-grid">
+                    <div class="field"><label for="newSeasonName">STAGIONE</label><input id="newSeasonName" type="text" value="${escapeHtml(nextSeason)}" placeholder="2027/28" inputmode="numeric" ${editCurrent ? "readonly" : ""}></div>
+                    <div class="field"><label for="newSeasonBase">QUOTA MENSILE ORDINARIA (€)</label><input id="newSeasonBase" type="number" min="0" step="0.5" value="${base}"></div>
+                    <div class="field"><label for="newSeasonStartMonth">PRIMO MESE DI PAGAMENTO</label><select id="newSeasonStartMonth">${calendarMonthOptions}</select></div>
+                    <div class="field"><label for="newSeasonEndMonth">ULTIMO MESE DI PAGAMENTO</label><select id="newSeasonEndMonth">${calendarMonthOptions}</select></div>
+                    <div class="field"><label for="newSeasonPaymentMode">GESTIONE PAGAMENTO MULTE</label><select id="newSeasonPaymentMode"><option value="due_day" ${paymentMode === "due_day" ? "selected" : ""}>Scadenza mensile</option><option value="rolling" ${paymentMode === "rolling" ? "selected" : ""}>Mese corrente automatico</option></select><small>Con Mese corrente si passa al successivo solo quando tutti hanno saldato.</small></div>
+                    <div class="field" id="newSeasonPaymentDueDayField"><label for="newSeasonPaymentDueDay">DAL GIORNO DEL MESE SUCCESSIVO</label><input id="newSeasonPaymentDueDay" type="number" min="1" max="28" step="1" value="${paymentDueDay}" inputmode="numeric"><small>Usato soltanto con Scadenza mensile.</small></div>
+                </div>
+                <div class="season-logo-editor">
+                    <img id="seasonTeamLogoPreview" src="${escapeHtml(getTeamLogo())}" alt="Anteprima stemma squadra">
+                    <div><strong>Stemma della squadra</strong><small>Viene adattato senza deformazioni e usato automaticamente in tutta l’app.</small><div class="season-logo-actions"><label class="btn secondary" for="newSeasonTeamLogo">Carica nuovo stemma</label><button class="btn secondary" id="restoreDefaultTeamLogo" type="button">Ripristina originale</button></div><input id="newSeasonTeamLogo" type="file" accept="image/png,image/jpeg,image/webp" hidden></div>
+                </div>
+                <div class="season-calendar-sources">
+                    <div class="field season-calendar-field"><label for="newSeasonLeagueCalendar">CALENDARIO CAMPIONATO</label><div class="season-calendar-input"><input id="newSeasonLeagueCalendar" type="url" value="${escapeHtml(state.seasonConfig?.calendarSources?.find(source => source.type === "league")?.url || "")}" placeholder="https://www.tuttocampo.it/.../Calendario"><button class="btn secondary calendar-import-button" data-import-calendar="league" type="button">Verifica link</button></div><div class="calendar-import-result" data-import-result="league"></div></div>
+                    <label class="season-source-toggle"><input id="newSeasonCupEnabled" type="checkbox" ${state.seasonConfig?.calendarSources?.find(source => source.type === "cup")?.enabled ? "checked" : ""}><span><strong>Aggiungi Coppa</strong><small>Competizione dinamica: dopo ogni gara verrà cercato automaticamente il turno successivo.</small></span></label>
+                    <div class="field season-calendar-field" id="newSeasonCupField"><label for="newSeasonCupCalendar">CALENDARIO COPPA</label><div class="season-calendar-input"><input id="newSeasonCupCalendar" type="url" value="${escapeHtml(state.seasonConfig?.calendarSources?.find(source => source.type === "cup")?.url || "")}" placeholder="https://www.tuttocampo.it/.../Risultati"><button class="btn secondary calendar-import-button" data-import-calendar="cup" type="button">Verifica link</button></div><div class="calendar-import-result" data-import-result="cup"></div></div>
+                </div>
+            </section>
+
+            <section class="season-setup-section">
+                <div class="season-setup-title"><span>02</span><div><h3>Quote mese per mese</h3><p>Modifica soltanto i mesi diversi dalla quota ordinaria.</p></div></div>
+                <div class="season-month-rates">
+                    ${monthLabels.map(([number, label]) => {
+                        const configured = state.seasonConfig?.monthOverrides?.[number];
+                        const value = configured !== undefined ? configured : base;
+                        return `<label><span>${label}</span><span class="season-rate-input"><input data-season-rate="${number}" type="number" min="0" step="0.5" value="${value}"><b>€</b></span></label>`;
+                    }).join("")}
+                </div>
+            </section>
+
+            <section class="season-setup-section season-change-summary">
+                <div class="season-setup-title"><span>03</span><div><h3>Cosa succede</h3><p>Controlla l’operazione prima di confermare.</p></div></div>
+                <div class="season-change-list">
+                    <div><i>✓</i><span><strong>${state.players.length} giocatori mantenuti</strong><small>Date e foto saranno conservate; nella nuova stagione il mese di partenza sarà quello scelto sopra.</small></span></div>
+                    <div><i>✓</i><span><strong>${state.rules.length} regole mantenute</strong><small>Il Multario non verrà modificato.</small></span></div>
+                    ${editCurrent
+                        ? `<div><i>✓</i><span><strong>Dati stagionali invariati</strong><small>${state.fines.length} multe e tutti i pagamenti attuali rimarranno intatti.</small></span></div>`
+                        : `<div><i>↥</i><span><strong>Backup e archivio automatici</strong><small>${state.fines.length} multe e tutti i pagamenti della stagione ${escapeHtml(state.season)} resteranno recuperabili.</small></span></div><div class="is-reset"><i>0</i><span><strong>Nuovi dati stagionali vuoti</strong><small>La nuova stagione partirà senza multe e pagamenti.</small></span></div>`}
+                </div>
+            </section>
+
+            <label class="season-confirm"><input id="confirmSeasonSetup" type="checkbox"><span>Ho controllato stagione, quote e calendari.</span></label>
+            <div class="modal-actions"><button class="btn secondary" id="cancelSeasonSetup" type="button">Annulla</button><button class="btn" id="applySeasonSetup" type="button" disabled>${editCurrent ? "Salva configurazione" : "Avvia nuova stagione"}</button></div>
+        </div>
+    `);
+
+    document.querySelector("#modalRoot .modal")?.classList.add("season-setup-modal");
+    const seasonInput = document.getElementById("newSeasonName");
+    const baseInput = document.getElementById("newSeasonBase");
+    const confirmInput = document.getElementById("confirmSeasonSetup");
+    const applyButton = document.getElementById("applySeasonSetup");
+    const cupEnabledInput = document.getElementById("newSeasonCupEnabled");
+    const cupField = document.getElementById("newSeasonCupField");
+    const startMonthInput = document.getElementById("newSeasonStartMonth");
+    const endMonthInput = document.getElementById("newSeasonEndMonth");
+    const paymentModeInput = document.getElementById("newSeasonPaymentMode");
+    const paymentDueDayInput = document.getElementById("newSeasonPaymentDueDay");
+    const paymentDueDayField = document.getElementById("newSeasonPaymentDueDayField");
+    pendingCalendarImports = { league: null, cup: null };
+    pendingTeamLogo = getTeamLogo();
+    startMonthInput.value = String(paymentStartMonth);
+    endMonthInput.value = String(paymentEndMonth);
+    const updatePaymentMode = () => { paymentDueDayField.hidden = paymentModeInput.value === "rolling"; };
+    paymentModeInput.addEventListener("change", updatePaymentMode);
+    updatePaymentMode();
+    const updatePreview = () => {
+        document.getElementById("seasonPreviewLabel").textContent = seasonInput.value.trim() || "—";
     };
-    saveState();
-    render();
-    showToast("Nuova stagione avviata. Backup scaricato.");
+    seasonInput.addEventListener("input", updatePreview);
+    const updateCupVisibility = () => { cupField.hidden = !cupEnabledInput.checked; };
+    cupEnabledInput.addEventListener("change", updateCupVisibility);
+    updateCupVisibility();
+    baseInput.addEventListener("change", () => {
+        const previousBase = base;
+        const nextBase = Math.max(0, Number(baseInput.value) || 0);
+        document.querySelectorAll("[data-season-rate]").forEach(input => {
+            if (Number(input.value) === previousBase) input.value = nextBase;
+        });
+    });
+    confirmInput.addEventListener("change", () => { applyButton.disabled = !confirmInput.checked; });
+    document.getElementById("newSeasonTeamLogo").addEventListener("change", async event => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        try {
+            pendingTeamLogo = await prepareTeamLogo(file);
+            document.getElementById("seasonTeamLogoPreview").src = pendingTeamLogo;
+            showToast("Nuovo stemma pronto. Salva per applicarlo.");
+        } catch (error) {
+            event.target.value = "";
+            showToast(error.message || "Immagine non valida.");
+        }
+    });
+    document.getElementById("restoreDefaultTeamLogo").onclick = () => {
+        pendingTeamLogo = "san-vitale-logo.png";
+        document.getElementById("seasonTeamLogoPreview").src = pendingTeamLogo;
+        document.getElementById("newSeasonTeamLogo").value = "";
+        showToast("Stemma originale pronto. Salva per applicarlo.");
+    };
+    document.querySelectorAll("[data-import-calendar]").forEach(button => {
+        button.onclick = async () => {
+            const type = button.dataset.importCalendar;
+            const input = document.getElementById(type === "cup" ? "newSeasonCupCalendar" : "newSeasonLeagueCalendar");
+            const result = document.querySelector(`[data-import-result="${type}"]`);
+            button.disabled = true;
+            button.textContent = "Controllo…";
+            result.className = "calendar-import-result is-loading";
+            result.textContent = "Lettura del calendario in corso…";
+            try {
+                const calendar = await importCalendarFromLink(type, input.value.trim());
+                pendingCalendarImports[type] = { url: input.value.trim(), snapshot: calendar };
+                const future = calendar.matches.filter(match => new Date(`${match.date}T${match.time}:00`).getTime() > Date.now()).length;
+                result.className = "calendar-import-result is-valid";
+                result.innerHTML = `<strong>✓ ${calendar.competition ? escapeHtml(calendar.competition) : (type === "cup" ? "Coppa" : "Campionato")}</strong><span>${calendar.matches.length} partite trovate · ${future} ancora da giocare</span><small>Anteprima verificata. Verrà salvata solo confermando la stagione.</small>`;
+            } catch (error) {
+                pendingCalendarImports[type] = null;
+                result.className = "calendar-import-result is-error";
+                result.innerHTML = `<strong>Link non importato</strong><span>${escapeHtml(error.message || "Controllo non riuscito.")}</span><small>Il calendario già salvato non è stato modificato.</small>`;
+            } finally {
+                button.disabled = false;
+                button.textContent = "Verifica link";
+            }
+        };
+    });
+    ["league", "cup"].forEach(type => {
+        const input = document.getElementById(type === "cup" ? "newSeasonCupCalendar" : "newSeasonLeagueCalendar");
+        input.addEventListener("input", () => { pendingCalendarImports[type] = null; });
+    });
+    document.getElementById("cancelSeasonSetup").onclick = closeModal;
+    applyButton.onclick = () => {
+        if (!requireOnlineAdmin()) return;
+        const season = seasonInput.value.trim();
+        if (!/^\d{4}\/\d{2}$/.test(season)) {
+            showToast("Inserisci la stagione nel formato 2027/28.");
+            return;
+        }
+        const leagueUrl = document.getElementById("newSeasonLeagueCalendar").value.trim();
+        const cupUrl = document.getElementById("newSeasonCupCalendar").value.trim();
+        if (!isValidTuttocampoCalendarUrl(leagueUrl) || (cupEnabledInput.checked && !isValidTuttocampoCalendarUrl(cupUrl))) {
+            showToast("Inserisci link Calendario/Risultati validi di Tuttocampo.");
+            return;
+        }
+        const existingLeague = state.seasonConfig?.calendarSources?.find(source => source.type === "league");
+        const existingCup = state.seasonConfig?.calendarSources?.find(source => source.type === "cup");
+        const leagueSnapshot = pendingCalendarImports.league?.url === leagueUrl
+            ? pendingCalendarImports.league.snapshot
+            : (existingLeague?.url === leagueUrl ? existingLeague.snapshot : null);
+        const cupSnapshot = pendingCalendarImports.cup?.url === cupUrl
+            ? pendingCalendarImports.cup.snapshot
+            : (existingCup?.url === cupUrl ? existingCup.snapshot : null);
+        if (!leagueSnapshot || (cupEnabledInput.checked && !cupSnapshot)) {
+            showToast("Verifica i link dei calendari prima di salvare.");
+            return;
+        }
+        const monthlyBase = Math.max(0, Number(baseInput.value) || 0);
+        const paymentStartMonth = Number(startMonthInput.value);
+        const paymentEndMonth = Number(endMonthInput.value);
+        const paymentFrequency = "monthly";
+        const paymentMode = paymentModeInput.value === "rolling" ? "rolling" : "due_day";
+        const paymentDueDay = Math.min(28, Math.max(1, Number(paymentDueDayInput.value) || 15));
+        const monthOverrides = {};
+        document.querySelectorAll("[data-season-rate]").forEach(input => {
+            const amount = Math.max(0, Number(input.value) || 0);
+            if (amount !== monthlyBase) monthOverrides[input.dataset.seasonRate] = amount;
+        });
+        if (editCurrent) {
+            state.season = season;
+            state.teamLogo = pendingTeamLogo || getTeamLogo();
+            state.seasonConfig = {
+                monthlyBase,
+                paymentStartMonth,
+                paymentEndMonth,
+                paymentFrequency,
+                paymentMode,
+                paymentDueDay,
+                monthOverrides,
+                calendarSources: [
+                    { type: "league", name: "Campionato", enabled: true, url: leagueUrl, snapshot: leagueSnapshot, lastCheckedAt: new Date().toISOString() },
+                    { type: "cup", name: "Coppa", enabled: cupEnabledInput.checked, dynamic: true, refreshPolicy: "after_match", url: cupEnabledInput.checked ? cupUrl : "", snapshot: cupEnabledInput.checked ? cupSnapshot : null, lastCheckedAt: cupEnabledInput.checked ? new Date().toISOString() : "" }
+                ]
+            };
+            saveState();
+            applyImportedCalendar();
+            closeModal();
+            render();
+            showToast("Configurazione stagione aggiornata.");
+            return;
+        }
+
+        downloadBackup("multefc-backup-prima-nuova-stagione");
+        const archive = {
+            season: state.season,
+            closedAt: new Date().toISOString(),
+            fines: structuredClone(state.fines),
+            payments: structuredClone(state.payments),
+            seasonConfig: structuredClone(state.seasonConfig || {})
+        };
+        const startYear = Number(season.slice(0, 4));
+        state = {
+            ...state,
+            season,
+            teamLogo: pendingTeamLogo || getTeamLogo(),
+            seasonConfig: {
+                monthlyBase,
+                paymentStartMonth,
+                paymentEndMonth,
+                paymentFrequency,
+                paymentMode,
+                paymentDueDay,
+                monthOverrides,
+                calendarSources: [
+                    { type: "league", name: "Campionato", enabled: true, url: leagueUrl, snapshot: leagueSnapshot, lastCheckedAt: new Date().toISOString() },
+                    { type: "cup", name: "Coppa", enabled: cupEnabledInput.checked, dynamic: true, refreshPolicy: "after_match", url: cupEnabledInput.checked ? cupUrl : "", snapshot: cupEnabledInput.checked ? cupSnapshot : null, lastCheckedAt: cupEnabledInput.checked ? new Date().toISOString() : "" }
+                ]
+            },
+            seasonArchives: [...(state.seasonArchives || []), archive],
+            playerStartMonths: Object.fromEntries(state.players.map(player => [player, `${startYear}-${String(paymentStartMonth).padStart(2, "0")}`])),
+            fines: [],
+            payments: {}
+        };
+        selectedPaymentMonth = `${startYear}-${String(paymentStartMonth).padStart(2, "0")}`;
+        saveState();
+        applyImportedCalendar();
+        closeModal();
+        render();
+        showToast(`Stagione ${season} avviata. Backup scaricato.`);
+    };
+}
+
+function resetSeason() {
+    openSeasonSetupModal();
 }
 
 function resetTotal() {

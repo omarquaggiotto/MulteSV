@@ -1,4 +1,4 @@
-const CACHE_NAME = "multefc-v58-sharp-aligned-crests";
+const CACHE_NAME = "multefc-v60-season-manager";
 const APP_SHELL = [
     "./",
     "./index.html",

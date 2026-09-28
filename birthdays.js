@@ -167,7 +167,9 @@ async function exportPlayerSummary(player,month){
  ctx.font='24px Arial';const rows=fines.map(f=>({fine:f,lines:wrap(f.type||'Multa',590)}));
  canvas.height=640+rows.reduce((n,r)=>n+Math.max(92,50+r.lines.length*30),0);
  ctx.fillStyle='#eef2f7';ctx.fillRect(0,0,900,canvas.height);ctx.fillStyle='#ffffff';ctx.fillRect(32,32,836,canvas.height-64);
- ctx.fillStyle='#153b84';ctx.fillRect(32,32,836,176);ctx.fillStyle='#fff';ctx.font='bold 18px Arial';ctx.fillText('SAN VITALE NEXT GEN',64,72);ctx.font='bold 32px Arial';ctx.fillText(player,64,120,650);ctx.font='22px Arial';ctx.fillText(label,64,164);
+ ctx.fillStyle='#153b84';ctx.fillRect(32,32,836,176);
+ let brandOffset=0;try{const crest=new Image();crest.src=getTeamLogo();await crest.decode();const scale=Math.min(72/crest.naturalWidth,72/crest.naturalHeight);const w=crest.naturalWidth*scale,h=crest.naturalHeight*scale;ctx.drawImage(crest,64+(72-w)/2,58+(72-h)/2,w,h);brandOffset=92;}catch{}
+ ctx.fillStyle='#fff';ctx.font='bold 18px Arial';ctx.fillText('SAN VITALE NEXT GEN',64+brandOffset,72);ctx.font='bold 32px Arial';ctx.fillText(player,64+brandOffset,120,650-brandOffset);ctx.font='22px Arial';ctx.fillText(label,64+brandOffset,164);
  const photo=getPlayerPhoto(player);if(photo){try{const img=new Image();img.src=photo;await img.decode();ctx.save();ctx.beginPath();ctx.roundRect(736,65,100,100,20);ctx.clip();ctx.drawImage(img,736,65,100,100);ctx.restore();}catch{}}
  let y=260;for(const [title,value] of [['Quote del mese',summary.base],['Multe del mese',summary.fines],['Versato',summary.paid],['Rimanente (inclusi arretrati)',summary.remaining]]){ctx.fillStyle='#475569';ctx.font='24px Arial';ctx.fillText(title,64,y);ctx.fillStyle='#0f172a';ctx.font='bold 28px Arial';ctx.textAlign='right';ctx.fillText(money(value),836,y);ctx.textAlign='left';y+=58;}
  ctx.fillStyle='#153b84';ctx.font='bold 26px Arial';ctx.fillText('Multe · '+label,64,y+24);y+=70;

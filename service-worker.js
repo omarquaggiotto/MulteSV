@@ -1,4 +1,4 @@
-const CACHE_NAME = "multefc-v61-calendar-import-fix";
+const CACHE_NAME = "multefc-v62-season-save-close";
 const APP_SHELL = [
     "./",
     "./index.html",

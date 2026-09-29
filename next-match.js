@@ -18,12 +18,13 @@ window.TEAM_FIXTURES = {"updatedAt":"2026-09-23","season":"2026/27","competition
    return data.matches.filter(m=>m.status==='scheduled' && Number.isFinite(kickoff(m)) && now < kickoff(m)).sort((a,b)=>kickoff(a)-kickoff(b))[0] || null;
  }
  function escape(value) { return String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+ function fastLogo(value) { return String(value||'').replace('/Teams/Original/','/Teams/80/'); }
  function team(id) {
    const t=data.teams.find(t=>t.id===id);
    const isSanVitale=id===1199590;
    const name=isSanVitale?'San Vitale':t.name;
    const fallback=!isSanVitale&&t.fallbackLogo?` data-fallback="${escape(t.fallbackLogo)}" onerror="this.onerror=null;this.src=this.dataset.fallback"`:'';
-   return `<div class="next-match-team ${isSanVitale?'is-san-vitale-team':'is-opponent-team'}"><span class="next-match-crest"><img src="${escape(t.logo)}"${fallback} alt="Stemma ${escape(t.name)}"></span><strong>${escape(name)}${isSanVitale?'<span>Next Gen</span>':''}</strong></div>`;
+   return `<div class="next-match-team ${isSanVitale?'is-san-vitale-team':'is-opponent-team'}"><span class="next-match-crest"><img src="${escape(fastLogo(t.logo))}"${fallback} alt="Stemma ${escape(t.name)}"></span><strong>${escape(name)}${isSanVitale?'<span>Next Gen</span>':''}</strong></div>`;
  }
  function directions(m) {
    if(m.awayId!==1199590) return '';

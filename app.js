@@ -724,6 +724,19 @@ function getTeamLogo() {
     return state?.teamLogo || "san-vitale-logo.png";
 }
 
+function optimizeTuttocampoLogoUrl(value) {
+    try {
+        const url = new URL(value);
+        if (url.protocol !== "https:") return "";
+        if (url.hostname === "b2-content.tuttocampo.it") {
+            url.pathname = url.pathname.replace(/\/Teams\/Original\//i, "/Teams/80/");
+        }
+        return url.href;
+    } catch {
+        return "";
+    }
+}
+
 function applyTeamBranding() {
     document.querySelectorAll("[data-team-logo]").forEach(image => { image.src = getTeamLogo(); });
     document.documentElement.style.setProperty("--team-logo-image", `url("${getTeamLogo().replace(/["\\]/g, "\\$&")}")`);
@@ -3268,7 +3281,7 @@ function openTeamStandings() {
     const standings = source?.snapshot?.standings || window.DEFAULT_STANDINGS;
     const rows = Array.isArray(standings?.rows) ? standings.rows : [];
     if (!rows.length) { showToast("Classifica non disponibile."); return; }
-    const safeLogo = value => { try { const url = new URL(value); return url.protocol === "https:" ? url.href : ""; } catch { return ""; } };
+    const safeLogo = optimizeTuttocampoLogoUrl;
     const updated = standings.updatedAt ? new Date(standings.updatedAt).toLocaleString("it-IT", { day:"2-digit", month:"short", hour:"2-digit", minute:"2-digit" }) : "";
     openModal("Classifica", `
         <div class="team-standings">
@@ -3300,9 +3313,7 @@ function openTeamCalendar() {
         .sort((left, right) => left.kickoff - right.kickoff);
     const hasLeague = matches.some(match => match.competitionType !== "cup");
     const hasCup = matches.some(match => match.competitionType === "cup");
-    const safeExternalUrl = value => {
-        try { const url = new URL(value); return url.protocol === "https:" ? url.href : ""; } catch { return ""; }
-    };
+    const safeExternalUrl = value => optimizeTuttocampoLogoUrl(value);
     openModal("Calendario partite", `
         <div class="team-calendar">
             <div class="team-calendar-toolbar" role="tablist" aria-label="Filtra calendario">

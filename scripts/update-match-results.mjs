@@ -39,11 +39,22 @@ async function roundResults(source, round, type) {
   if (!competition) return [];
   const pageUrl = new URL(`${competition}/Giornata${round}`, sourceUrl.origin).href;
   const pageResponse = await fetch(pageUrl, { headers:HEADERS });
+  if (!pageResponse.ok) {
+    console.warn(`Giornata ${round} non disponibile (${pageResponse.status}); sarà riprovata al prossimo controllo.`);
+    return [];
+  }
   const page = await pageResponse.text();
   const token = page.match(/var\s+tckk\s*=\s*["']([^"']+)/i)?.[1];
-  if (!token) throw new Error(`Token non trovato per giornata ${round}`);
+  if (!token) {
+    console.warn(`Giornata ${round} temporaneamente non leggibile da TuttoCampo; sarà riprovata al prossimo controllo.`);
+    return [];
+  }
   const cookie = pageResponse.headers.get("set-cookie")?.split(";")[0] || "";
   const fragment = await fetch(new URL(`/Web/Views/Results/ResultsView.php?tckk=${encodeURIComponent(token)}&v=1`, sourceUrl.origin), { headers:{ ...HEADERS, "x-requested-with":"XMLHttpRequest", referer:pageUrl, ...(cookie ? {cookie} : {}) } });
+  if (!fragment.ok) {
+    console.warn(`Risultati della giornata ${round} non disponibili (${fragment.status}); saranno riprovati.`);
+    return [];
+  }
   return parse(await fragment.text(), type);
 }
 

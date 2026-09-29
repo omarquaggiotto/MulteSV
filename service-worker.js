@@ -1,4 +1,4 @@
-const CACHE_NAME = "multefc-v80-rule-category-choice";
+const CACHE_NAME = "multefc-v81-fast-team-logos";
 const APP_SHELL = [
     "./",
     "./index.html",
@@ -45,6 +45,18 @@ self.addEventListener("activate", event => {
 self.addEventListener("fetch", event => {
     const request = event.request;
     const url = new URL(request.url);
+
+    if (request.method === "GET" && request.destination === "image" && url.hostname === "b2-content.tuttocampo.it") {
+        event.respondWith(
+            caches.match(request).then(cached => cached || fetch(request).then(response => {
+                if (response.ok || response.type === "opaque") {
+                    event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.put(request, response.clone())));
+                }
+                return response;
+            }))
+        );
+        return;
+    }
 
     if (request.method !== "GET" || url.origin !== self.location.origin) {
         return;

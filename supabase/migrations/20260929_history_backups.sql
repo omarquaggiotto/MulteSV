@@ -13,6 +13,7 @@ create table if not exists public.app_state_history (
 create index if not exists app_state_history_state_created_idx
   on public.app_state_history (state_id, created_at desc);
 
+alter table public.app_state_history enable row level security;
 revoke all on public.app_state_history from anon, authenticated;
 
 create or replace function public.save_app_state_versioned(p_data jsonb)

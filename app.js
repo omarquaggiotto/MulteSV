@@ -7200,3 +7200,10 @@ exportPaymentsImage = async function(mode = "all") {
  const images=getSortedPlayers().map(function(player){const src=typeof getPlayerPhoto==="function"?getPlayerPhoto(player):"";if(!src)return Promise.resolve();const wrap=document.createElement("span");wrap.setAttribute("data-player-history",player);const img=document.createElement("img");img.className="player-list-photo";img.src=src;wrap.appendChild(img);holder.appendChild(wrap);return new Promise(function(done){if(img.complete)return done();img.onload=done;img.onerror=done})});
  try{await Promise.all(images);return exportPaymentsImageWithVisiblePortraits(mode)}finally{holder.remove()}
 };
+
+
+/* Mantiene nell'export solo Giocatore, Versato e Rimanente. */
+const createPaymentsExportCanvasVisibleColumns = createPaymentsExportCanvas;
+createPaymentsExportCanvas = function(mode = "all") {
+ const canvas=createPaymentsExportCanvasVisibleColumns(mode);if(!canvas)return null;const scale=canvas.width/698,c=canvas.getContext("2d");c.fillStyle="#f7f9fc";c.fillRect(655*scale,108*scale,43*scale,canvas.height-108*scale);return canvas;
+};

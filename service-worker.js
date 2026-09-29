@@ -1,4 +1,4 @@
-const CACHE_NAME = "multefc-v71-calendar-crests";
+const CACHE_NAME = "multefc-v72-payments-essential";
 const APP_SHELL = [
     "./",
     "./index.html",

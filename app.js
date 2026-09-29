@@ -7228,9 +7228,19 @@ createPaymentsExportCanvas = function(mode = "all") {
  let x=pad;["Giocatore","Versato","Rimanente"].forEach((v,i)=>{c.fillText(v,x+14,top+head/2);x+=cols[i]});
  const photos=[...document.querySelectorAll("[data-player-history] img.player-list-photo")];
  rows.forEach((entry,i)=>{const y=top+head+i*rowH;c.fillStyle=i%2?"#eef3f9":"#fff";c.fillRect(pad,y,tableW,rowH);c.strokeStyle="#d7e0ec";c.strokeRect(pad,y,tableW,rowH);
-  const img=photos[i],size=36,px=pad+12,py=y+9;c.save();c.beginPath();c.arc(px+18,py+18,18,0,Math.PI*2);c.clip();if(img&&img.complete&&img.naturalWidth){const s=Math.max(size/img.naturalWidth,size/img.naturalHeight),dw=img.naturalWidth*s,dh=img.naturalHeight*s;c.drawImage(img,px+(size-dw)/2,py+(size-dh)/2,dw,dh)}else{c.fillStyle=accent;c.fillRect(px,py,size,size);c.fillStyle="#fff";c.font="800 12px system-ui,sans-serif";c.textAlign="center";c.fillText(initials(entry.player),px+18,py+19)}c.restore();c.textAlign="left";
+    const img=photos.find(n=>n.closest("[data-player-history]")?.getAttribute("data-player-history")===entry.player&&n.complete&&n.naturalWidth),size=36,px=pad+12,py=y+9;c.save();c.beginPath();c.arc(px+18,py+18,18,0,Math.PI*2);c.clip();if(img&&img.complete&&img.naturalWidth){const s=Math.max(size/img.naturalWidth,size/img.naturalHeight),dw=img.naturalWidth*s,dh=img.naturalHeight*s;c.drawImage(img,px+(size-dw)/2,py+(size-dh)/2,dw,dh)}else{c.fillStyle=accent;c.fillRect(px,py,size,size);c.fillStyle="#fff";c.font="800 12px system-ui,sans-serif";c.textAlign="center";c.fillText(initials(entry.player),px+18,py+19)}c.restore();c.textAlign="left";
   c.font="650 15px system-ui,sans-serif";c.fillStyle="#172236";c.fillText(entry.player,pad+58,y+rowH/2,cols[0]-72);
   c.font="600 15px system-ui,sans-serif";c.fillText(money(entry.summary.paid),pad+cols[0]+14,y+rowH/2);
   c.fillStyle=entry.summary.remaining>0?"#ba2a31":"#16835b";c.fillText(entry.summary.remaining>0?money(entry.summary.remaining):money(0)+"  ✓ Saldato",pad+cols[0]+cols[1]+14,y+rowH/2);
  });return canvas;
 };
+
+/* Aggiorna subito il rimanente durante l’inserimento del versato. */
+document.addEventListener("input", event => {
+ const input=event.target.closest?.("[data-payment-player]");if(!input)return;
+ const player=input.dataset.paymentPlayer,month=getDisplayedPaymentMonth(),summary=getPlayerMonthSummary(player,month),paid=Math.max(0,Number(input.value)||0),remaining=Math.max(0,summary.total-paid),row=input.closest(".payment-row"),remainingCell=row?.querySelector(".payment-remaining,.payment-ok"),status=row?.querySelector(".payment-status");
+ if(row)row.dataset.paymentRemaining=String(remaining);
+ if(remainingCell){remainingCell.textContent=money(remaining);remainingCell.classList.toggle("payment-remaining",remaining>0);remainingCell.classList.toggle("payment-ok",remaining<=0)}
+ if(status){status.className="payment-status "+(remaining<=0?"payment-status-ok":paid>0?"payment-status-partial":"payment-status-due");status.textContent=remaining<=0?"✓ Saldato":paid>0?"€ Parziale":"! Da saldare"}
+});
+document.addEventListener("click",event=>{const button=event.target.closest?.("[data-fill-payment]");if(!button)return;const input=button.closest(".payment-row")?.querySelector("[data-payment-player]");queueMicrotask(()=>input?.dispatchEvent(new Event("change",{bubbles:true}))) });

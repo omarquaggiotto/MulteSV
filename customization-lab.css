@@ -61,3 +61,26 @@
 .payment-fill-button{min-height:36px;padding:7px 10px;border:1px solid color-mix(in srgb,var(--primary) 35%,var(--border));border-radius:10px;background:color-mix(in srgb,var(--primary) 12%,var(--surface));color:var(--primary);font:inherit;font-size:11px;font-weight:900;cursor:pointer}
 .payment-fill-button:active{transform:scale(.97)}
 @media(max-width:600px){.payments-table-card{overflow:visible}.payments-table-header{display:none}.payment-row{grid-template-columns:minmax(0,1fr) auto;gap:10px;min-width:0;margin:10px;padding:13px;border:1px solid var(--border);border-radius:16px;background:var(--surface)!important}.payment-row+.payment-row{border-top:1px solid var(--border)}.payment-player{grid-column:1/-1;padding-bottom:10px!important;border-bottom:1px solid var(--border);background:transparent!important}.payment-paid-cell,.payment-row>.payment-remaining,.payment-row>.payment-ok{display:grid;gap:5px;align-items:center}.payment-paid-cell{grid-template-columns:minmax(0,1fr) auto}.payment-paid-cell:before,.payment-row>.payment-remaining:before,.payment-row>.payment-ok:before{grid-column:1/-1;color:var(--muted);font-size:9px;font-weight:900;letter-spacing:.08em;text-transform:uppercase}.payment-paid-cell:before{content:"Versato"}.payment-row>.payment-remaining:before,.payment-row>.payment-ok:before{content:"Rimanente"}.payment-paid-input{width:100%;min-width:0}.payment-fill-button{min-height:38px}}
+
+
+/* Pagamenti mobile: elenco compatto su una sola riga. */
+@media(max-width:600px){
+ .payments-table-card{overflow:hidden;border:1px solid var(--border);background:var(--surface);box-shadow:0 8px 24px rgba(5,16,35,.06)}
+ .payments-table-header{display:grid;grid-template-columns:minmax(0,1fr) 98px 58px;gap:6px;min-width:0;padding:9px 10px;font-size:8px}
+ .payments-table-header .payment-sticky{position:static;background:transparent;color:inherit;box-shadow:none}
+ .payments-table-header>div:last-child{text-align:right}
+ .payments-table-body{display:block}
+ .payment-row{grid-template-columns:minmax(0,1fr) 98px 58px;gap:6px;min-width:0;margin:0;padding:9px 10px;border:0;border-radius:0;background:var(--surface)!important;box-shadow:none}
+ .payment-row+.payment-row{border-top:1px solid var(--border)}
+ .payment-player{grid-column:auto;padding:0!important;border:0;box-shadow:none;background:transparent!important}
+ .payment-player .player-avatar{width:30px;height:30px;flex-basis:30px}
+ .payment-player strong{font-size:11px;line-height:1.15}
+ .payment-status,.payment-arrears{margin-top:2px;font-size:8px;line-height:1.15}
+ .payment-paid-cell{display:grid;grid-template-columns:minmax(0,1fr) 34px;gap:4px;min-width:0;padding:0;background:transparent;border:0}
+ .payment-paid-cell:before,.payment-row>.payment-remaining:before,.payment-row>.payment-ok:before{display:none}
+ .payment-paid-input{width:100%;min-width:0;min-height:34px;padding:6px;border-radius:9px;background:var(--surface-2);font-size:13px}
+ .payment-fill-button{min-width:34px;min-height:34px;padding:4px;border-radius:9px;font-size:0}
+ .payment-fill-button:after{content:"✓";font-size:14px;font-weight:950}
+ .payment-fill-button[hidden]{display:none}
+ .payment-row>.payment-remaining,.payment-row>.payment-ok{display:block;min-width:0;padding:0;text-align:right;font-size:12px;white-space:nowrap;background:transparent;border:0}
+}

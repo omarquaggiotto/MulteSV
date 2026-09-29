@@ -1,4 +1,4 @@
-const CACHE_NAME = "multefc-v75-standings";
+const CACHE_NAME = "multefc-v76-history-backups";
 const APP_SHELL = [
     "./",
     "./index.html",
@@ -6,6 +6,7 @@ const APP_SHELL = [
     "./app.js",
     "./birthdays.js",
     "./birthdays.css",
+    "./history.js",
     "./next-match.js",
     "./standings-data.js",
     "./customization-lab.js",

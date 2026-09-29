@@ -849,12 +849,15 @@ function queueCloudSave() {
 
     clearTimeout(cloudSaveTimer);
     cloudSaveTimer = setTimeout(async () => {
-        const { error } = await supabaseClient
-            .from("app_state")
-            .upsert(
-                { id: "team", data: state },
-                { onConflict: "id" }
-            );
+        let { error } = await supabaseClient.rpc("save_app_state_versioned", { p_data: state });
+
+        // Compatibilità durante la pubblicazione: finché la nuova migrazione
+        // non è installata, il salvataggio esistente continua a funzionare.
+        if (error && (error.code === "PGRST202" || /save_app_state_versioned/i.test(error.message || ""))) {
+            ({ error } = await supabaseClient
+                .from("app_state")
+                .upsert({ id: "team", data: state }, { onConflict: "id" }));
+        }
 
         if (error) {
             console.error("Errore salvataggio online:", error);
@@ -985,6 +988,7 @@ async function initializeCloud() {
     if (!supabaseClient) return;
 
     await refreshAccess();
+    await ensureOnlineDailyBackup();
     const hasCloudState = await loadCloudState();
     cloudReady = hasCloudState !== null;
 
@@ -1789,6 +1793,7 @@ function render() {
 
     bindPageEvents();
     bindBirthdayEvents();
+    bindOnlineHistoryEvents();
     applyAccessMode();
     applyTeamBranding();
 
@@ -4052,6 +4057,8 @@ function renderSettings() {
                     <button class="btn secondary" id="exportAutoBackup" type="button">Esporta copia</button>
                 </div>
             </details>
+
+            ${renderOnlineHistorySettings()}
 
             <details class="card data-section settings-collapse"><summary><span class="settings-menu-icon" aria-hidden="true">▦</span><span class="settings-menu-label"><strong>Gestione stagione</strong><small>Quote, calendario e nuova annata</small></span><span class="settings-chevron" aria-hidden="true">⌄</span></summary><div class="data-section-heading"><p>Configura la quota mensile e prepara la prossima stagione mantenendo giocatori e Multario.</p></div>
 

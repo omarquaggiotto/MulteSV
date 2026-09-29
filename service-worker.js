@@ -1,4 +1,4 @@
-const CACHE_NAME = "multefc-v76-history-backups";
+const CACHE_NAME = "multefc-v77-fine-recipients";
 const APP_SHELL = [
     "./",
     "./index.html",

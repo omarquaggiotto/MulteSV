@@ -3258,6 +3258,29 @@ function exportPaymentsImage(mode = "all") {
     }
 }
 
+function openTeamStandings() {
+    const source = (state.seasonConfig?.calendarSources || []).find(item => item.enabled !== false && item.type === "league");
+    const standings = source?.snapshot?.standings || window.DEFAULT_STANDINGS;
+    const rows = Array.isArray(standings?.rows) ? standings.rows : [];
+    if (!rows.length) { showToast("Classifica non disponibile."); return; }
+    const safeLogo = value => { try { const url = new URL(value); return url.protocol === "https:" ? url.href : ""; } catch { return ""; } };
+    const updated = standings.updatedAt ? new Date(standings.updatedAt).toLocaleString("it-IT", { day:"2-digit", month:"short", hour:"2-digit", minute:"2-digit" }) : "";
+    openModal("Classifica", `
+        <div class="team-standings">
+            <div class="team-standings-heading"><div><strong>${escapeHtml(standings.competition || "Campionato")}</strong><span>${updated ? `Aggiornata ${escapeHtml(updated)}` : "Ultimo aggiornamento disponibile"}</span></div><span class="team-standings-live"><i></i> Tuttocampo</span></div>
+            <div class="team-standings-table"><div class="team-standings-labels"><span>#</span><span>Squadra</span><span>G</span><span>V</span><span>N</span><span>P</span><span>DR</span><span>Pt</span></div>
+            <div class="team-standings-list">${rows.map((row,index) => {
+                const own = Number(row.id) === 1199590;
+                const logo = own ? getTeamLogo() : safeLogo(row.logo);
+                const initials = String(row.name || "?").split(/\s+/).filter(Boolean).slice(0,2).map(word=>word[0]).join("").toUpperCase();
+                const difference = Number(row.goalDifference || 0);
+                return `<article class="team-standing-row ${own ? "is-own-team" : ""}"><strong class="team-standing-position">${Number(row.position) || index+1}</strong><div class="team-standing-team"><span>${logo ? `<img src="${escapeHtml(logo)}" alt="" loading="lazy" onerror="this.hidden=true;this.nextElementSibling.hidden=false"><b hidden>${escapeHtml(initials)}</b>` : `<b>${escapeHtml(initials)}</b>`}</span><div><strong>${escapeHtml(row.name || "Squadra")}</strong></div></div><span>${Number(row.played)||0}</span><span>${Number(row.won)||0}</span><span>${Number(row.drawn)||0}</span><span>${Number(row.lost)||0}</span><span class="team-standing-difference">${difference>0?"+":""}${difference}</span><strong class="team-standing-points">${Number(row.points)||0}</strong></article>`;
+            }).join("")}</div></div>
+        </div>`);
+    document.querySelector("#modalRoot .modal")?.classList.add("team-standings-modal");
+    document.querySelector("#modalRoot .modal-backdrop")?.classList.add("team-calendar-backdrop");
+}
+window.openTeamStandings = openTeamStandings;
 function openTeamCalendar() {
     const calendar = window.MatchCalendar?.getData?.();
     if (!calendar || !Array.isArray(calendar.matches)) {

@@ -84,3 +84,7 @@
  .payment-fill-button[hidden]{display:none}
  .payment-row>.payment-remaining,.payment-row>.payment-ok{display:block;min-width:0;padding:0;text-align:right;font-size:12px;white-space:nowrap;background:transparent;border:0}
 }
+
+
+/* Pagamenti mobile: righe piu leggibili e controlli touch. */
+@media(max-width:600px){.payment-row{min-height:62px;padding-block:11px}.payment-player .player-avatar{width:36px;height:36px;flex-basis:36px}.payment-player strong{font-size:12px;line-height:1.2}.payment-status,.payment-arrears{font-size:9px;line-height:1.2}.payment-paid-input{min-height:40px;padding:7px;font-size:14px}.payment-fill-button{min-width:38px;min-height:40px}.payment-row>.payment-remaining,.payment-row>.payment-ok{font-size:13px}}

@@ -380,6 +380,7 @@ function loadState() {
                         refreshPolicy: source?.type === "cup" ? "after_match" : "weekly",
                         url: typeof source?.url === "string" ? source.url : "",
                         lastCheckedAt: typeof source?.lastCheckedAt === "string" ? source.lastCheckedAt : "",
+                        lastResultsCheckedAt: typeof source?.lastResultsCheckedAt === "string" ? source.lastResultsCheckedAt : "",
                         snapshot: source?.snapshot && typeof source.snapshot === "object"
                             ? structuredClone(source.snapshot)
                             : null
@@ -507,6 +508,7 @@ function normalizeIncomingState(raw) {
             refreshPolicy: source?.type === "cup" ? "after_match" : "weekly",
             url: typeof source?.url === "string" ? source.url : "",
             lastCheckedAt: typeof source?.lastCheckedAt === "string" ? source.lastCheckedAt : "",
+            lastResultsCheckedAt: typeof source?.lastResultsCheckedAt === "string" ? source.lastResultsCheckedAt : "",
             snapshot: source?.snapshot && typeof source.snapshot === "object" ? structuredClone(source.snapshot) : null
         })) : structuredClone(defaultState.seasonConfig.calendarSources)
     };
@@ -582,6 +584,79 @@ async function importCalendarFromLink(type, url) {
         payload = data;
     }
     return validateImportedCalendar(payload?.calendar, type);
+}
+
+const MATCH_RESULTS_CHECK_KEY = "multesv_match_results_check_v1";
+let matchResultsRefreshInFlight = false;
+
+function calendarKickoff(match) {
+    const value = new Date(`${match.date}T${match.time}:00`);
+    return Number.isNaN(value.getTime()) ? null : value;
+}
+
+function sourceNeedsResultRefresh(source, now = Date.now()) {
+    if (!source?.enabled || !source.url || !source.snapshot) return false;
+    if (!source.lastResultsCheckedAt) return true;
+    return (source.snapshot.matches || []).some(match => {
+        const kickoff = calendarKickoff(match);
+        return kickoff && kickoff.getTime() + 3 * 60 * 60 * 1000 <= now && !/^\d{1,2}-\d{1,2}$/.test(String(match.result || ""));
+    });
+}
+
+function resultRoundsForSource(source, now = Date.now()) {
+    const matches = source.snapshot?.matches || [];
+    const rounds = new Set(matches.filter(match => {
+        const kickoff = calendarKickoff(match);
+        return kickoff && kickoff.getTime() + 3 * 60 * 60 * 1000 <= now && !/^\d{1,2}-\d{1,2}$/.test(String(match.result || ""));
+    }).map(match => Number(match.round)).filter(Number.isInteger));
+    if (!source.lastResultsCheckedAt) {
+        const firstKnown = Math.min(...matches.map(match => Number(match.round)).filter(round => Number.isInteger(round) && round > 0));
+        if (Number.isFinite(firstKnown)) for (let round = 1; round < firstKnown; round += 1) rounds.add(round);
+    }
+    return [...rounds].sort((a, b) => a - b).slice(-10);
+}
+
+async function refreshMatchResults({ force = false } = {}) {
+    if (matchResultsRefreshInFlight || !navigator.onLine || !supabaseClient) return false;
+    const previousCheck = Number(localStorage.getItem(MATCH_RESULTS_CHECK_KEY) || 0);
+    if (!force && Date.now() - previousCheck < 30 * 60 * 1000) return false;
+    const sources = (state.seasonConfig?.calendarSources || []).filter(source => sourceNeedsResultRefresh(source));
+    if (!sources.length) return false;
+    matchResultsRefreshInFlight = true;
+    localStorage.setItem(MATCH_RESULTS_CHECK_KEY, String(Date.now()));
+    let changed = false;
+    try {
+        for (const source of sources) {
+            const rounds = resultRoundsForSource(source);
+            if (!rounds.length) continue;
+            let payload;
+            if (typeof window.__MULTE_SV_RESULTS_IMPORT_MOCK__ === "function") {
+                payload = await window.__MULTE_SV_RESULTS_IMPORT_MOCK__({ type: source.type, url: source.url, teamId: 1199590, mode: "results", rounds });
+            } else {
+                const response = await supabaseClient.functions.invoke("import-tuttocampo-calendar", {
+                    body: { type: source.type, url: source.url, teamId: 1199590, mode: "results", rounds }
+                });
+                if (response.error) continue;
+                payload = response.data;
+            }
+            let calendar;
+            try { calendar = validateImportedCalendar(payload?.calendar, source.type); } catch (_) { continue; }
+            const completed = calendar.matches.filter(match => {
+                const kickoff = calendarKickoff(match);
+                return kickoff && kickoff.getTime() + 3 * 60 * 60 * 1000 <= Date.now() && /^\d{1,2}-\d{1,2}$/.test(String(match.result || ""));
+            });
+            const { data, error } = await supabaseClient.rpc("merge_calendar_results", { p_source_type: source.type, p_matches: completed });
+            if (!error && data) {
+                state = normalizeIncomingState(data);
+                saveLocalState();
+                changed = changed || completed.length > 0;
+            }
+        }
+        if (changed) render();
+        return changed;
+    } finally {
+        matchResultsRefreshInFlight = false;
+    }
 }
 
 function getCombinedImportedCalendar() {
@@ -920,6 +995,7 @@ async function initializeCloud() {
     subscribeToCloud();
 
     render();
+    refreshMatchResults().catch(error => console.warn("Controllo risultati non riuscito", error));
 
     supabaseClient.auth.onAuthStateChange(() => {
         setTimeout(async () => {
@@ -939,6 +1015,7 @@ async function handleConnectionRestored() {
         await refreshAccess();
     }
     render();
+    refreshMatchResults({ force: true }).catch(error => console.warn("Controllo risultati non riuscito", error));
     showToast("Connessione ristabilita.");
 }
 
@@ -7155,6 +7232,10 @@ render();
 window.addEventListener("online", handleConnectionRestored);
 window.addEventListener("offline", handleConnectionLost);
 initializeCloud();
+setInterval(() => refreshMatchResults().catch(() => {}), 60 * 60 * 1000);
+document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) refreshMatchResults().catch(() => {});
+});
 if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {
         navigator.serviceWorker

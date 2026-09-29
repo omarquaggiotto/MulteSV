@@ -7207,3 +7207,30 @@ const createPaymentsExportCanvasVisibleColumns = createPaymentsExportCanvas;
 createPaymentsExportCanvas = function(mode = "all") {
  const canvas=createPaymentsExportCanvasVisibleColumns(mode);if(!canvas)return null;const scale=canvas.width/698,c=canvas.getContext("2d");c.fillStyle="#f7f9fc";c.fillRect(655*scale,108*scale,43*scale,canvas.height-108*scale);return canvas;
 };
+
+
+/* Export pagamenti definitivo: solo Giocatore, Versato e Rimanente. */
+createPaymentsExportCanvas = function(mode = "all") {
+ const due=mode==="due", month=getDisplayedPaymentMonth();
+ const rows=getSortedPlayers().map(player=>({player,summary:getPlayerMonthSummary(player,month)})).filter(row=>!due||row.summary.remaining>0);
+ if(!rows.length)return null;
+ const cols=[400,170,200], pad=36, top=104, head=46, rowH=54, tableW=cols.reduce((a,b)=>a+b,0), w=tableW+pad*2, h=top+head+rows.length*rowH+pad;
+ const ratio=typeof getExportScale==="function"?getExportScale(w,h):Math.min(window.devicePixelRatio||1,2), canvas=document.createElement("canvas");
+ canvas.width=Math.round(w*ratio);canvas.height=Math.round(h*ratio);const c=canvas.getContext("2d");if(!c)return null;c.scale(ratio,ratio);c.textBaseline="middle";
+ const css=getComputedStyle(document.documentElement), primary=state.teamCustomization?.primary||css.getPropertyValue("--primary").trim()||"#2563eb", accent=state.teamCustomization?.accent||css.getPropertyValue("--preview-accent").trim()||"#60a5fa";
+ c.fillStyle="#f7f9fc";c.fillRect(0,0,w,h);
+ const logo=[...document.querySelectorAll("[data-team-logo],.team-link img")].find(img=>img.complete&&img.naturalWidth);let titleX=pad;
+ if(logo){const s=Math.min(52/logo.naturalWidth,52/logo.naturalHeight),dw=logo.naturalWidth*s,dh=logo.naturalHeight*s;c.drawImage(logo,pad+(52-dw)/2,22+(52-dh)/2,dw,dh);titleX=pad+68;}
+ const label=new Date(month+"-01T12:00:00").toLocaleDateString("it-IT",{month:"long",year:"numeric"});
+ c.fillStyle="#13213a";c.font="700 27px system-ui,sans-serif";c.fillText((due?"Da pagare":"Pagamenti")+" — "+label.charAt(0).toUpperCase()+label.slice(1),titleX,40);
+ c.fillStyle="#5b677a";c.font="500 14px system-ui,sans-serif";c.fillText(due?"Solo chi deve ancora versare":"Situazione dei versamenti del mese",titleX,70);
+ c.fillStyle=primary;c.fillRect(pad,top,tableW,head);c.fillStyle=accent;c.fillRect(pad,top,7,head);c.fillStyle="#fff";c.font="700 14px system-ui,sans-serif";
+ let x=pad;["Giocatore","Versato","Rimanente"].forEach((v,i)=>{c.fillText(v,x+14,top+head/2);x+=cols[i]});
+ const photos=[...document.querySelectorAll("[data-player-history] img.player-list-photo")];
+ rows.forEach((entry,i)=>{const y=top+head+i*rowH;c.fillStyle=i%2?"#eef3f9":"#fff";c.fillRect(pad,y,tableW,rowH);c.strokeStyle="#d7e0ec";c.strokeRect(pad,y,tableW,rowH);
+  const img=photos[i],size=36,px=pad+12,py=y+9;c.save();c.beginPath();c.arc(px+18,py+18,18,0,Math.PI*2);c.clip();if(img&&img.complete&&img.naturalWidth){const s=Math.max(size/img.naturalWidth,size/img.naturalHeight),dw=img.naturalWidth*s,dh=img.naturalHeight*s;c.drawImage(img,px+(size-dw)/2,py+(size-dh)/2,dw,dh)}else{c.fillStyle=accent;c.fillRect(px,py,size,size);c.fillStyle="#fff";c.font="800 12px system-ui,sans-serif";c.textAlign="center";c.fillText(initials(entry.player),px+18,py+19)}c.restore();c.textAlign="left";
+  c.font="650 15px system-ui,sans-serif";c.fillStyle="#172236";c.fillText(entry.player,pad+58,y+rowH/2,cols[0]-72);
+  c.font="600 15px system-ui,sans-serif";c.fillText(money(entry.summary.paid),pad+cols[0]+14,y+rowH/2);
+  c.fillStyle=entry.summary.remaining>0?"#ba2a31":"#16835b";c.fillText(entry.summary.remaining>0?money(entry.summary.remaining):money(0)+"  ✓ Saldato",pad+cols[0]+cols[1]+14,y+rowH/2);
+ });return canvas;
+};

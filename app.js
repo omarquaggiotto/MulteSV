@@ -814,7 +814,8 @@ function applyAccessMode() {
         "#importData",
         "#resetData",
         "#resetSeason",
-        "#resetTotal"
+        "#resetTotal",
+        "[data-fill-payment]"
     ];
 
     document.querySelectorAll(adminControls.join(",")).forEach(control => {
@@ -2879,16 +2880,25 @@ function renderPayments() {
                     </button>
 
                     <div class="payment-value payment-paid-cell">
-
-                      <input
-                          type="number"
-                          class="payment-paid-input"
-                          data-payment-player="${escapeHtml(player)}"
-                          min="0"
-                          step="1"
-                          value="${summary.paid}"
-                      >
-
+                        <input
+                            type="number"
+                            class="payment-paid-input"
+                            data-payment-player="${escapeHtml(player)}"
+                            min="0"
+                            step="1"
+                            value="${summary.paid}"
+                            aria-label="Versato da ${escapeHtml(player)}"
+                        >
+                        ${summary.remaining > 0 ? `
+                            <button
+                                type="button"
+                                class="payment-fill-button"
+                                data-fill-payment="${escapeHtml(player)}"
+                                data-fill-payment-value="${summary.paid + summary.remaining}"
+                                title="Compila l'importo necessario per saldare"
+                                aria-label="Compila il saldo di ${escapeHtml(player)}: ${money(summary.remaining)} rimanenti"
+                            >Saldo</button>
+                        ` : ""}
                      </div>
 
                     <div class="
@@ -2902,17 +2912,6 @@ function renderPayments() {
                         ${money(summary.remaining)}
                     </div>
 
-                    <div class="payment-value">
-                        ${money(summary.base)}
-                    </div>
-
-                    <div class="payment-value">
-                        ${money(summary.fines)}
-                    </div>
-
-                    <div class="payment-value payment-total">
-                        ${money(summary.total)}
-                    </div>
                 </div>
             `)
         .join("");
@@ -3005,9 +3004,6 @@ function renderPayments() {
                 <div class="payment-sticky">Giocatore</div>
                 <div>Versato</div>
                 <div>Rimanente</div>
-                <div>Base</div>
-                <div>Multe</div>
-                <div>Totale</div>
             </div>
 
             <div class="payments-table-body">
@@ -6497,6 +6493,21 @@ document
             }
         );
 
+    });
+
+document
+    .querySelectorAll("[data-fill-payment]")
+    .forEach(button => {
+        button.addEventListener("click", () => {
+            if (!requireOnlineAdmin()) return;
+            const player = button.dataset.fillPayment;
+            const input = [...document.querySelectorAll("[data-payment-player]")]
+                .find(candidate => candidate.dataset.paymentPlayer === player);
+            if (!input) return;
+            input.value = button.dataset.fillPaymentValue || "0";
+            input.focus();
+            input.select();
+        });
     });
 }
 

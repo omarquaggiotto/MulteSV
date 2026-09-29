@@ -47,6 +47,33 @@ async function roundResults(source, round, type) {
   return parse(await fragment.text(), type);
 }
 
+
+function parseStandings(html) {
+  const strip = value => value.replace(/<[^>]+>/g," ").replace(/&amp;/g,"&").replace(/\s+/g," ").trim();
+  const rows=[];
+  for (const match of html.matchAll(/<tr\b[^>]*data-team-id=["'](\d+)["'][^>]*>([\s\S]*?)<\/tr>/gi)) {
+    const cells=[...match[2].matchAll(/<td\b([^>]*)>([\s\S]*?)<\/td>/gi)].map(item=>({className:item[1].match(/class=["']([^"']*)/)?.[1]||"",body:item[2]}));
+    const teamCell=cells.find(cell=>/\bteam\b/.test(cell.className)&&!/team_logo/.test(cell.className));
+    const name=strip(teamCell?.body||"");
+    const logo=(match[2].match(/data-src=['"]([^'"]*\/Teams\/(?:40|80)\/[^'"]+)['"]/i)?.[1]||"").replace(/\/Teams\/(?:40|80)\//,"/Teams/Original/");
+    const values=cells.filter(cell=>!/(last_match|team_logo|\bteam\b|details)/.test(cell.className)).map(cell=>Number(strip(cell.body)));
+    if(name&&values.length>=8) rows.push({position:rows.length+1,id:Number(match[1]),name,logo,points:values[0],played:values[1],won:values[2],drawn:values[3],lost:values[4],goalsFor:values[5],goalsAgainst:values[6],goalDifference:values[7]});
+  }
+  return rows;
+}
+
+async function fetchStandings(source) {
+  const sourceUrl=new URL(source); const competition=sourceUrl.pathname.match(/^(\/[^/]+\/[^/]+\/[^/]+)/)?.[1];
+  if(!competition) throw new Error("Competizione classifica non riconosciuta");
+  const pageUrl=new URL(`${competition}/Classifica`,sourceUrl.origin).href; const pageResponse=await fetch(pageUrl,{headers:HEADERS}); const page=await pageResponse.text();
+  const token=page.match(/var\s+tckk\s*=\s*["']([^"']+)/i)?.[1]; const roundId=page.match(/var\s+roundID\s*=\s*["']([^"']+)/i)?.[1]; const matchDay=page.match(/var\s+currentMatchDay\s*=\s*["'](\d+)/i)?.[1]||"";
+  if(!token||!roundId) throw new Error("Dati classifica non disponibili");
+  const cookie=pageResponse.headers.get("set-cookie")?.split(";")[0]||"";
+  const fragmentUrl=new URL(`/Web/Views/Rankings/RankingView.php?tckk=${encodeURIComponent(token)}&category_id=${encodeURIComponent(roundId)}&match_day_id=${encodeURIComponent(matchDay)}&total=true&is_ranking_tab=true`,sourceUrl.origin);
+  const fragment=await fetch(fragmentUrl,{headers:{...HEADERS,"x-requested-with":"XMLHttpRequest",referer:pageUrl,...(cookie?{cookie}:{})}}); const html=await fragment.text();
+  return {competition:stripTitle(html.match(/<span[^>]*style=["'][^"']*font-size:20px[^"']*["'][^>]*>([\s\S]*?)<\/span>/i)?.[1]||"Campionato"),rows:parseStandings(html)};
+}
+function stripTitle(value){return value.replace(/<[^>]+>/g," ").replace(/\s+/g," ").trim();}
 const auth = { apikey:CONFIG.apiKey, Authorization:`Bearer ${CONFIG.apiKey}` };
 const stateResponse = await fetch(`${CONFIG.projectUrl}/rest/v1/app_state?id=eq.${encodeURIComponent(CONFIG.stateId)}&select=data`, { headers:auth });
 if (!stateResponse.ok) throw new Error(`Lettura stato fallita: ${stateResponse.status}`);
@@ -64,4 +91,11 @@ for (const source of sources.filter(item => item.enabled !== false && item.url))
   const saved = await fetch(`${CONFIG.projectUrl}/rest/v1/rpc/merge_calendar_results`, { method:"POST", headers:{...auth,"content-type":"application/json"}, body:JSON.stringify({p_source_type:source.type || "league",p_matches:matches}) });
   if (!saved.ok) throw new Error(`Salvataggio risultati fallito: ${saved.status} ${await saved.text()}`);
   console.log(`${source.name || source.type}: ${matches.length} risultati verificati`);
+}
+
+const leagueSource=sources.find(item=>item.enabled!==false&&item.type==="league"&&item.url);
+if(leagueSource){
+  const previous=Date.parse(leagueSource.snapshot?.standings?.updatedAt||0)||0; const localHour=Number(new Intl.DateTimeFormat("it-IT",{timeZone:"Europe/Rome",hour:"2-digit",hour12:false}).format(new Date())); const day=Number(new Intl.DateTimeFormat("en-US",{timeZone:"Europe/Rome",weekday:"short"}).format(new Date())==="Sat"?6:new Intl.DateTimeFormat("en-US",{timeZone:"Europe/Rome",weekday:"short"}).format(new Date())==="Sun"?0:-1);
+  const weekendAfterMatches=(day===0||day===6)&&localHour>=18; const due=Date.now()-previous>20*3600000||(weekendAfterMatches&&Date.now()-previous>2*3600000);
+  if(due){const standings=await fetchStandings(leagueSource.url);if(standings.rows.length){const saved=await fetch(`${CONFIG.projectUrl}/rest/v1/rpc/merge_calendar_standings`,{method:"POST",headers:{...auth,"content-type":"application/json"},body:JSON.stringify({p_rows:standings.rows,p_competition:standings.competition,p_updated_at:new Date().toISOString()})});if(!saved.ok)throw new Error(`Salvataggio classifica fallito: ${saved.status} ${await saved.text()}`);console.log(`Classifica: ${standings.rows.length} squadre`);}}
 }

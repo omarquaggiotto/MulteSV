@@ -7191,3 +7191,12 @@ createPaymentsExportCanvas = function(mode = "all") {
  list.forEach(function(e,i){const y=154+i*52;c.fillStyle=i%2?"#eef3f9":"#fff";c.fillRect(44,y,300,52);c.strokeStyle="#d7e0ec";c.strokeRect(44,y,300,52);const img=photos.find(function(n){return n.closest("[data-player-history]")?.getAttribute("data-player-history")===e.player&&n.complete&&n.naturalWidth});const x=57,s=36,r=18;c.save();c.beginPath();c.arc(x+r,y+26,r,0,Math.PI*2);c.clip();if(img){const k=Math.max(s/img.naturalWidth,s/img.naturalHeight),w=img.naturalWidth*k,h=img.naturalHeight*k;c.drawImage(img,x+(s-w)/2,y+8+(s-h)/2,w,h)}else{c.fillStyle=accent;c.fillRect(x,y+8,s,s);c.fillStyle="#fff";c.font="800 13px system-ui,sans-serif";c.textAlign="center";c.fillText(initials(e.player),x+r,y+27)}c.restore();c.textAlign="left";c.fillStyle="#172236";c.font="650 16px system-ui,sans-serif";c.fillText(e.player,104,y+26,225);c.fillStyle=e.summary.remaining>0?"#ba2a31":"#16835b";c.font="600 16px system-ui,sans-serif";c.fillText(e.summary.remaining>0?money(e.summary.remaining):money(0)+"  ✓ Saldato",504,y+26,135)});
  return canvas;
 };
+
+
+/* Precarica tutte le foto prima di comporre il PNG, anche fuori schermo. */
+const exportPaymentsImageWithVisiblePortraits = exportPaymentsImage;
+exportPaymentsImage = async function(mode = "all") {
+ const holder=document.createElement("div");holder.hidden=true;document.body.appendChild(holder);
+ const images=getSortedPlayers().map(function(player){const src=typeof getPlayerPhoto==="function"?getPlayerPhoto(player):"";if(!src)return Promise.resolve();const wrap=document.createElement("span");wrap.setAttribute("data-player-history",player);const img=document.createElement("img");img.className="player-list-photo";img.src=src;wrap.appendChild(img);holder.appendChild(wrap);return new Promise(function(done){if(img.complete)return done();img.onload=done;img.onerror=done})});
+ try{await Promise.all(images);return exportPaymentsImageWithVisiblePortraits(mode)}finally{holder.remove()}
+};

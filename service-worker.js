@@ -1,4 +1,4 @@
-const CACHE_NAME = "multefc-v62-season-save-close";
+const CACHE_NAME = "multefc-v70-calendar-mobile";
 const APP_SHELL = [
     "./",
     "./index.html",
@@ -7,6 +7,8 @@ const APP_SHELL = [
     "./birthdays.js",
     "./birthdays.css",
     "./next-match.js",
+    "./customization-lab.js",
+    "./customization-lab.css",
     "./manifest.json",
     "./assets/multe-sv-icon.png",
     "./san-vitale-logo.png",
@@ -82,6 +84,7 @@ self.addEventListener("fetch", event => {
             .then(cached => cached || fetch(request))
     );
 });
+
 
 
 

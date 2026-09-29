@@ -1,4 +1,4 @@
-/* =========================================================
+const img=photos.find(n=>n.closest("[data-player-history]")?.getAttribute("data-player-history")===entry.player&&n.complete&&n.naturalWidth),size=36/* =========================================================
    MulteFC
    APP.JS
    ========================================================= */

@@ -3574,7 +3574,7 @@ function openPlayerHistoryModal(player) {
     openModal(
         `Scheda giocatore`,
         `
-            <div class="player-profile-hero">${playerPortrait(player)}<div><small>SAN VITALE NEXT GEN</small><h3>${escapeHtml(player)}</h3><p>Stagione ${escapeHtml(state.season)}</p>${validBirthday(getBirthday(player))?'<p>🎂 '+getBirthday(player).split('-').reverse().join('/')+'</p>':''}</div></div>
+            <div class="player-profile-hero">${playerPortrait(player)}<div><small>SAN VITALE NEXT GEN</small><h3>${escapeHtml(player)}</h3><p>Stagione ${escapeHtml(state.season)}</p>${validBirthday(getBirthday(player))?'<p>🎂 '+getBirthday(player).split('-').reverse().join('/')+'</p>':''}</div><button class="player-photo-edit-button" id="editSharedPlayerPhoto" type="button" ${navigator.onLine?'':'disabled'} aria-label="Cambia la foto di ${escapeHtml(player)}">📷<span>Cambia foto</span></button></div>
             <div class="player-profile-status">${remainingTotal>0?'Da saldare · '+money(remainingTotal):'✓ Tutto saldato'}</div>
             <div class="player-share-controls"><label for="playerShareMonth">Mese da condividere</label><select id="playerShareMonth">${months.map(m=>`<option value="${m}">${escapeHtml(new Date(m+'-01T12:00:00').toLocaleDateString('it-IT',{month:'long',year:'numeric'}))}</option>`).join('')}</select><button class="btn secondary" id="sharePlayerSummary" type="button">Condividi scheda mensile</button></div><div class="player-history-summary">
                 <div><span>Dovuto stagione</span><strong>${money(dueTotal)}</strong></div>
@@ -3615,6 +3615,7 @@ function openPlayerHistoryModal(player) {
     document.querySelector("#modalRoot .modal")?.classList.add("player-profile-modal");
     const monthSelect=document.getElementById('playerShareMonth');if(months.length)monthSelect.value=months[months.length-1];
     document.getElementById('sharePlayerSummary').onclick=()=>exportPlayerSummary(player,monthSelect.value);
+    document.getElementById('editSharedPlayerPhoto').onclick=()=>openSharedPlayerPhotoEditor(player);
 }
 
 /* =========================================================

@@ -158,6 +158,40 @@ async function preparePlayerPhoto(file,onChange){
  }catch(error){throw new Error(error.message.includes('Foto troppo')?error.message:'Formato non leggibile. Prova una foto JPEG o PNG.');}finally{URL.revokeObjectURL(url);}
 }
 
+async function saveSharedPlayerPhoto(player,photo){
+ if(!navigator.onLine)throw new Error('Offline: la foto può essere cambiata solo con una connessione Internet.');
+ if(!state.players.includes(player))throw new Error('Giocatore non più presente nella rosa.');
+ if(!/^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(photo)||photo.length>45000)throw new Error('La foto preparata non è valida.');
+ if(LOCAL_CUSTOMIZATION_PREVIEW){
+  const previous=getPlayerPhoto(player);state.playerPhotoBackups={...(state.playerPhotoBackups||{})};
+  if(previous&&previous!==photo)state.playerPhotoBackups[player]=previous;
+  state.playerPhotos={...(state.playerPhotos||{}),[player]:photo};saveLocalState();return;
+ }
+ if(!supabaseClient||!cloudReady)throw new Error('Archivio online momentaneamente non disponibile.');
+ const {data,error}=await supabaseClient.rpc('update_player_photo',{p_player_name:player,p_photo_data:photo});
+ if(error)throw new Error(error.message?.includes('rate limit')?'La foto è stata cambiata da poco. Attendi qualche secondo e riprova.':'Salvataggio della foto non riuscito.');
+ if(data&&typeof data==='object'){state=normalizeIncomingState(data);saveLocalState();}else{await loadCloudState();}
+}
+
+async function restoreSharedPlayerPhoto(player){
+ if(!isAdmin)throw new Error('Ripristino disponibile solo per l’Admin.');
+ if(LOCAL_CUSTOMIZATION_PREVIEW){const backup=state.playerPhotoBackups?.[player];if(!backup)throw new Error('Nessuna foto precedente disponibile.');const current=getPlayerPhoto(player);state.playerPhotos={...(state.playerPhotos||{}),[player]:backup};state.playerPhotoBackups={...(state.playerPhotoBackups||{}),[player]:current};saveLocalState();return;}
+ const {data,error}=await supabaseClient.rpc('restore_player_photo',{p_player_name:player});if(error)throw new Error('Ripristino della foto non riuscito.');
+ if(data&&typeof data==='object'){state=normalizeIncomingState(data);saveLocalState();}else await loadCloudState();
+}
+
+function openSharedPlayerPhotoEditor(player){
+ if(!state.players.includes(player))return showToast('Giocatore non trovato.');
+ if(!navigator.onLine)return showToast('Offline: le foto sono in sola lettura.');
+ let pendingPhoto='',photoBusy=false;
+ openModal('Cambia foto',`<div class="form shared-photo-editor"><div class="shared-photo-player"><div id="playerPhotoPreview">${playerPortrait(player)}</div><div><small>FOTO GIOCATORE</small><strong>${escapeHtml(player)}</strong><span>La nuova immagine sarà visibile a tutta la squadra.</span></div></div><label class="btn shared-photo-picker" for="playerPhotoFile">📷 Scegli una foto</label><input id="playerPhotoFile" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" hidden>${isAdmin&&state.playerPhotoBackups?.[player]?'<button class="btn secondary" id="restoreSharedPhoto" type="button">↶ Ripristina foto precedente</button>':''}<p class="small muted" id="photoStatus">Scegli una foto e centra il volto prima di salvarla.</p><div id="photoCropControls" class="photo-crop-controls" hidden><canvas id="photoCropCanvas" width="320" height="320" aria-label="Anteprima ritaglio"></canvas><label>Zoom<input id="photoCropZoom" type="range" min="1" max="3" step="0.01" value="1"></label><label>Sposta a sinistra / destra<input id="photoCropX" type="range" min="0" max="1" step="0.01" value="0.5"></label><label>Sposta in alto / basso<input id="photoCropY" type="range" min="0" max="1" step="0.01" value="0.5"></label></div><div class="shared-photo-note">Cambierai soltanto la foto. Nome, compleanno, multe e pagamenti resteranno invariati.</div><div class="modal-actions"><button class="btn secondary" id="cancelSharedPhoto" type="button">Annulla</button><button class="btn" id="saveSharedPhoto" type="button" disabled>Salva foto</button></div></div>`);
+ const input=document.getElementById('playerPhotoFile'),preview=document.getElementById('playerPhotoPreview'),status=document.getElementById('photoStatus'),save=document.getElementById('saveSharedPhoto');
+ input.onchange=async event=>{const file=event.target.files?.[0];if(!file)return;photoBusy=true;save.disabled=true;status.textContent='Preparazione foto…';try{const result=await preparePlayerPhoto(file,data=>{pendingPhoto=data;preview.innerHTML=playerPortrait(player,data);});if(!preview.isConnected)return;pendingPhoto=result;preview.innerHTML=playerPortrait(player,result);status.textContent='Foto pronta. Controlla il ritaglio e premi Salva foto.';save.disabled=false;}catch(error){status.textContent=error.message;}finally{photoBusy=false;}};
+ document.getElementById('cancelSharedPhoto').onclick=()=>{closeModal();openPlayerHistoryModal(player);};
+ const restore=document.getElementById('restoreSharedPhoto');if(restore)restore.onclick=async()=>{restore.disabled=true;status.textContent='Ripristino in corso…';try{await restoreSharedPlayerPhoto(player);closeModal();render();openPlayerHistoryModal(player);showToast('Foto precedente ripristinata.');}catch(error){restore.disabled=false;status.textContent=error.message;}};
+ save.onclick=async()=>{if(photoBusy||!pendingPhoto)return;save.disabled=true;input.disabled=true;status.textContent='Salvataggio in corso…';try{await saveSharedPlayerPhoto(player,pendingPhoto);closeModal();render();openPlayerHistoryModal(player);showToast('Foto aggiornata per tutta la squadra.');}catch(error){save.disabled=false;input.disabled=false;status.textContent=error.message;}};
+}
+
 async function exportPlayerSummary(player,month){
  if(!state.players.includes(player)||!getPaymentMonthsToDate().includes(month))return;
  const summary=getPlayerMonthSummary(player,month),fines=state.fines.filter(f=>f.player===player&&String(f.date).slice(0,7)===month);

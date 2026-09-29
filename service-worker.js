@@ -1,4 +1,4 @@
-const CACHE_NAME = "multefc-v82-multario-assign";
+const CACHE_NAME = "multefc-v83-multario-prefill";
 const APP_SHELL = [
     "./",
     "./index.html",

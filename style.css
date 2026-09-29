@@ -1157,6 +1157,29 @@ h3 {
     white-space: nowrap;
 }
 
+.fine-date-shortcuts {
+    display: flex;
+    gap: 7px;
+    margin-top: 7px;
+}
+
+.fine-date-shortcuts button {
+    min-height: 32px;
+    padding: 6px 13px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--surface-2);
+    color: var(--text);
+    font-size: 11px;
+    font-weight: 900;
+}
+
+.fine-date-shortcuts button:active {
+    border-color: var(--primary);
+    color: var(--primary);
+    transform: scale(.97);
+}
+
 
 /* =========================================================
    PLAYERS

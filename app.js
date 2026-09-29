@@ -7174,3 +7174,20 @@ if ("serviceWorker" in navigator) {
         window.location.reload();
     });
 }
+
+
+/* Export Pagamenti coordinato con colori, stemma e foto squadra. */
+const createPaymentsExportCanvasBase = createPaymentsExportCanvas;
+createPaymentsExportCanvas = function(mode = "all") {
+ const base=createPaymentsExportCanvasBase(mode); if(!base)return null;
+ const m=getDisplayedPaymentMonth(), due=mode==="due";
+ const list=getSortedPlayers().map(function(p){return {player:p,summary:getPlayerMonthSummary(p,m)}}).filter(function(e){return !due||e.summary.remaining>0});
+ const scale=base.width/1133, canvas=document.createElement("canvas"); canvas.width=Math.round(698*scale); canvas.height=base.height;
+ const c=canvas.getContext("2d"); c.drawImage(base,0,0,canvas.width,base.height,0,0,canvas.width,base.height); c.scale(scale,scale); c.textBaseline="middle";
+ const css=getComputedStyle(document.documentElement), primary=state.teamCustomization?.primary||css.getPropertyValue("--primary").trim()||"#2563eb", accent=state.teamCustomization?.accent||css.getPropertyValue("--preview-accent").trim()||"#60a5fa";
+ c.fillStyle="#f7f9fc";c.fillRect(44,82,610,24);c.fillStyle="#5b677a";c.font="500 15px system-ui,sans-serif";c.fillText(due?"Solo i giocatori con un importo ancora da versare":"Situazione dei versamenti del mese selezionato",114,74);
+ c.fillStyle=primary;c.fillRect(44,108,610,46);c.fillStyle=accent;c.fillRect(44,108,7,46);c.fillStyle="#fff";c.font="700 14px system-ui,sans-serif";c.fillText("Giocatore",59,131);c.fillText("Versato",359,131);c.fillText("Rimanente",504,131);
+ const photos=Array.from(document.querySelectorAll("[data-player-history] img.player-list-photo"));
+ list.forEach(function(e,i){const y=154+i*52;c.fillStyle=i%2?"#eef3f9":"#fff";c.fillRect(44,y,300,52);c.strokeStyle="#d7e0ec";c.strokeRect(44,y,300,52);const img=photos.find(function(n){return n.closest("[data-player-history]")?.getAttribute("data-player-history")===e.player&&n.complete&&n.naturalWidth});const x=57,s=36,r=18;c.save();c.beginPath();c.arc(x+r,y+26,r,0,Math.PI*2);c.clip();if(img){const k=Math.max(s/img.naturalWidth,s/img.naturalHeight),w=img.naturalWidth*k,h=img.naturalHeight*k;c.drawImage(img,x+(s-w)/2,y+8+(s-h)/2,w,h)}else{c.fillStyle=accent;c.fillRect(x,y+8,s,s);c.fillStyle="#fff";c.font="800 13px system-ui,sans-serif";c.textAlign="center";c.fillText(initials(e.player),x+r,y+27)}c.restore();c.textAlign="left";c.fillStyle="#172236";c.font="650 16px system-ui,sans-serif";c.fillText(e.player,104,y+26,225);c.fillStyle=e.summary.remaining>0?"#ba2a31":"#16835b";c.font="600 16px system-ui,sans-serif";c.fillText(e.summary.remaining>0?money(e.summary.remaining):money(0)+"  ✓ Saldato",504,y+26,135)});
+ return canvas;
+};

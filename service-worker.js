@@ -1,4 +1,4 @@
-const CACHE_NAME = "multefc-v79-fine-checkbox-reset";
+const CACHE_NAME = "multefc-v80-rule-category-choice";
 const APP_SHELL = [
     "./",
     "./index.html",

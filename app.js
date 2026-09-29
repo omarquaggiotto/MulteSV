@@ -5555,10 +5555,11 @@ function openRuleModal(id = null) {
         ? state.rules.find(item => item.id === id)
         : null;
     const calculation = getRuleCalculation(rule);
-    const categorySuggestions = getSortedCategories([
-        ...PREFERRED_CATEGORY_ORDER,
-        ...state.rules.map(item => item.category)
-    ]);
+    const existingCategories = getSortedCategories(
+        state.rules.map(item => item.category)
+    );
+    const newCategoryValue = "__new_category__";
+    const initialCategoryValue = rule?.category || existingCategories[0] || newCategoryValue;
 
     openModal(
         id ? "Modifica regola" : "Nuova regola",
@@ -5568,14 +5569,24 @@ function openRuleModal(id = null) {
                 <div class="fine-section-title"><span>01</span><h3>Descrivi la regola</h3></div>
                 <div class="field">
                     <label>CATEGORIA</label>
-                    <input id="ruleCategory" type="text" list="ruleCategories"
-                        value="${escapeHtml(rule?.category || "")}"
-                        placeholder="Es. Allenamento">
-                    <datalist id="ruleCategories">
-                        ${categorySuggestions.map(category =>
-                            `<option value="${escapeHtml(category)}"></option>`
-                        ).join("")}
-                    </datalist>
+                    <select id="ruleCategorySelect">
+                        ${existingCategories.map(category => `
+                            <option value="${escapeHtml(category)}"
+                                ${category === initialCategoryValue ? "selected" : ""}>
+                                ${escapeHtml(category)}
+                            </option>
+                        `).join("")}
+                        <option value="${newCategoryValue}"
+                            ${initialCategoryValue === newCategoryValue ? "selected" : ""}>
+                            + Nuova categoria…
+                        </option>
+                    </select>
+                </div>
+
+                <div class="field" id="ruleNewCategoryField" hidden>
+                    <label>NOME NUOVA CATEGORIA</label>
+                    <input id="ruleNewCategory" type="text"
+                        placeholder="Es. Allenamento" autocomplete="off">
                 </div>
 
                 <div class="field">
@@ -5638,6 +5649,9 @@ function openRuleModal(id = null) {
     );
     document.querySelector("#modalRoot .modal")?.classList.add("rule-modal-refresh");
 
+    const categorySelect = document.getElementById("ruleCategorySelect");
+    const newCategoryField = document.getElementById("ruleNewCategoryField");
+    const newCategoryInput = document.getElementById("ruleNewCategory");
     const calculationSelect = document.getElementById("ruleCalculation");
     const calculationFields = {
         fixed: ["ruleFixedField"],
@@ -5656,10 +5670,21 @@ function openRuleModal(id = null) {
 
     calculationSelect.addEventListener("change", updateRuleCalculationFields);
     updateRuleCalculationFields();
+
+    function updateNewCategoryField() {
+        const creatingCategory = categorySelect.value === newCategoryValue;
+        newCategoryField.hidden = !creatingCategory;
+        if (creatingCategory) newCategoryInput.focus();
+    }
+
+    categorySelect.addEventListener("change", updateNewCategoryField);
+    updateNewCategoryField();
     document.getElementById("cancelRule").onclick = closeModal;
 
     document.getElementById("saveRule").onclick = () => {
-        const category = document.getElementById("ruleCategory").value.trim();
+        const category = categorySelect.value === newCategoryValue
+            ? newCategoryInput.value.trim()
+            : categorySelect.value.trim();
         const type = document.getElementById("ruleType").value.trim();
         const selectedCalculation = calculationSelect.value;
         const values = {

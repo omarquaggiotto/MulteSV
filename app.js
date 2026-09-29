@@ -3,7 +3,8 @@
    APP.JS
    ========================================================= */
 
-const STORAGE_KEY = "multefc_v1";
+const LOCAL_CUSTOMIZATION_PREVIEW = /^(?:localhost|127\.0\.0\.1)$/i.test(location.hostname);
+const STORAGE_KEY = LOCAL_CUSTOMIZATION_PREVIEW ? "multesv_customization_preview_v1" : "multefc_v1";
 const THEME_STORAGE_KEY = "multefc_theme_v1";
 const AUTO_BACKUP_STORAGE_KEY = "multefc_auto_backup_v1";
 const ADMIN_USERNAME = "admin";
@@ -11,7 +12,7 @@ const ADMIN_EMAIL = "admin@multefc.local";
 
 const SUPABASE_URL = "https://gzeyptkjdvrwzsjeijss.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_juzsgyE5TPcFwNxXZV0t8A_w3TOKMfj";
-const supabaseClient = window.supabase?.createClient
+const supabaseClient = !LOCAL_CUSTOMIZATION_PREVIEW && window.supabase?.createClient
     ? window.supabase.createClient(
         SUPABASE_URL,
         SUPABASE_PUBLISHABLE_KEY,
@@ -26,7 +27,7 @@ const supabaseClient = window.supabase?.createClient
     : null;
 
 let authUser = null;
-let isAdmin = false;
+let isAdmin = LOCAL_CUSTOMIZATION_PREVIEW;
 let cloudReady = false;
 let cloudChannel = null;
 let cloudSaveTimer = null;
@@ -317,6 +318,7 @@ let selectedPaymentMonth = "2026-08";
 let selectedFinePlayer = "all";
 let showAllRanking = false;
 let showMonthlySummary = false;
+let showAllOverduePlayers = false;
 let fineSearchQuery = "";
 let undoSnapshot = null;
 let undoTimer = null;
@@ -1061,6 +1063,13 @@ function getSortedPlayers(players = state.players) {
 function getSortedCategories(categories) {
     return [...new Set(categories.filter(Boolean))]
         .sort((left, right) => {
+            const leftCustom = Number(state.categorySettings?.[left]?.order);
+            const rightCustom = Number(state.categorySettings?.[right]?.order);
+            if (Number.isFinite(leftCustom) || Number.isFinite(rightCustom)) {
+                if (!Number.isFinite(leftCustom)) return 1;
+                if (!Number.isFinite(rightCustom)) return -1;
+                if (leftCustom !== rightCustom) return leftCustom - rightCustom;
+            }
             const leftIndex = PREFERRED_CATEGORY_ORDER.indexOf(left);
             const rightIndex = PREFERRED_CATEGORY_ORDER.indexOf(right);
 
@@ -1124,6 +1133,13 @@ function getFineCategoryTone(category) {
     if (normalized.includes("squadra")) return "fine-tone-team";
     if (normalized.includes("comportamento")) return "fine-tone-behaviour";
     return "fine-tone-default";
+}
+
+function getFineCategoryStyle(category) {
+    const color = state.categorySettings?.[category]?.color;
+    return /^#[0-9a-f]{6}$/i.test(color || "")
+        ? ` style="--category-color:${escapeHtml(color)};background:color-mix(in srgb,var(--category-color) 15%,var(--surface));color:var(--category-color)"`
+        : "";
 }
 
 
@@ -2148,13 +2164,14 @@ function renderHome() {
                             overduePlayers.length
                                 ? `
                                     <div class="overdue-list">
-                                        ${overduePlayers.map(item => `
+                                        ${overduePlayers.slice(0, showAllOverduePlayers ? overduePlayers.length : 5).map(item => `
                                             <div class="overdue-row">
                                                 <span>${escapeHtml(item.player)}</span>
                                                 <strong>${money(item.summary.remaining)}</strong>
                                             </div>
                                         `).join("")}
                                     </div>
+                                    ${overduePlayers.length > 5 ? `<button class="btn secondary overdue-toggle" id="toggleOverduePlayers" type="button">${showAllOverduePlayers ? "Mostra meno" : `Mostra tutti (${overduePlayers.length})`}</button>` : ""}
                                 `
                                 : `<p class="small muted">Tutti in regola per il mese di riferimento.</p>`
                         }
@@ -3214,8 +3231,10 @@ function openTeamCalendar() {
         list.innerHTML = [...groups.entries()].map(([month, monthMatches]) => {
             const monthLabel = new Date(`${month}-01T12:00:00`).toLocaleDateString("it-IT", { month: "long", year: "numeric" });
             return `<section class="team-calendar-month"><h3>${escapeHtml(monthLabel)}</h3>${monthMatches.map(match => {
-                const home = teams.get(Number(match.homeId))?.name || "Squadra casa";
-                const away = teams.get(Number(match.awayId))?.name || "Squadra ospite";
+                const homeTeam = teams.get(Number(match.homeId)) || {};
+                const awayTeam = teams.get(Number(match.awayId)) || {};
+                const home = homeTeam.name || "Squadra casa";
+                const away = awayTeam.name || "Squadra ospite";
                 const opponent = Number(match.homeId) === 1199590 ? away : home;
                 const awayMatch = Number(match.awayId) === 1199590;
                 const date = new Date(`${match.date}T12:00:00`);
@@ -3223,9 +3242,14 @@ function openTeamCalendar() {
                 const mapsUrl = awayMatch && venue?.address ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${venue.name || "Campo"}, ${venue.address}, Italia`)}` : "";
                 const matchUrl = safeExternalUrl(match.url);
                 const played = match.status === "played" || Boolean(match.result);
+                const teamBadge = (team, name, ownTeam) => {
+                    const logo = ownTeam ? getTeamLogo() : safeExternalUrl(team.logo);
+                    const initials = name.split(/\s+/).filter(Boolean).slice(0, 2).map(word => word[0]).join("").toUpperCase();
+                    return `<span class="team-calendar-crest">${logo ? `<img src="${escapeHtml(logo)}" alt="" loading="lazy" onerror="this.hidden=true;this.nextElementSibling.hidden=false"><b hidden>${escapeHtml(initials)}</b>` : `<b>${escapeHtml(initials)}</b>`}</span>`;
+                };
                 return `<article class="team-calendar-match" data-calendar-type="${match.competitionType === "cup" ? "cup" : "league"}">
-                    <div class="team-calendar-date"><strong>${date.getDate()}</strong><small>${date.toLocaleDateString("it-IT", { month: "short" })}</small></div>
-                    <div class="team-calendar-copy"><small>${match.competitionType === "cup" ? "Coppa" : "Campionato"} · ${awayMatch ? "Trasferta" : "Casa"}</small><strong>${escapeHtml(opponent)}</strong><span>${escapeHtml(match.place || venue?.name || "Campo da definire")}</span></div>
+                    <div class="team-calendar-date"><span>${date.toLocaleDateString("it-IT", { weekday: "short" }).replace(".", "")}</span><strong>${date.getDate()}</strong><small>${date.toLocaleDateString("it-IT", { month: "short" }).replace(".", "")}</small></div>
+                    <div class="team-calendar-copy"><small>${match.competitionType === "cup" ? "Coppa" : "Campionato"} · ${awayMatch ? "Trasferta" : "Casa"}</small><div class="team-calendar-teams"><div>${teamBadge(homeTeam, home, Number(match.homeId) === 1199590)}<strong>${escapeHtml(home)}</strong></div><em>VS</em><div>${teamBadge(awayTeam, away, Number(match.awayId) === 1199590)}<strong>${escapeHtml(away)}</strong></div></div><span>${escapeHtml(match.place || venue?.name || "Campo da definire")}</span></div>
                     <div class="team-calendar-result"><strong>${played ? escapeHtml(match.result || "—") : escapeHtml(match.time)}</strong><span>${played ? "FINALE" : `${Number(match.round) || "—"}ª G.`}</span></div>
                     ${(mapsUrl || matchUrl) ? `<div class="team-calendar-actions">${mapsUrl ? `<a href="${escapeHtml(mapsUrl)}" target="_blank" rel="noopener noreferrer">Apri Maps</a>` : ""}${matchUrl ? `<a href="${escapeHtml(matchUrl)}" target="_blank" rel="noopener noreferrer">Tuttocampo ↗</a>` : ""}</div>` : ""}
                 </article>`;
@@ -3628,7 +3652,7 @@ function renderFineRow(fine) {
                         </div>
 
                         <div class="fine-row-meta">
-                            <span class="fine-category ${getFineCategoryTone(fine.category)}">
+                            <span class="fine-category ${getFineCategoryTone(fine.category)}"${getFineCategoryStyle(fine.category)}>
                                 ${escapeHtml(fine.category)}
                             </span>
                             <span class="fine-date">${formatDate(fine.date)}</span>
@@ -3738,7 +3762,7 @@ function renderRules() {
                             <div class="multario-category-head">
 
                                 <div>
-                                    <span class="multario-category-badge ${getFineCategoryTone(category)}">
+                                    <span class="multario-category-badge ${getFineCategoryTone(category)}"${getFineCategoryStyle(category)}>
                                         ${escapeHtml(category)}
                                     </span>
 
@@ -6016,6 +6040,13 @@ document
             render();
         });
 
+    document
+        .getElementById("toggleOverduePlayers")
+        ?.addEventListener("click", () => {
+            showAllOverduePlayers = !showAllOverduePlayers;
+            render();
+        });
+
 
 
 
@@ -6695,6 +6726,8 @@ function openSeasonSetupModal(editCurrent = false) {
     const paymentEndMonth = Number(state.seasonConfig?.paymentEndMonth ?? 5);
     const paymentMode = state.seasonConfig?.paymentMode === "rolling" ? "rolling" : "due_day";
     const paymentDueDay = Math.min(28, Math.max(1, Number(state.seasonConfig?.paymentDueDay ?? 15) || 15));
+    const feeMode = state.teamCustomization?.feeMode || "monthly";
+    const entryFee = Math.max(0, Number(state.teamCustomization?.entryFee) || 0);
     const calendarMonthOptions = Array.from({ length: 12 }, (_, index) => {
         const month = index + 1;
         return `<option value="${month}">${getMonthName(month)}</option>`;
@@ -6712,7 +6745,9 @@ function openSeasonSetupModal(editCurrent = false) {
                 <div class="season-setup-title"><span>01</span><div><h3>Nuova annata</h3><p>Imposta stagione e collegamento al calendario.</p></div></div>
                 <div class="season-setup-grid">
                     <div class="field"><label for="newSeasonName">STAGIONE</label><input id="newSeasonName" type="text" value="${escapeHtml(nextSeason)}" placeholder="2027/28" inputmode="numeric" ${editCurrent ? "readonly" : ""}></div>
+                    <div class="field"><label for="newSeasonFeeMode">TIPO DI QUOTA</label><select id="newSeasonFeeMode"><option value="none" ${feeMode === "none" ? "selected" : ""}>Nessuna quota</option><option value="monthly" ${feeMode === "monthly" ? "selected" : ""}>Solo quota mensile</option><option value="entry" ${feeMode === "entry" ? "selected" : ""}>Solo quota d’ingresso</option><option value="monthly_entry" ${feeMode === "monthly_entry" ? "selected" : ""}>Quota d’ingresso, poi mensile</option></select></div>
                     <div class="field"><label for="newSeasonBase">QUOTA MENSILE ORDINARIA (€)</label><input id="newSeasonBase" type="number" min="0" step="0.5" value="${base}"></div>
+                    <div class="field"><label for="newSeasonEntryFee">QUOTA DEL PRIMO MESE / INGRESSO (€)</label><input id="newSeasonEntryFee" type="number" min="0" step="0.5" value="${entryFee}"><small>È l’unica quota del primo mese assegnato: non si somma alla quota mensile.</small></div>
                     <div class="field"><label for="newSeasonStartMonth">PRIMO MESE DI PAGAMENTO</label><select id="newSeasonStartMonth">${calendarMonthOptions}</select></div>
                     <div class="field"><label for="newSeasonEndMonth">ULTIMO MESE DI PAGAMENTO</label><select id="newSeasonEndMonth">${calendarMonthOptions}</select></div>
                     <div class="field"><label for="newSeasonPaymentMode">GESTIONE PAGAMENTO MULTE</label><select id="newSeasonPaymentMode"><option value="due_day" ${paymentMode === "due_day" ? "selected" : ""}>Scadenza mensile</option><option value="rolling" ${paymentMode === "rolling" ? "selected" : ""}>Mese corrente automatico</option></select><small>Con Mese corrente si passa al successivo solo quando tutti hanno saldato.</small></div>
@@ -6730,7 +6765,7 @@ function openSeasonSetupModal(editCurrent = false) {
             </section>
 
             <section class="season-setup-section">
-                <div class="season-setup-title"><span>02</span><div><h3>Quote mese per mese</h3><p>Modifica soltanto i mesi diversi dalla quota ordinaria.</p></div></div>
+                <div class="season-setup-title"><span>02</span><div><h3>Quote mensili mese per mese</h3><p>Valgono dal mese successivo all’ingresso. Nel primo mese si applica soltanto la quota indicata sopra.</p></div></div>
                 <div class="season-month-rates">
                     ${monthLabels.map(([number, label]) => {
                         const configured = state.seasonConfig?.monthOverrides?.[number];
@@ -6866,6 +6901,7 @@ function openSeasonSetupModal(editCurrent = false) {
             return;
         }
         const monthlyBase = Math.max(0, Number(baseInput.value) || 0);
+        state.teamCustomization = { ...(state.teamCustomization || {}), feeMode: document.getElementById("newSeasonFeeMode").value, entryFee: Math.max(0, Number(document.getElementById("newSeasonEntryFee").value) || 0), feesEnabled: document.getElementById("newSeasonFeeMode").value !== "none" };
         const paymentStartMonth = Number(startMonthInput.value);
         const paymentEndMonth = Number(endMonthInput.value);
         const paymentFrequency = "monthly";

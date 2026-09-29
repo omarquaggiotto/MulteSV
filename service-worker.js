@@ -1,4 +1,4 @@
-const CACHE_NAME = "multefc-v70-calendar-mobile";
+const CACHE_NAME = "multefc-v71-calendar-crests";
 const APP_SHELL = [
     "./",
     "./index.html",
@@ -84,6 +84,7 @@ self.addEventListener("fetch", event => {
             .then(cached => cached || fetch(request))
     );
 });
+
 
 
 

@@ -1,4 +1,4 @@
-const CACHE_NAME = "multefc-v72-payments-essential";
+const CACHE_NAME = "multefc-v73-shared-player-photos";
 const APP_SHELL = [
     "./",
     "./index.html",
@@ -84,7 +84,6 @@ self.addEventListener("fetch", event => {
             .then(cached => cached || fetch(request))
     );
 });
-
 
 
 

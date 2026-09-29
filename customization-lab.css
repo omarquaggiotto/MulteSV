@@ -24,6 +24,24 @@
 .settings-page,.settings-page>.card,.settings-page>.section-head,.settings-page>.data-management,.data-management>.card{width:100%;max-width:100%;box-sizing:border-box;margin-inline:0}.data-management{display:grid;gap:14px}.data-action-row{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:14px}.data-action-row .btn{min-width:110px}.customization-lab{width:100%}.custom-panel-note{margin:0;padding:0 15px 15px}.customization-lab #addManualMatch{display:block;width:calc(100% - 30px);margin:0 15px 15px}
 @media(max-width:560px){.data-action-row{grid-template-columns:1fr}.data-action-row .btn{width:100%}.customization-modal{width:calc(100vw - 16px)}}
 
+/* Calendario: layout leggibile e stabile anche sugli iPhone piu stretti. */
+@media(max-width:600px){
+ .team-calendar-backdrop{align-items:stretch;padding:0;overflow:hidden;background:var(--surface)}
+ .team-calendar-modal{width:100%;height:100dvh;max-height:none;padding:max(16px,env(safe-area-inset-top)) 16px max(16px,env(safe-area-inset-bottom));border-radius:0;overscroll-behavior:contain}
+ .team-calendar-modal>.row{position:sticky;top:calc(-1 * max(16px,env(safe-area-inset-top)));z-index:10;margin:-16px -16px 0;padding:max(16px,env(safe-area-inset-top)) 16px 10px;background:var(--surface);box-shadow:0 8px 14px color-mix(in srgb,var(--surface) 92%,transparent)}
+ .team-calendar-toolbar{flex-wrap:wrap;overflow:visible;gap:7px}
+ .team-calendar-filter{min-height:36px;padding:7px 11px}
+ .team-calendar-match{grid-template-columns:48px minmax(0,1fr) 54px;grid-template-areas:"date badge result" "teams teams teams" "actions actions actions";gap:9px 10px;padding:12px}
+ .team-calendar-date{grid-area:date;position:static;top:auto}
+ .team-calendar-copy{display:contents}
+ .team-calendar-copy>small{grid-area:badge;align-self:center;justify-self:start;max-width:100%;margin:0}
+ .team-calendar-teams{grid-area:teams;width:100%;margin-top:2px}
+ .team-calendar-copy>span{grid-area:teams;align-self:end;margin-top:0;padding-top:82px;pointer-events:none}
+ .team-calendar-result{grid-area:result;position:static;align-self:start;margin:0;padding-top:3px;text-align:right}
+ .team-calendar-actions{grid-area:actions;justify-content:center;margin-top:3px}
+ .team-calendar-teams strong{font-size:11px;-webkit-line-clamp:3}
+}
+
 /* Respiro uniforme nella pagina Gestione squadra. */
 .settings-page{width:calc(100% - 24px);max-width:760px;margin-inline:auto!important;padding-bottom:18px}
 .settings-page>.card,.settings-page>.data-management{margin-bottom:16px}

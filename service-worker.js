@@ -1,4 +1,4 @@
-const CACHE_NAME = "multefc-v81-fast-team-logos";
+const CACHE_NAME = "multefc-v82-multario-assign";
 const APP_SHELL = [
     "./",
     "./index.html",

@@ -3214,6 +3214,7 @@ function openTeamCalendar() {
         </div>
     `);
     document.querySelector("#modalRoot .modal")?.classList.add("team-calendar-modal");
+    document.querySelector("#modalRoot .modal-backdrop")?.classList.add("team-calendar-backdrop");
     const list = document.getElementById("teamCalendarList");
     const draw = filter => {
         const now = Date.now();

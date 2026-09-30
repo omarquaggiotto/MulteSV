@@ -50,6 +50,8 @@ const defaultState = {
     season: "2026/27",
 
     seasonConfig: {
+        tuttocampoTeamId: 1199590,
+        teamProfile: null,
         monthlyBase: 5,
         paymentStartMonth: 8,
         paymentEndMonth: 5,
@@ -319,6 +321,7 @@ let selectedFinePlayer = "all";
 let showAllRanking = false;
 let showMonthlySummary = false;
 let showAllOverduePlayers = false;
+let overdueMonthView = "previous";
 let fineSearchQuery = "";
 let undoSnapshot = null;
 let undoTimer = null;
@@ -362,6 +365,8 @@ function loadState() {
                 ? loaded.seasonConfig
                 : {};
             loaded.seasonConfig = {
+                tuttocampoTeamId: Number(savedSeasonConfig.tuttocampoTeamId) || 1199590,
+                teamProfile: savedSeasonConfig.teamProfile && typeof savedSeasonConfig.teamProfile === "object" ? structuredClone(savedSeasonConfig.teamProfile) : null,
                 monthlyBase: Math.max(0, Number(savedSeasonConfig.monthlyBase ?? 5) || 0),
                 paymentStartMonth: Math.min(12, Math.max(1, Number(savedSeasonConfig.paymentStartMonth ?? 8) || 8)),
                 paymentEndMonth: Math.min(12, Math.max(1, Number(savedSeasonConfig.paymentEndMonth ?? 5) || 5)),
@@ -493,6 +498,8 @@ function normalizeIncomingState(raw) {
     loaded.seasonArchives = Array.isArray(loaded.seasonArchives) ? loaded.seasonArchives : [];
     const savedConfig = loaded.seasonConfig && typeof loaded.seasonConfig === "object" ? loaded.seasonConfig : {};
     loaded.seasonConfig = {
+        tuttocampoTeamId: Number(savedConfig.tuttocampoTeamId) || 1199590,
+        teamProfile: savedConfig.teamProfile && typeof savedConfig.teamProfile === "object" ? structuredClone(savedConfig.teamProfile) : null,
         monthlyBase: Math.max(0, Number(savedConfig.monthlyBase ?? 5) || 0),
         paymentStartMonth: Math.min(12, Math.max(1, Number(savedConfig.paymentStartMonth ?? 8) || 8)),
         paymentEndMonth: Math.min(12, Math.max(1, Number(savedConfig.paymentEndMonth ?? 5) || 5)),
@@ -1523,6 +1530,13 @@ function getDisplayedPaymentMonth() {
             : months[0];
 }
 
+function getHomeDueMonth(today, currentMonth, paymentMonths, view = "previous") {
+    if (view === "current") return currentMonth;
+    const previousDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+    const previousMonth = `${previousDate.getFullYear()}-${String(previousDate.getMonth() + 1).padStart(2, "0")}`;
+    return paymentMonths.includes(previousMonth) ? previousMonth : currentMonth;
+}
+
 
 function getMonthlyBase(monthId) {
     const monthNumber = String(monthId || "").slice(5, 7);
@@ -1881,17 +1895,13 @@ function renderHome() {
 
     const unpaid = Math.max(0, total - totalPaid);
 
-    // Dal giorno configurato diventa esigibile il mese precedente.
+    // La vista resta disponibile anche prima del giorno di scadenza: passando
+    // al mese successivo mostra subito il mese precedente.
     const paymentDueDay = Math.min(28, Math.max(1, Number(state.seasonConfig?.paymentDueDay ?? 15) || 15));
     const rollingPayments = state.seasonConfig?.paymentMode === "rolling";
-    const overdueReference = !rollingPayments && today.getDate() >= paymentDueDay
-        ? new Date(today.getFullYear(), today.getMonth() - 1, 1)
-        : null;
     const overdueMonth = rollingPayments
         ? getRollingPaymentMonth()
-        : overdueReference
-            ? `${overdueReference.getFullYear()}-${String(overdueReference.getMonth() + 1).padStart(2, "0")}`
-            : null;
+        : getHomeDueMonth(today, currentMonth, paymentMonths, overdueMonthView);
     const overduePlayers = overdueMonth && paymentMonths.includes(overdueMonth)
         ? getSortedPlayers().map(player => ({
             player,
@@ -2248,11 +2258,12 @@ function renderHome() {
             overdueMonth
                 ? `
                     <div class="card overdue-card">
+                        ${!rollingPayments ? `<div class="overdue-month-switch" role="group" aria-label="Mese da visualizzare"><button type="button" data-overdue-month="current" class="${overdueMonthView === "current" ? "is-active" : ""}">Mese corrente</button><button type="button" data-overdue-month="previous" class="${overdueMonthView === "previous" ? "is-active" : ""}">Mese precedente</button></div>` : ""}
                         <div class="payment-due-heading">
                             <div class="payment-due-icon">€</div>
                             <div>
                                 <strong>Da saldare</strong>
-                                <div class="small muted">${escapeHtml(overdueMonthLabel)} · ${rollingPayments ? "passa al mese successivo quando tutti hanno pagato" : `dal giorno ${paymentDueDay} del mese successivo`}</div>
+                                <div class="small muted">${escapeHtml(overdueMonthLabel)} · ${rollingPayments ? "passa al mese successivo quando tutti hanno pagato" : overdueMonthView === "current" ? "situazione del mese corrente" : `scadenza configurata: giorno ${paymentDueDay}`}</div>
                             </div>
                             <span class="payment-due-count">${overduePlayers.length}</span>
                         </div>
@@ -4097,6 +4108,11 @@ function renderSettings() {
                     </div>
                     <button class="btn secondary" id="editSeasonConfig" type="button">Modifica</button>
                 </div>
+
+                ${LOCAL_CUSTOMIZATION_PREVIEW ? `<div class="data-action-row team-code-preview-row">
+                    <div><strong>Configura con codice Tuttocampo</strong><div class="small muted">Prova locale: rileva automaticamente squadra, stemma e competizioni senza modificare i dati online.</div></div>
+                    <div class="team-code-row-actions"><button class="btn secondary" id="refreshAllTeamInfo" type="button">↻ Aggiorna info</button><button class="btn secondary" id="openTeamCodeSetup" type="button">Configura</button></div>
+                </div>` : ""}
 
                 <div class="data-action-row">
                     <div>
@@ -6297,6 +6313,14 @@ document
             render();
         });
 
+    document.querySelectorAll("[data-overdue-month]").forEach(button => {
+        button.addEventListener("click", () => {
+            overdueMonthView = button.dataset.overdueMonth === "current" ? "current" : "previous";
+            showAllOverduePlayers = false;
+            render();
+        });
+    });
+
 
 
 
@@ -6697,6 +6721,12 @@ document
     document
         .getElementById("editSeasonConfig")
         ?.addEventListener("click", () => openSeasonSetupModal(true));
+    document
+        .getElementById("openTeamCodeSetup")
+        ?.addEventListener("click", openTeamCodeSetupModal);
+    document
+        .getElementById("refreshAllTeamInfo")
+        ?.addEventListener("click", openGeneralTeamRefreshModal);
 
     document
         .getElementById("changeAdminPassword")
@@ -6994,6 +7024,181 @@ function getSuggestedNextSeason() {
     return `${nextStart}/${String(nextStart + 1).slice(-2)}`;
 }
 
+async function resolveTuttocampoTeamCode(teamId) {
+    const normalized = String(teamId || "").trim();
+    if (!/^\d{5,10}$/.test(normalized)) throw new Error("Inserisci un codice Tuttocampo valido.");
+    if (LOCAL_CUSTOMIZATION_PREVIEW) {
+        const response = await fetch(`/__team-profile?teamId=${encodeURIComponent(normalized)}`, { cache: "no-store" });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(payload.error || "Squadra non trovata su Tuttocampo.");
+        return payload.profile;
+    }
+    if (!supabaseClient) throw new Error("Servizio di configurazione non disponibile.");
+    const { data, error } = await supabaseClient.functions.invoke("import-tuttocampo-calendar", {
+        body: { mode: "profile", teamId: Number(normalized) }
+    });
+    if (error) throw new Error(error.message || "Squadra non trovata su Tuttocampo.");
+    return data?.profile;
+}
+
+function applyVerifiedTeamProfile(profile) {
+    if (!profile || !Number(profile.teamId) || !/^https:\/\/www\.tuttocampo\.it\//i.test(profile.teamUrl || "") || !/^https:\/\/www\.tuttocampo\.it\//i.test(profile.calendarUrl || "")) {
+        throw new Error("Il profilo squadra non contiene collegamenti verificati.");
+    }
+    const currentConfig = state.seasonConfig || {};
+    const currentSources = Array.isArray(currentConfig.calendarSources) ? currentConfig.calendarSources : [];
+    const currentLeague = currentSources.find(source => source?.type === "league") || {};
+    const preservedSources = currentSources.filter(source => source?.type !== "league");
+    state.seasonConfig = {
+        ...currentConfig,
+        tuttocampoTeamId: Number(profile.teamId),
+        teamProfile: structuredClone(profile),
+        calendarSources: [
+            { ...currentLeague, type:"league", name:currentLeague.name || "Campionato", enabled:currentLeague.enabled !== false, url:profile.calendarUrl },
+            ...preservedSources
+        ]
+    };
+    state.teamCustomization = { ...(state.teamCustomization || {}), teamLink:profile.teamUrl };
+}
+
+function normalizeRosterPersonName(value) {
+    return String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/gi, " ").trim().toLocaleLowerCase("it");
+}
+
+function mergeSelectedRosterMembers(members, startMonth) {
+    const existingByName = new Map(state.players.map(name => [normalizeRosterPersonName(name), name]));
+    for (const member of members) {
+        const name = String(member?.name || "").trim();
+        const key = normalizeRosterPersonName(name);
+        if (!name || !key || existingByName.has(key)) continue;
+        state.players.push(name);
+        existingByName.set(key, name);
+        state.playerStartMonths = { ...(state.playerStartMonths || {}), [name]:startMonth };
+        if (/^\d{4}-\d{2}-\d{2}$/.test(member.birthDate || "")) state.playerBirthDates = { ...(state.playerBirthDates || {}), [name]:member.birthDate };
+        if (/^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(member.photoData || "")) state.playerPhotos = { ...(state.playerPhotos || {}), [name]:member.photoData };
+    }
+    state.players = getSortedPlayers(state.players);
+}
+
+async function resolveTuttocampoRoster(teamId) {
+    if (LOCAL_CUSTOMIZATION_PREVIEW) {
+        const response = await fetch(`/__team-roster?teamId=${encodeURIComponent(teamId)}`, { cache:"no-store" });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(payload.error || "Rosa non disponibile.");
+        return payload;
+    }
+    const { data, error } = await supabaseClient.functions.invoke("import-tuttocampo-calendar", { body:{ mode:"roster", teamId:Number(teamId) } });
+    if (error) throw new Error(error.message || "Rosa non disponibile.");
+    return data;
+}
+
+async function fetchRosterPhotoData(photoUrl) {
+    if (!LOCAL_CUSTOMIZATION_PREVIEW || !photoUrl) return "";
+    const response = await fetch(`/__team-photo?url=${encodeURIComponent(photoUrl)}`, { cache:"no-store" });
+    if (!response.ok) return "";
+    const blob = await response.blob();
+    const image = await createImageBitmap(blob);
+    const size = 480;
+    const canvas = document.createElement("canvas"); canvas.width = size; canvas.height = size;
+    const context = canvas.getContext("2d");
+    const scale = Math.max(size / image.width, size / image.height);
+    const width = image.width * scale, height = image.height * scale;
+    context.drawImage(image, (size - width) / 2, (size - height) / 2, width, height);
+    image.close?.();
+    return canvas.toDataURL("image/jpeg", .86);
+}
+
+function openTeamCodeSetupModal() {
+    if (!LOCAL_CUSTOMIZATION_PREVIEW) return;
+    const currentCode = state.seasonConfig?.tuttocampoTeamId || "1199590";
+    openModal("Configura da Tuttocampo", `
+        <div class="team-code-setup">
+            <section class="team-code-hero"><span>PROVA LOCALE</span><h3>Un solo codice per tutta la squadra</h3><p>La ricerca prepara nome, stemma, pagina ufficiale e campionato. Le coppe già configurate restano al sicuro finché non vengono riconosciute con certezza. Nessun dato viene salvato online.</p></section>
+            <label class="team-code-input"><span>CODICE SQUADRA TUTTOCAMPO</span><div><input id="tuttocampoTeamCode" inputmode="numeric" autocomplete="off" value="${escapeHtml(String(currentCode))}" placeholder="es. 1199590"><button class="btn" id="resolveTeamCode" type="button">Rileva squadra</button></div><small>È il numero presente nell’indirizzo della pagina della squadra.</small></label>
+            <div id="teamCodeResult" class="team-code-result"><p>Inserisci il codice e controlla l’anteprima prima di applicare la configurazione.</p></div>
+            <div class="modal-actions"><button class="btn secondary" id="cancelTeamCodeSetup" type="button">Chiudi</button><button class="btn" id="stageTeamCodeSetup" type="button" disabled>Usa nella prova locale</button></div>
+        </div>
+    `);
+    document.querySelector("#modalRoot .modal")?.classList.add("team-code-setup-modal");
+    const input = document.getElementById("tuttocampoTeamCode");
+    const resolveButton = document.getElementById("resolveTeamCode");
+    const applyButton = document.getElementById("stageTeamCodeSetup");
+    const result = document.getElementById("teamCodeResult");
+    let resolvedProfile = null;
+    const resolve = async () => {
+        resolveButton.disabled = true;
+        applyButton.disabled = true;
+        resolvedProfile = null;
+        result.className = "team-code-result is-loading";
+        result.innerHTML = "<p>Ricerca della squadra e delle competizioni…</p>";
+        try {
+            resolvedProfile = await resolveTuttocampoTeamCode(input.value);
+            const sources = Array.isArray(resolvedProfile.competitions) ? resolvedProfile.competitions : [];
+            result.className = "team-code-result is-ready";
+            result.innerHTML = `<div class="team-code-identity"><img src="${escapeHtml(resolvedProfile.logo)}" alt=""><div><small>SQUADRA TROVATA</small><strong>${escapeHtml(resolvedProfile.name)}</strong><span>Codice ${escapeHtml(String(resolvedProfile.teamId))}</span></div></div><div class="team-code-detected"><div><span>Pagina squadra</span><strong>Collegata</strong></div><div><span>Campionato</span><strong>${escapeHtml(resolvedProfile.league || "Rilevato")}</strong></div><div><span>Calendario</span><strong>Pronto</strong></div><div><span>Coppe rilevate</span><strong>${sources.filter(source => source.type === "cup").length}</strong></div></div><details><summary>Collegamenti rilevati</summary>${sources.map(source => `<p><b>${escapeHtml(source.name)}</b><small>${escapeHtml(source.url)}</small></p>`).join("") || "<p>Nessuna competizione aggiuntiva rilevata.</p>"}</details><p class="team-code-safe-note">Questa anteprima non modifica rosa, multe, pagamenti, Multario o password.</p>`;
+            applyButton.disabled = false;
+        } catch (error) {
+            result.className = "team-code-result is-error";
+            result.innerHTML = `<strong>Configurazione non trovata</strong><p>${escapeHtml(error.message || "Controllo non riuscito.")}</p>`;
+        } finally {
+            resolveButton.disabled = false;
+        }
+    };
+    resolveButton.onclick = resolve;
+    input.addEventListener("keydown", event => { if (event.key === "Enter") resolve(); });
+    input.addEventListener("input", () => { applyButton.disabled = true; resolvedProfile = null; });
+    document.getElementById("cancelTeamCodeSetup").onclick = closeModal;
+    applyButton.onclick = () => {
+        if (!resolvedProfile) return;
+        sessionStorage.setItem("multesv_team_profile_preview_v1", JSON.stringify(resolvedProfile));
+        applyVerifiedTeamProfile(resolvedProfile);
+        saveLocalState();
+        result.insertAdjacentHTML("beforeend", `<p class="team-code-staged">✓ Configurazione preparata soltanto per questa prova locale.</p>`);
+        applyButton.disabled = true;
+        applyButton.textContent = "Preparata";
+    };
+}
+
+async function openGeneralTeamRefreshModal() {
+    if (!LOCAL_CUSTOMIZATION_PREVIEW) return;
+    const staged = JSON.parse(sessionStorage.getItem("multesv_team_profile_preview_v1") || "null");
+    const teamId = staged?.teamId || state.seasonConfig?.tuttocampoTeamId || 1199590;
+    openModal("Aggiorna tutte le info", `
+        <div class="team-refresh-panel">
+            <div class="team-refresh-heading"><span class="team-refresh-spinner">↻</span><div><strong>Controllo completo in corso</strong><small>Codice Tuttocampo ${escapeHtml(String(teamId))}</small></div></div>
+            <div id="teamRefreshChecks" class="team-refresh-checks"><p>Collegamento a Tuttocampo…</p></div>
+            <p class="team-code-safe-note">Il controllo prepara una nuova versione delle informazioni. Non modifica rosa, multe, quote o pagamenti.</p>
+            <div class="modal-actions"><button class="btn secondary" id="closeTeamRefresh" type="button">Chiudi</button><button class="btn" id="stageTeamRefresh" type="button" disabled>Applica aggiornamento locale</button></div>
+        </div>
+    `);
+    const checks = document.getElementById("teamRefreshChecks");
+    const apply = document.getElementById("stageTeamRefresh");
+    document.getElementById("closeTeamRefresh").onclick = closeModal;
+    try {
+        const response = await fetch(`/__team-profile?teamId=${encodeURIComponent(teamId)}&refresh=1`, { cache: "no-store" });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(payload.error || "Controllo non riuscito.");
+        const report = payload.report || {};
+        const rows = [
+            ["Profilo squadra", report.profile], ["Stemma", report.logo], ["Calendario campionato", report.calendar],
+            ["Prossima partita", report.nextMatch], ["Risultati", report.results], ["Classifica", report.standings], ["Coppe", report.cups]
+        ];
+        checks.innerHTML = rows.map(([label,item]) => `<div class="team-refresh-check ${item?.ok ? "is-ok" : "is-warning"}"><i>${item?.ok ? "✓" : "!"}</i><span><strong>${escapeHtml(label)}</strong><small>${escapeHtml(item?.detail || "Da verificare")}</small></span></div>`).join("");
+        document.querySelector(".team-refresh-heading strong").textContent = "Controllo completato";
+        document.querySelector(".team-refresh-spinner").textContent = "✓";
+        apply.disabled = false;
+        apply.onclick = () => {
+            sessionStorage.setItem("multesv_team_refresh_preview_v1", JSON.stringify(payload));
+            apply.disabled = true; apply.textContent = "Aggiornato nella prova";
+            showToast("Informazioni aggiornate soltanto nella versione locale.");
+        };
+    } catch (error) {
+        checks.innerHTML = `<div class="team-refresh-check is-warning"><i>!</i><span><strong>Controllo interrotto</strong><small>${escapeHtml(error.message || "Riprova più tardi.")}</small></span></div>`;
+        document.querySelector(".team-refresh-heading strong").textContent = "Aggiornamento non completato";
+        document.querySelector(".team-refresh-spinner").textContent = "!";
+    }
+}
+
 function openSeasonSetupModal(editCurrent = false) {
     if (!requireOnlineAdmin()) return;
 
@@ -7011,6 +7216,7 @@ function openSeasonSetupModal(editCurrent = false) {
     const paymentDueDay = Math.min(28, Math.max(1, Number(state.seasonConfig?.paymentDueDay ?? 15) || 15));
     const feeMode = state.teamCustomization?.feeMode || "monthly";
     const entryFee = Math.max(0, Number(state.teamCustomization?.entryFee) || 0);
+    let pendingRosterCandidates = [];
     const calendarMonthOptions = Array.from({ length: 12 }, (_, index) => {
         const month = index + 1;
         return `<option value="${month}">${getMonthName(month)}</option>`;
@@ -7047,8 +7253,14 @@ function openSeasonSetupModal(editCurrent = false) {
                 </div>
             </section>
 
+            ${editCurrent ? "" : `<section class="season-setup-section season-roster-import">
+                <div class="season-setup-title"><span>02</span><div><h3>Rosa della nuova stagione</h3><p>Importazione facoltativa da Tuttocampo, con scelta persona per persona.</p></div></div>
+                <div class="season-roster-toolbar"><div><strong>Giocatori e staff</strong><small>Le persone già presenti mantengono nome personalizzato, foto, compleanno e storico.</small></div><button class="btn secondary" id="loadSeasonRoster" type="button">Importa da Tuttocampo</button></div>
+                <div id="seasonRosterResult" class="season-roster-result"><p>Nessuna modifica alla rosa finché non selezioni e avvii la nuova stagione.</p></div>
+            </section>`}
+
             <section class="season-setup-section">
-                <div class="season-setup-title"><span>02</span><div><h3>Quote mensili mese per mese</h3><p>Valgono dal mese successivo all’ingresso. Nel primo mese si applica soltanto la quota indicata sopra.</p></div></div>
+                <div class="season-setup-title"><span>${editCurrent ? "02" : "03"}</span><div><h3>Quote mensili mese per mese</h3><p>Valgono dal mese successivo all’ingresso. Nel primo mese si applica soltanto la quota indicata sopra.</p></div></div>
                 <div class="season-month-rates">
                     ${monthLabels.map(([number, label]) => {
                         const configured = state.seasonConfig?.monthOverrides?.[number];
@@ -7059,7 +7271,7 @@ function openSeasonSetupModal(editCurrent = false) {
             </section>
 
             <section class="season-setup-section season-change-summary">
-                <div class="season-setup-title"><span>03</span><div><h3>Cosa succede</h3><p>Controlla l’operazione prima di confermare.</p></div></div>
+                <div class="season-setup-title"><span>${editCurrent ? "03" : "04"}</span><div><h3>Cosa succede</h3><p>Controlla l’operazione prima di confermare.</p></div></div>
                 <div class="season-change-list">
                     <div><i>✓</i><span><strong>${state.players.length} giocatori mantenuti</strong><small>Date e foto saranno conservate; nella nuova stagione il mese di partenza sarà quello scelto sopra.</small></span></div>
                     <div><i>✓</i><span><strong>${state.rules.length} regole mantenute</strong><small>Il Multario non verrà modificato.</small></span></div>
@@ -7126,6 +7338,33 @@ function openSeasonSetupModal(editCurrent = false) {
         document.getElementById("newSeasonTeamLogo").value = "";
         showToast("Stemma originale pronto. Salva per applicarlo.");
     };
+    const rosterButton = document.getElementById("loadSeasonRoster");
+    if (rosterButton) rosterButton.onclick = async () => {
+        const result = document.getElementById("seasonRosterResult");
+        const teamId = Number(state.seasonConfig?.tuttocampoTeamId) || 1199590;
+        rosterButton.disabled = true; rosterButton.textContent = "Lettura…";
+        result.className = "season-roster-result is-loading"; result.innerHTML = "<p>Controllo della rosa e dello staff in corso…</p>";
+        try {
+            const roster = await resolveTuttocampoRoster(teamId);
+            pendingRosterCandidates = Array.isArray(roster.members) ? roster.members : [];
+            const existing = new Set(state.players.map(normalizeRosterPersonName));
+            if (!pendingRosterCandidates.length) {
+                const warning = (roster.warnings || []).join(" ") || "Nessuna persona pubblicata nella rosa Tuttocampo.";
+                result.className = "season-roster-result is-warning";
+                result.innerHTML = `<strong>Rosa non importata</strong><p>${escapeHtml(warning)}</p><small>I giocatori attuali e tutte le loro personalizzazioni restano invariati.</small>`;
+                return;
+            }
+            result.className = "season-roster-result is-ready";
+            result.innerHTML = `<div class="season-roster-summary"><strong>${pendingRosterCandidates.length} persone trovate</strong><button class="btn secondary" id="selectNewRosterMembers" type="button">Seleziona nuovi</button></div><div class="season-roster-list">${pendingRosterCandidates.map((member,index) => {
+                const alreadyPresent = existing.has(normalizeRosterPersonName(member.name));
+                return `<label class="season-roster-person ${alreadyPresent ? "is-existing" : ""}"><input type="checkbox" data-roster-index="${index}" ${alreadyPresent ? "checked disabled" : ""}><span class="season-roster-photo">${member.photoUrl ? `<img src="${escapeHtml(member.photoUrl)}" alt="">` : escapeHtml(initials(member.name))}</span><span><strong>${escapeHtml(member.name)}</strong><small>${alreadyPresent ? "Già presente · dati conservati" : [member.kind === "staff" ? "Staff" : "Giocatore", member.birthDate ? member.birthDate.split("-").reverse().join("/") : ""].filter(Boolean).join(" · ")}</small></span></label>`;
+            }).join("")}</div>${(roster.warnings || []).length ? `<p class="season-roster-warning">${escapeHtml(roster.warnings.join(" "))}</p>` : ""}`;
+            document.getElementById("selectNewRosterMembers").onclick = () => result.querySelectorAll("[data-roster-index]:not(:disabled)").forEach(input => { input.checked = true; });
+        } catch (error) {
+            pendingRosterCandidates = [];
+            result.className = "season-roster-result is-warning"; result.innerHTML = `<strong>Controllo non riuscito</strong><p>${escapeHtml(error.message || "Riprova più tardi.")}</p>`;
+        } finally { rosterButton.disabled = false; rosterButton.textContent = "Importa da Tuttocampo"; }
+    };
     document.querySelectorAll("[data-import-calendar]").forEach(button => {
         button.onclick = async () => {
             const type = button.dataset.importCalendar;
@@ -7156,7 +7395,7 @@ function openSeasonSetupModal(editCurrent = false) {
         input.addEventListener("input", () => { pendingCalendarImports[type] = null; });
     });
     document.getElementById("cancelSeasonSetup").onclick = closeModal;
-    applyButton.onclick = () => {
+    applyButton.onclick = async () => {
         if (!requireOnlineAdmin()) return;
         const season = seasonInput.value.trim();
         if (!/^\d{4}\/\d{2}$/.test(season)) {
@@ -7183,6 +7422,11 @@ function openSeasonSetupModal(editCurrent = false) {
             showToast("Verifica i link dei calendari prima di salvare.");
             return;
         }
+        const selectedRosterMembers = editCurrent ? [] : [...document.querySelectorAll("[data-roster-index]:checked:not(:disabled)")].map(input => pendingRosterCandidates[Number(input.dataset.rosterIndex)]).filter(Boolean);
+        if (selectedRosterMembers.length) {
+            applyButton.disabled = true; applyButton.textContent = "Preparo la rosa…";
+            await Promise.all(selectedRosterMembers.map(async member => { if (member.photoUrl) member.photoData = await fetchRosterPhotoData(member.photoUrl).catch(() => ""); }));
+        }
         const monthlyBase = Math.max(0, Number(baseInput.value) || 0);
         state.teamCustomization = { ...(state.teamCustomization || {}), feeMode: document.getElementById("newSeasonFeeMode").value, entryFee: Math.max(0, Number(document.getElementById("newSeasonEntryFee").value) || 0), feesEnabled: document.getElementById("newSeasonFeeMode").value !== "none" };
         const paymentStartMonth = Number(startMonthInput.value);
@@ -7199,6 +7443,8 @@ function openSeasonSetupModal(editCurrent = false) {
             state.season = season;
             state.teamLogo = pendingTeamLogo || getTeamLogo();
             state.seasonConfig = {
+                tuttocampoTeamId: Number(state.seasonConfig?.tuttocampoTeamId) || 1199590,
+                teamProfile: state.seasonConfig?.teamProfile ? structuredClone(state.seasonConfig.teamProfile) : null,
                 monthlyBase,
                 paymentStartMonth,
                 paymentEndMonth,
@@ -7233,6 +7479,8 @@ function openSeasonSetupModal(editCurrent = false) {
             season,
             teamLogo: pendingTeamLogo || getTeamLogo(),
             seasonConfig: {
+                tuttocampoTeamId: Number(state.seasonConfig?.tuttocampoTeamId) || 1199590,
+                teamProfile: state.seasonConfig?.teamProfile ? structuredClone(state.seasonConfig.teamProfile) : null,
                 monthlyBase,
                 paymentStartMonth,
                 paymentEndMonth,
@@ -7250,6 +7498,7 @@ function openSeasonSetupModal(editCurrent = false) {
             fines: [],
             payments: {}
         };
+        mergeSelectedRosterMembers(selectedRosterMembers, `${startYear}-${String(paymentStartMonth).padStart(2, "0")}`);
         selectedPaymentMonth = `${startYear}-${String(paymentStartMonth).padStart(2, "0")}`;
         saveState();
         applyImportedCalendar();

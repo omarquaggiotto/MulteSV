@@ -2,6 +2,9 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
 const ALLOWED_HOST = "www.tuttocampo.it";
 const TEAM_ID = 1199590;
+const serviceUser = String(Deno.env.get("TUTTOCAMPO_USERNAME") || "").trim();
+const servicePassword = String(Deno.env.get("TUTTOCAMPO_PASSWORD") || "");
+const requestHeaders = {"user-agent":"Mozilla/5.0 (iPhone; CPU iPhone OS 17_6 like Mac OS X) AppleWebKit/605.1.15","accept-language":"it-IT,it;q=0.9","referer":"https://www.tuttocampo.it/"};
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -16,6 +19,10 @@ function decode(value = "") {
 function absolute(value = "") {
   try { return new URL(value, "https://www.tuttocampo.it").href; } catch { return ""; }
 }
+
+function rememberCookies(response: Response, cookies: Map<string,string>) { const values=typeof response.headers.getSetCookie==="function"?response.headers.getSetCookie():[response.headers.get("set-cookie")].filter(Boolean) as string[]; for(const value of values){const pair=String(value).split(";",1)[0],at=pair.indexOf("=");if(at>0)cookies.set(pair.slice(0,at),pair.slice(at+1));} }
+function sessionHeaders(cookies?: Map<string,string>, extra: Record<string,string>={}) { const cookie=cookies?[...cookies].map(([name,value])=>`${name}=${value}`).join("; "):"";return{...requestHeaders,...(cookie?{cookie}:{}),...extra}; }
+async function serviceSession(){if(!serviceUser||!servicePassword)throw new Error("Account di servizio Tuttocampo non configurato");const cookies=new Map<string,string>();const landing=await fetch("https://www.tuttocampo.it/",{redirect:"follow",headers:sessionHeaders(cookies)});rememberCookies(landing,cookies);const body=new URLSearchParams({username:serviceUser,password:servicePassword,remind_me:"remind_me",destination_page:"https://www.tuttocampo.it/",submit_login:"Accedi"}),login=await fetch("https://www.tuttocampo.it/Web/Views/Login/LoginModal.php",{method:"POST",redirect:"manual",headers:sessionHeaders(cookies,{"content-type":"application/x-www-form-urlencoded","origin":"https://www.tuttocampo.it/"}),body});rememberCookies(login,cookies);if(!cookies.has("USER"))throw new Error("Accesso Tuttocampo non riuscito");return cookies;}
 
 function teamFromCell(cell: string) {
   const link = cell.match(/href=["']([^"']*\/Squadra\/[^"']*\/(\d+)\/Scheda)["'][^>]*class=["'][^"']*team-name[^"']*["'][^>]*>([\s\S]*?)<\/a>/i)
@@ -47,10 +54,12 @@ function parseRows(html: string) {
     let event: Record<string, string> = {};
     try { event = eventJson ? JSON.parse(eventJson) : {}; } catch { event = {}; }
     const dateText = text.match(/\b(\d{2})\/(\d{2})(?:\/(\d{2,4}))?\b/);
-    const time = event.startTime || text.match(/\b([01]\d|2[0-3]):([0-5]\d)\b/)?.[0] || "";
+    const dateTitle = decode(row[2].match(/title=["']([^"']*\bore\s+\d{1,2}:\d{2})["']/i)?.[1] || "");
+    const time = event.startTime || dateTitle.match(/\b(?:[01]?\d|2[0-3]):[0-5]\d\b/)?.[0]?.padStart(5,"0") || text.match(/\b([01]\d|2[0-3]):([0-5]\d)\b/)?.[0] || "";
     const goals = [...row[2].matchAll(/class=["'][^"']*goal[^"']*["'][^>]*title=["'][^"']*terminata[^"']*["'][^>]*>\s*(\d+)/gi)].map(x => x[1]);
     const eventDate = event.startDate || "";
-    const partialDate = eventDate || (dateText ? `${dateText[1]}/${dateText[2]}/${dateText[3] || ""}` : "");
+    const italianDate = dateTitle.match(/\b(\d{1,2})\s+(gennaio|febbraio|marzo|aprile|maggio|giugno|luglio|agosto|settembre|ottobre|novembre|dicembre)\b/i);
+    const partialDate = eventDate || (dateText ? `${dateText[1]}/${dateText[2]}/${dateText[3] || ""}` : italianDate ? `${italianDate[1].padStart(2,"0")}/${monthNumbers[italianDate[2].toLowerCase()]}/` : "");
     if (!partialDate || !time) continue;
     matches.push({ round, homeId: home.id, awayId: away.id, partialDate, time, place: event.location || "", result: goals.length === 2 ? `${goals[0]}-${goals[1]}` : "", status: goals.length === 2 ? "played" : "scheduled", url: absolute(row[1]) });
   }
@@ -105,19 +114,17 @@ function inferDate(partial: string, season: string) {
   return `${year}-${match[2]}-${match[1]}`;
 }
 
-async function fetchText(url: string) {
+async function fetchText(url: string, cookies?: Map<string,string>) {
   const response = await fetch(url, {
-    headers: {
-      "user-agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.6 Mobile/15E148 Safari/604.1",
+    headers: sessionHeaders(cookies, {
       "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-      "accept-language": "it-IT,it;q=0.9,en;q=0.7",
       "cache-control": "no-cache",
       "pragma": "no-cache",
-      "referer": "https://www.tuttocampo.it/",
       "upgrade-insecure-requests": "1",
-    },
+    }),
     redirect: "follow",
   });
+  if(cookies)rememberCookies(response,cookies);
   if (!response.ok) throw new Error(`Tuttocampo ha risposto ${response.status}`);
   const text = await response.text();
   if (text.length < 1000) throw new Error("Pagina Tuttocampo incompleta");
@@ -153,18 +160,17 @@ function parseResultRound(html: string, type: string) {
   return { teams:[...teams.values()], matches };
 }
 
-async function fetchResultRound(source: URL, round: number, type: string) {
+async function fetchResultRound(source: URL, round: number, type: string, cookies: Map<string,string>) {
   const competition = source.pathname.match(/^(\/[^/]+\/[^/]+\/[^/]+)/)?.[1];
   if (!competition) throw new Error("Competizione non riconosciuta");
   const pageUrl = new URL(`${competition}/Giornata${round}`, source.origin).href;
-  const pageResponse = await fetch(pageUrl, { headers:{ "user-agent":"Mozilla/5.0 (iPhone; CPU iPhone OS 17_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.6 Mobile/15E148 Safari/604.1", "accept-language":"it-IT,it;q=0.9", "referer":"https://www.tuttocampo.it/" } });
+  const pageResponse = await fetch(pageUrl, { headers:sessionHeaders(cookies) });rememberCookies(pageResponse,cookies);
   if (!pageResponse.ok) throw new Error(`Tuttocampo ha risposto ${pageResponse.status}`);
   const page = await pageResponse.text();
   const token = page.match(/var tckk='([^']+)'/)?.[1];
   if (!token) throw new Error("Token risultati non disponibile");
-  const cookie = pageResponse.headers.get("set-cookie")?.split(";")[0] || "";
   const fragmentUrl = new URL(`/Web/Views/Results/ResultsView.php?tckk=${encodeURIComponent(token)}&v=1`, source.origin);
-  const fragmentResponse = await fetch(fragmentUrl, { headers:{ "user-agent":"Mozilla/5.0 (iPhone; CPU iPhone OS 17_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.6 Mobile/15E148 Safari/604.1", "x-requested-with":"XMLHttpRequest", "referer":pageUrl, ...(cookie ? { cookie } : {}) } });
+  const fragmentResponse = await fetch(fragmentUrl, { headers:sessionHeaders(cookies,{"x-requested-with":"XMLHttpRequest","referer":pageUrl}) });rememberCookies(fragmentResponse,cookies);
   if (!fragmentResponse.ok) throw new Error(`Tuttocampo risultati ${fragmentResponse.status}`);
   return parseResultRound(await fragmentResponse.text(), type);
 }
@@ -204,12 +210,13 @@ Deno.serve(async req => {
     if (teamId !== TEAM_ID || url.protocol !== "https:" || url.hostname !== ALLOWED_HOST || !/\/(Calendario|Risultati)\/?$/i.test(url.pathname)) {
       return Response.json({ error: "Link Tuttocampo non valido" }, { status: 400, headers: corsHeaders });
     }
+    const cookies = await serviceSession();
     if (resultsOnly) {
       const rounds = [...new Set((Array.isArray(body.rounds) ? body.rounds : []).map(Number).filter(value => Number.isInteger(value) && value > 0 && value < 100))].slice(0,10);
       if (!rounds.length) throw new Error("Nessuna giornata da controllare");
       const teams = new Map<number, Record<string, unknown>>(); const matches: Record<string, unknown>[] = [];
       for (const round of rounds) {
-        const parsed = await fetchResultRound(url, round, type);
+        const parsed = await fetchResultRound(url, round, type, cookies);
         parsed.teams.forEach((team:any) => teams.set(Number(team.id),team)); matches.push(...parsed.matches);
       }
       return Response.json({ calendar:{ type, competition:"Risultati Tuttocampo", season:"", source:url.href, importedAt:new Date().toISOString(), teams:[...teams.values()], matches, venues:{} } }, { headers:{...corsHeaders,"content-type":"application/json"} });
@@ -218,10 +225,14 @@ Deno.serve(async req => {
     // selected. Resolve it to San Vitale's calendar so both links accepted by the
     // settings screen produce the same stable, team-only snapshot.
     const resolvedUrl = teamCalendarUrl(url);
-    const html = await fetchText(resolvedUrl);
+    const html = await fetchText(resolvedUrl, cookies);
     const pageTitle = decode(html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] || "");
     const season = decode(html.match(/(?:Stagione|stagione)\s*(20\d{2}\/\d{2})/i)?.[1] || "") || `${new Date().getUTCFullYear()}/${String(new Date().getUTCFullYear() + 1).slice(-2)}`;
     let parsed = parseRows(html);
+    if (!parsed.matches.length) {
+      const token=html.match(/var\s+tckk\s*=\s*["']([^"']+)/i)?.[1];
+      if(token){const fragment=await fetch(`https://www.tuttocampo.it/Web/Views/TeamCalendar/TeamCalendar.php?tckk=${encodeURIComponent(token)}&v=1`,{headers:sessionHeaders(cookies,{"accept":"text/html, */*; q=0.01","x-requested-with":"XMLHttpRequest","referer":resolvedUrl})});rememberCookies(fragment,cookies);if(fragment.ok)parsed=parseRows(await fragment.text());}
+    }
     if (!parsed.matches.length) parsed = parseEmbeddedEvents(html);
     const fallback = !parsed.matches.length ? currentCupFallback(type, url) : null;
     if (fallback) parsed = fallback;

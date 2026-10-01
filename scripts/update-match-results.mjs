@@ -7,6 +7,19 @@ const CONFIG = {
 
 const MONTHS = { gennaio:"01", febbraio:"02", marzo:"03", aprile:"04", maggio:"05", giugno:"06", luglio:"07", agosto:"08", settembre:"09", ottobre:"10", novembre:"11", dicembre:"12" };
 const HEADERS = { "user-agent":"Mozilla/5.0 (iPhone; CPU iPhone OS 17_6 like Mac OS X) AppleWebKit/605.1.15 Version/17.6 Mobile/15E148 Safari/604.1", "accept-language":"it-IT,it;q=0.9" };
+const TC_USER = String(process.env.TUTTOCAMPO_USERNAME || "").trim();
+const TC_PASSWORD = String(process.env.TUTTOCAMPO_PASSWORD || "");
+const COOKIES = new Map();
+function remember(response){ for(const value of response.headers.getSetCookie?.() || []){ const pair=value.split(";",1)[0], i=pair.indexOf("="); if(i>0) COOKIES.set(pair.slice(0,i),pair.slice(i+1)); } }
+function sessionHeaders(extra={}){ const cookie=[...COOKIES].map(([k,v])=>`${k}=${v}`).join("; "); return {...HEADERS,...(cookie?{cookie}:{}),...extra}; }
+async function login(){
+  if(!TC_USER || !TC_PASSWORD) throw new Error("Credenziali di servizio Tuttocampo mancanti");
+  const landing=await fetch("https://www.tuttocampo.it/",{headers:sessionHeaders(),redirect:"follow"}); remember(landing);
+  const body=new URLSearchParams({username:TC_USER,password:TC_PASSWORD,remind_me:"remind_me",destination_page:"https://www.tuttocampo.it/",submit_login:"Accedi"});
+  const response=await fetch("https://www.tuttocampo.it/Web/Views/Login/LoginModal.php",{method:"POST",headers:sessionHeaders({"content-type":"application/x-www-form-urlencoded",origin:"https://www.tuttocampo.it/"}),body,redirect:"manual"}); remember(response);
+  const profile=await fetch("https://www.tuttocampo.it/ProfiloUtente",{headers:sessionHeaders(),redirect:"follow"}); remember(profile);
+  if(!profile.ok || !COOKIES.size) throw new Error("Accesso di servizio Tuttocampo non riuscito");
+}
 
 function dateFrom(text) {
   const m = text.replace(/<[^>]+>/g," ").replace(/\s+/g," ").match(/(\d{1,2})\s+(gennaio|febbraio|marzo|aprile|maggio|giugno|luglio|agosto|settembre|ottobre|novembre|dicembre)\s+(20\d{2})/i);
@@ -38,13 +51,12 @@ async function roundResults(source, round, type) {
   const competition = sourceUrl.pathname.match(/^(\/[^/]+\/[^/]+\/[^/]+)/)?.[1];
   if (!competition) return [];
   const pageUrl = new URL(`${competition}/Giornata${round}`, sourceUrl.origin).href;
-  const pageResponse = await fetch(pageUrl, { headers:HEADERS });
+  const pageResponse = await fetch(pageUrl, { headers:sessionHeaders() }); remember(pageResponse);
   if (!pageResponse.ok) { console.warn(`Giornata ${round} non disponibile (${pageResponse.status}); sarà riprovata al prossimo controllo.`); return []; }
   const page = await pageResponse.text();
   const token = page.match(/var\s+tckk\s*=\s*["']([^"']+)/i)?.[1];
   if (!token) { console.warn(`Giornata ${round} temporaneamente non leggibile da TuttoCampo; sarà riprovata al prossimo controllo.`); return []; }
-  const cookie = pageResponse.headers.get("set-cookie")?.split(";")[0] || "";
-  const fragment = await fetch(new URL(`/Web/Views/Results/ResultsView.php?tckk=${encodeURIComponent(token)}&v=1`, sourceUrl.origin), { headers:{ ...HEADERS, "x-requested-with":"XMLHttpRequest", referer:pageUrl, ...(cookie ? {cookie} : {}) } });
+  const fragment = await fetch(new URL(`/Web/Views/Results/ResultsView.php?tckk=${encodeURIComponent(token)}&v=1`, sourceUrl.origin), { headers:sessionHeaders({"x-requested-with":"XMLHttpRequest",referer:pageUrl}) }); remember(fragment);
   if (!fragment.ok) { console.warn(`Risultati della giornata ${round} non disponibili (${fragment.status}); saranno riprovati.`); return []; }
   return parse(await fragment.text(), type);
 }
@@ -67,20 +79,20 @@ function parseStandings(html) {
 async function fetchStandings(source) {
   const sourceUrl=new URL(source); const competition=sourceUrl.pathname.match(/^(\/[^/]+\/[^/]+\/[^/]+)/)?.[1];
   if(!competition) { console.warn("Competizione classifica non riconosciuta; i dati esistenti restano invariati."); return null; }
-  const pageUrl=new URL(`${competition}/Classifica`,sourceUrl.origin).href; const pageResponse=await fetch(pageUrl,{headers:HEADERS});
+  const pageUrl=new URL(`${competition}/Classifica`,sourceUrl.origin).href; const pageResponse=await fetch(pageUrl,{headers:sessionHeaders()}); remember(pageResponse);
   if(!pageResponse.ok) { console.warn(`Classifica non disponibile (${pageResponse.status}); sarà riprovata al prossimo controllo.`); return null; }
   const page=await pageResponse.text();
   const token=page.match(/var\s+tckk\s*=\s*["']([^"']+)/i)?.[1]; const roundId=page.match(/var\s+roundID\s*=\s*["']([^"']+)/i)?.[1]; const matchDay=page.match(/var\s+currentMatchDay\s*=\s*["'](\d+)/i)?.[1]||"";
   if(!token||!roundId) { console.warn("Classifica temporaneamente non leggibile da TuttoCampo; sarà riprovata al prossimo controllo."); return null; }
-  const cookie=pageResponse.headers.get("set-cookie")?.split(";")[0]||"";
   const fragmentUrl=new URL(`/Web/Views/Rankings/RankingView.php?tckk=${encodeURIComponent(token)}&category_id=${encodeURIComponent(roundId)}&match_day_id=${encodeURIComponent(matchDay)}&total=true&is_ranking_tab=true`,sourceUrl.origin);
-  const fragment=await fetch(fragmentUrl,{headers:{...HEADERS,"x-requested-with":"XMLHttpRequest",referer:pageUrl,...(cookie?{cookie}:{})}});
+  const fragment=await fetch(fragmentUrl,{headers:sessionHeaders({"x-requested-with":"XMLHttpRequest",referer:pageUrl})}); remember(fragment);
   if(!fragment.ok) { console.warn(`Dettaglio classifica non disponibile (${fragment.status}); sarà riprovato.`); return null; }
   const html=await fragment.text();
   return {competition:stripTitle(html.match(/<span[^>]*style=["'][^"']*font-size:20px[^"']*["'][^>]*>([\s\S]*?)<\/span>/i)?.[1]||"Campionato"),rows:parseStandings(html)};
 }
 function stripTitle(value){return value.replace(/<[^>]+>/g," ").replace(/\s+/g," ").trim();}
 const auth = { apikey:CONFIG.apiKey, Authorization:`Bearer ${CONFIG.apiKey}` };
+await login();
 const stateResponse = await fetch(`${CONFIG.projectUrl}/rest/v1/app_state?id=eq.${encodeURIComponent(CONFIG.stateId)}&select=data`, { headers:auth });
 if (!stateResponse.ok) throw new Error(`Lettura stato fallita: ${stateResponse.status}`);
 const state = (await stateResponse.json())[0]?.data;

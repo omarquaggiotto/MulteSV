@@ -50,8 +50,6 @@ const defaultState = {
     season: "2026/27",
 
     seasonConfig: {
-        tuttocampoTeamId: 1199590,
-        teamProfile: null,
         monthlyBase: 5,
         paymentStartMonth: 8,
         paymentEndMonth: 5,
@@ -316,12 +314,11 @@ let deviceTheme = getDeviceTheme(state.theme);
 let currentPage = "home";
 let pageBeforeSettings = "home";
 let selectedMonth = "all";
-let selectedPaymentMonth = "2026-08";
+let selectedPaymentMonth = "";
 let selectedFinePlayer = "all";
 let showAllRanking = false;
 let showMonthlySummary = false;
 let showAllOverduePlayers = false;
-let overdueMonthView = "previous";
 let fineSearchQuery = "";
 let undoSnapshot = null;
 let undoTimer = null;
@@ -365,8 +362,6 @@ function loadState() {
                 ? loaded.seasonConfig
                 : {};
             loaded.seasonConfig = {
-                tuttocampoTeamId: Number(savedSeasonConfig.tuttocampoTeamId) || 1199590,
-                teamProfile: savedSeasonConfig.teamProfile && typeof savedSeasonConfig.teamProfile === "object" ? structuredClone(savedSeasonConfig.teamProfile) : null,
                 monthlyBase: Math.max(0, Number(savedSeasonConfig.monthlyBase ?? 5) || 0),
                 paymentStartMonth: Math.min(12, Math.max(1, Number(savedSeasonConfig.paymentStartMonth ?? 8) || 8)),
                 paymentEndMonth: Math.min(12, Math.max(1, Number(savedSeasonConfig.paymentEndMonth ?? 5) || 5)),
@@ -498,8 +493,6 @@ function normalizeIncomingState(raw) {
     loaded.seasonArchives = Array.isArray(loaded.seasonArchives) ? loaded.seasonArchives : [];
     const savedConfig = loaded.seasonConfig && typeof loaded.seasonConfig === "object" ? loaded.seasonConfig : {};
     loaded.seasonConfig = {
-        tuttocampoTeamId: Number(savedConfig.tuttocampoTeamId) || 1199590,
-        teamProfile: savedConfig.teamProfile && typeof savedConfig.teamProfile === "object" ? structuredClone(savedConfig.teamProfile) : null,
         monthlyBase: Math.max(0, Number(savedConfig.monthlyBase ?? 5) || 0),
         paymentStartMonth: Math.min(12, Math.max(1, Number(savedConfig.paymentStartMonth ?? 8) || 8)),
         paymentEndMonth: Math.min(12, Math.max(1, Number(savedConfig.paymentEndMonth ?? 5) || 5)),
@@ -731,19 +724,6 @@ function getTeamLogo() {
     return state?.teamLogo || "san-vitale-logo.png";
 }
 
-function optimizeTuttocampoLogoUrl(value) {
-    try {
-        const url = new URL(value);
-        if (url.protocol !== "https:") return "";
-        if (url.hostname === "b2-content.tuttocampo.it") {
-            url.pathname = url.pathname.replace(/\/Teams\/Original\//i, "/Teams/80/");
-        }
-        return url.href;
-    } catch {
-        return "";
-    }
-}
-
 function applyTeamBranding() {
     document.querySelectorAll("[data-team-logo]").forEach(image => { image.src = getTeamLogo(); });
     document.documentElement.style.setProperty("--team-logo-image", `url("${getTeamLogo().replace(/["\\]/g, "\\$&")}")`);
@@ -869,15 +849,12 @@ function queueCloudSave() {
 
     clearTimeout(cloudSaveTimer);
     cloudSaveTimer = setTimeout(async () => {
-        let { error } = await supabaseClient.rpc("save_app_state_versioned", { p_data: state });
-
-        // Compatibilità durante la pubblicazione: finché la nuova migrazione
-        // non è installata, il salvataggio esistente continua a funzionare.
-        if (error && (error.code === "PGRST202" || /save_app_state_versioned/i.test(error.message || ""))) {
-            ({ error } = await supabaseClient
-                .from("app_state")
-                .upsert({ id: "team", data: state }, { onConflict: "id" }));
-        }
+        const { error } = await supabaseClient
+            .from("app_state")
+            .upsert(
+                { id: "team", data: state },
+                { onConflict: "id" }
+            );
 
         if (error) {
             console.error("Errore salvataggio online:", error);
@@ -1008,7 +985,6 @@ async function initializeCloud() {
     if (!supabaseClient) return;
 
     await refreshAccess();
-    await ensureOnlineDailyBackup();
     const hasCloudState = await loadCloudState();
     cloudReady = hasCloudState !== null;
 
@@ -1527,14 +1503,16 @@ function getDisplayedPaymentMonth() {
         ? getRollingPaymentMonth()
         : months.includes(selectedPaymentMonth)
             ? selectedPaymentMonth
-            : months[0];
+            : getDefaultPaymentMonth();
 }
 
-function getHomeDueMonth(today, currentMonth, paymentMonths, view = "previous") {
-    if (view === "current") return currentMonth;
+function getDefaultPaymentMonth(today = new Date()) {
+    const months = getPaymentMonths();
     const previousDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
     const previousMonth = `${previousDate.getFullYear()}-${String(previousDate.getMonth() + 1).padStart(2, "0")}`;
-    return paymentMonths.includes(previousMonth) ? previousMonth : currentMonth;
+    if (months.includes(previousMonth)) return previousMonth;
+    const currentMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
+    return [...months].reverse().find(month => month < currentMonth) || months[0];
 }
 
 
@@ -1686,16 +1664,18 @@ function getPlayerMonthSummary(
             monthId
         );
 
-    const remaining =
-        Math.max(
-            0,
-            total - paid
-        );
+    const months = getPaymentMonths();
+    const monthIndex = months.indexOf(monthId);
+    const cumulativeDue = months.slice(0, monthIndex + 1).reduce((sum, month) =>
+        sum + getPlayerMonthBase(player, month) + getPlayerMonthFines(player, month), 0);
+    const cumulativePaid = months.reduce((sum, month) =>
+        sum + getPlayerMonthPayment(player, month), 0);
+    const remaining = Math.max(0, cumulativeDue - cumulativePaid);
 
     const overpayment =
         Math.max(
             0,
-            paid - total
+            cumulativePaid - cumulativeDue
         );
 
     return {
@@ -1820,7 +1800,6 @@ function render() {
 
     bindPageEvents();
     bindBirthdayEvents();
-    bindOnlineHistoryEvents();
     applyAccessMode();
     applyTeamBranding();
 
@@ -1895,13 +1874,17 @@ function renderHome() {
 
     const unpaid = Math.max(0, total - totalPaid);
 
-    // La vista resta disponibile anche prima del giorno di scadenza: passando
-    // al mese successivo mostra subito il mese precedente.
+    // Dal giorno configurato diventa esigibile il mese precedente.
     const paymentDueDay = Math.min(28, Math.max(1, Number(state.seasonConfig?.paymentDueDay ?? 15) || 15));
     const rollingPayments = state.seasonConfig?.paymentMode === "rolling";
+    const overdueReference = !rollingPayments && today.getDate() >= paymentDueDay
+        ? new Date(today.getFullYear(), today.getMonth() - 1, 1)
+        : null;
     const overdueMonth = rollingPayments
         ? getRollingPaymentMonth()
-        : getHomeDueMonth(today, currentMonth, paymentMonths, overdueMonthView);
+        : overdueReference
+            ? `${overdueReference.getFullYear()}-${String(overdueReference.getMonth() + 1).padStart(2, "0")}`
+            : null;
     const overduePlayers = overdueMonth && paymentMonths.includes(overdueMonth)
         ? getSortedPlayers().map(player => ({
             player,
@@ -2258,12 +2241,11 @@ function renderHome() {
             overdueMonth
                 ? `
                     <div class="card overdue-card">
-                        ${!rollingPayments ? `<div class="overdue-month-switch" role="group" aria-label="Mese da visualizzare"><button type="button" data-overdue-month="current" class="${overdueMonthView === "current" ? "is-active" : ""}">Mese corrente</button><button type="button" data-overdue-month="previous" class="${overdueMonthView === "previous" ? "is-active" : ""}">Mese precedente</button></div>` : ""}
                         <div class="payment-due-heading">
                             <div class="payment-due-icon">€</div>
                             <div>
                                 <strong>Da saldare</strong>
-                                <div class="small muted">${escapeHtml(overdueMonthLabel)} · ${rollingPayments ? "passa al mese successivo quando tutti hanno pagato" : overdueMonthView === "current" ? "situazione del mese corrente" : `scadenza configurata: giorno ${paymentDueDay}`}</div>
+                                <div class="small muted">${escapeHtml(overdueMonthLabel)} · ${rollingPayments ? "passa al mese successivo quando tutti hanno pagato" : `dal giorno ${paymentDueDay} del mese successivo`}</div>
                             </div>
                             <span class="payment-due-count">${overduePlayers.length}</span>
                         </div>
@@ -3292,7 +3274,7 @@ function openTeamStandings() {
     const standings = source?.snapshot?.standings || window.DEFAULT_STANDINGS;
     const rows = Array.isArray(standings?.rows) ? standings.rows : [];
     if (!rows.length) { showToast("Classifica non disponibile."); return; }
-    const safeLogo = optimizeTuttocampoLogoUrl;
+    const safeLogo = value => { try { const url = new URL(value); return url.protocol === "https:" ? url.href : ""; } catch { return ""; } };
     const updated = standings.updatedAt ? new Date(standings.updatedAt).toLocaleString("it-IT", { day:"2-digit", month:"short", hour:"2-digit", minute:"2-digit" }) : "";
     openModal("Classifica", `
         <div class="team-standings">
@@ -3324,7 +3306,9 @@ function openTeamCalendar() {
         .sort((left, right) => left.kickoff - right.kickoff);
     const hasLeague = matches.some(match => match.competitionType !== "cup");
     const hasCup = matches.some(match => match.competitionType === "cup");
-    const safeExternalUrl = value => optimizeTuttocampoLogoUrl(value);
+    const safeExternalUrl = value => {
+        try { const url = new URL(value); return url.protocol === "https:" ? url.href : ""; } catch { return ""; }
+    };
     openModal("Calendario partite", `
         <div class="team-calendar">
             <div class="team-calendar-toolbar" role="tablist" aria-label="Filtra calendario">
@@ -3904,13 +3888,7 @@ function renderRules() {
                                     .map(
                                         rule => `
 
-                                            <article
-                                                class="rule-row"
-                                                data-assign-rule="${rule.id}"
-                                                role="button"
-                                                tabindex="0"
-                                                aria-label="Assegna ${escapeHtml(rule.type)}"
-                                            >
+                                            <article class="rule-row">
 
                                                 <div class="rule-row-copy">
 
@@ -3938,8 +3916,6 @@ function renderRules() {
                                                         class="icon-mini"
                                                         data-edit-rule="${rule.id}"
                                                         type="button"
-                                                        aria-label="Modifica ${escapeHtml(rule.type)}"
-                                                        title="Modifica regola"
                                                     >
                                                         ✏️
                                                     </button>
@@ -3949,8 +3925,6 @@ function renderRules() {
                                                         class="icon-mini"
                                                         data-delete-rule="${rule.id}"
                                                         type="button"
-                                                        aria-label="Elimina ${escapeHtml(rule.type)}"
-                                                        title="Elimina regola"
                                                     >
                                                         🗑️
                                                     </button>
@@ -4089,8 +4063,6 @@ function renderSettings() {
                     <button class="btn secondary" id="exportAutoBackup" type="button">Esporta copia</button>
                 </div>
             </details>
-
-            ${renderOnlineHistorySettings()}
 
             <details class="card data-section settings-collapse"><summary><span class="settings-menu-icon" aria-hidden="true">▦</span><span class="settings-menu-label"><strong>Gestione stagione</strong><small>Quote, calendario e nuova annata</small></span><span class="settings-chevron" aria-hidden="true">⌄</span></summary><div class="data-section-heading"><p>Configura la quota mensile e prepara la prossima stagione mantenendo giocatori e Multario.</p></div>
 
@@ -4251,7 +4223,7 @@ function closeModal() {
    MODALE MULTA
    ========================================================= */
 
-function openFineModal(id = null, presetRuleId = null) {
+function openFineModal(id = null) {
 
     if (!requireOnlineAdmin()) return;
 
@@ -4287,9 +4259,7 @@ function openFineModal(id = null, presetRuleId = null) {
             rule =>
                 rule.id === fine.ruleId
         )
-        : state.rules.find(rule => String(rule.id) === String(presetRuleId)) || state.rules[0];
-
-    const initialRuleId = fine?.ruleId ?? initialRule?.id ?? null;
+        : state.rules[0];
 
 
     const initialCategory =
@@ -4327,8 +4297,8 @@ function openFineModal(id = null, presetRuleId = null) {
                         <div class="field">
                             <label>DESTINATARI</label>
                             <select id="fineRecipients">
-                                <option value="single" ${presetRuleId ? "" : "selected"}>Un giocatore</option>
-                                <option value="multiple" ${presetRuleId ? "selected" : ""}>Più giocatori</option>
+                                <option value="single">Un giocatore</option>
+                                <option value="multiple">Più giocatori</option>
                                 <option value="team">Tutta la squadra</option>
                             </select>
                         </div>
@@ -4446,8 +4416,8 @@ function openFineModal(id = null, presetRuleId = null) {
                                     <option
                                         value="${rule.id}"
                                         ${
-                                            String(initialRuleId) ===
-                                            String(rule.id)
+                                            fine?.ruleId ===
+                                            rule.id
                                                 ? "selected"
                                                 : ""
                                         }
@@ -4557,17 +4527,12 @@ function openFineModal(id = null, presetRuleId = null) {
 
                 </div>
 
-                <div class="fine-date-shortcuts" aria-label="Scelte rapide data">
-                    <button type="button" data-fine-date-offset="-1">Ieri</button>
-                    <button type="button" data-fine-date-offset="0">Oggi</button>
-                </div>
-
             </div>
 
 
             <!-- IMPORTO -->
 
-            <div class="field" id="fineAmountField">
+            <div class="field">
 
                 <label>
                     IMPORTO (€)
@@ -4642,8 +4607,6 @@ function openFineModal(id = null, presetRuleId = null) {
             "fineAmount"
         );
 
-    const amountField = document.getElementById("fineAmountField");
-
     const quantityField =
         document.getElementById(
             "quantityField"
@@ -4675,9 +4638,8 @@ function openFineModal(id = null, presetRuleId = null) {
     const recipientsSelect = document.getElementById("fineRecipients");
 
 
-    /* Nuova multa generica: nessun valore precompilato.
-       Dal Multario, invece, conserva categoria e regola scelte. */
-    if (!isEdit && !presetRuleId) {
+    /* Nuova multa: nessun valore precompilato. */
+    if (!isEdit) {
         const initialPlayerSelect = document.getElementById("finePlayer");
 
         initialPlayerSelect.insertAdjacentHTML(
@@ -4726,24 +4688,11 @@ function openFineModal(id = null, presetRuleId = null) {
 
     fineDateInput.addEventListener("input", updateFineDateValue);
     fineDateInput.addEventListener("change", updateFineDateValue);
-    document.querySelectorAll("[data-fine-date-offset]").forEach(button => {
-        button.addEventListener("click", () => {
-            const date = new Date();
-            date.setDate(date.getDate() + Number(button.dataset.fineDateOffset || 0));
-            fineDateInput.value = [
-                date.getFullYear(),
-                String(date.getMonth() + 1).padStart(2, "0"),
-                String(date.getDate()).padStart(2, "0")
-            ].join("-");
-            updateFineDateValue();
-        });
-    });
     updateFineDateValue();
 
 
     let refreshRuleMenu = () => {};
     const customFineMenus = [];
-    const personalizedRecipientValues = new Map();
 
     function setupFineMenu(select, trigger, menu) {
         function render() {
@@ -4803,43 +4752,6 @@ function openFineModal(id = null, presetRuleId = null) {
     );
     refreshRuleMenu = ruleMenu.render;
 
-    function updatePersonalizedRecipientValues() {
-        const container = document.getElementById("recipientVariableValues");
-        if (!container) return;
-        const rule = state.rules.find(item => String(item.id) === String(ruleSelect.value));
-        const calculation = getRuleCalculation(rule);
-        if (!rule || !["per_minute", "per_piece", "custom_min"].includes(calculation)) {
-            container.innerHTML = "";
-            container.hidden = true;
-            return;
-        }
-        const players = Array.from(document.querySelectorAll("[data-fine-recipient]:checked")).map(input => input.value);
-        if (!players.length) {
-            container.innerHTML = "";
-            container.hidden = true;
-            return;
-        }
-        const settings = calculation === "per_minute"
-            ? { label: "Minuti", min: 0, value: 0 }
-            : calculation === "per_piece"
-                ? { label: "Pezzi", min: 1, value: 1 }
-                : { label: "Importo €", min: Number(rule.minAmount) || 0, value: Number(rule.minAmount) || 0 };
-        container.hidden = false;
-        container.innerHTML = `<strong>VALORI PER GIOCATORE</strong>${players.map(player => {
-            const key = `${rule.id}|${player}`;
-            const value = personalizedRecipientValues.has(key) ? personalizedRecipientValues.get(key) : settings.value;
-            const total = calculation === "custom_min" ? Number(value) : calculateRuleAmount(rule, Number(value));
-            return `<label class="recipient-value-row"><span>${escapeHtml(player)}</span><small>${settings.label}</small><input type="number" min="${settings.min}" step="${calculation === "custom_min" ? "0.01" : "1"}" value="${value}" data-recipient-value="${escapeHtml(player)}" data-recipient-value-key="${escapeHtml(key)}"><output>${money(total)}</output></label>`;
-        }).join("")}`;
-        container.querySelectorAll("[data-recipient-value]").forEach(input => {
-            input.addEventListener("input", () => {
-                personalizedRecipientValues.set(input.dataset.recipientValueKey, input.value);
-                const value = Number(input.value);
-                input.nextElementSibling.textContent = money(calculation === "custom_min" ? value : calculateRuleAmount(rule, value));
-            });
-        });
-    }
-
     [categorySelect, ruleSelect, document.getElementById("finePlayer")]
         .filter(Boolean)
         .forEach(select => {
@@ -4857,9 +4769,6 @@ function openFineModal(id = null, presetRuleId = null) {
 
     function updateFineInterface() {
 
-        queueMicrotask(updatePersonalizedRecipientValues);
-        amountField.style.display = "";
-
         const selectedValue =
             ruleSelect.value;
        const selectedRule =
@@ -4876,7 +4785,6 @@ function openFineModal(id = null, presetRuleId = null) {
         const recipientMode = isEdit
             ? "single"
             : recipientsSelect?.value || "single";
-        const personalizedMode = recipientMode === "multiple";
 
         const rememberedPlayer =
             document.getElementById("finePlayer")?.value ||
@@ -4930,13 +4838,8 @@ function openFineModal(id = null, presetRuleId = null) {
                         </label>
                     `).join("")}
                 </div>
-                <div class="recipient-variable-values" id="recipientVariableValues" hidden></div>
                 <small class="muted">Seleziona i giocatori a cui applicare la multa.</small>
             `;
-
-            finePlayerContainer.querySelectorAll("[data-fine-recipient]").forEach(input => {
-                input.addEventListener("change", updatePersonalizedRecipientValues);
-            });
 
             finePlayerContainer
                 .querySelector("[data-select-all-recipients]")
@@ -4944,7 +4847,6 @@ function openFineModal(id = null, presetRuleId = null) {
                     finePlayerContainer
                         .querySelectorAll("[data-fine-recipient]")
                         .forEach(input => { input.checked = true; });
-                    updatePersonalizedRecipientValues();
                 });
 
             finePlayerContainer
@@ -4953,7 +4855,6 @@ function openFineModal(id = null, presetRuleId = null) {
                     finePlayerContainer
                         .querySelectorAll("[data-fine-recipient]")
                         .forEach(input => { input.checked = false; });
-                    updatePersonalizedRecipientValues();
                 });
         } else if (!document.getElementById("finePlayer")) {
             finePlayerContainer.innerHTML = `
@@ -5041,8 +4942,8 @@ function openFineModal(id = null, presetRuleId = null) {
             "per_minute"
         ) {
 
-            quantityField.style.display = personalizedMode ? "none" : "block";
-            if (personalizedMode) amountField.style.display = "none";
+            quantityField.style.display =
+                "block";
 
             quantityLabel.textContent =
                 "MINUTI DI RITARDO";
@@ -5080,8 +4981,8 @@ function openFineModal(id = null, presetRuleId = null) {
             "per_piece"
         ) {
 
-            quantityField.style.display = personalizedMode ? "none" : "block";
-            if (personalizedMode) amountField.style.display = "none";
+            quantityField.style.display =
+                "block";
 
             quantityLabel.textContent =
                 "NUMERO DI PEZZI";
@@ -5121,7 +5022,6 @@ function openFineModal(id = null, presetRuleId = null) {
 
             quantityField.style.display =
                 "none";
-            if (personalizedMode) amountField.style.display = "none";
 
             amountInput.disabled =
                 false;
@@ -5475,24 +5375,6 @@ document
                 amountInput.value
             );
 
-        const personalizedValues = new Map(
-            Array.from(document.querySelectorAll("[data-recipient-value]"))
-                .map(input => [input.dataset.recipientValue, Number(input.value)])
-        );
-        const usesPersonalizedValues = !isEdit && recipientMode === "multiple" &&
-            ["per_minute", "per_piece", "custom_min"].includes(getRuleCalculation(rule));
-
-        if (usesPersonalizedValues && selectedPlayers.some(playerName => {
-            const value = personalizedValues.get(playerName);
-            if (!Number.isFinite(value)) return true;
-            if (getRuleCalculation(rule) === "per_piece") return value < 1;
-            if (getRuleCalculation(rule) === "custom_min") return value < (Number(rule.minAmount) || 0);
-            return value < 0;
-        })) {
-            showToast("Controlla i valori inseriti per ogni giocatore.");
-            return;
-        }
-
         let quantity =
             null;
 
@@ -5626,15 +5508,6 @@ document
         else {
 
             selectedPlayers.forEach(playerName => {
-                const personalValue = personalizedValues.get(playerName);
-                const personalQuantity = usesPersonalizedValues && ["per_minute", "per_piece"].includes(getRuleCalculation(rule))
-                    ? personalValue
-                    : quantity;
-                const personalAmount = usesPersonalizedValues
-                    ? getRuleCalculation(rule) === "custom_min"
-                        ? personalValue
-                        : calculateRuleAmount(rule, personalValue)
-                    : amount;
                 state.fines.push({
                     id: generateId(),
                     date,
@@ -5642,11 +5515,11 @@ document
                     category: rule.category,
                     type: rule.type,
                     ruleId,
-                    quantity: personalQuantity,
+                    quantity,
                     custom: false,
                     team: recipientMode === "team",
                     createdAt: new Date().toISOString(),
-                    amount: personalAmount
+                    amount
                 });
             });
 
@@ -5691,11 +5564,10 @@ function openRuleModal(id = null) {
         ? state.rules.find(item => item.id === id)
         : null;
     const calculation = getRuleCalculation(rule);
-    const existingCategories = getSortedCategories(
-        state.rules.map(item => item.category)
-    );
-    const newCategoryValue = "__new_category__";
-    const initialCategoryValue = rule?.category || existingCategories[0] || newCategoryValue;
+    const categorySuggestions = getSortedCategories([
+        ...PREFERRED_CATEGORY_ORDER,
+        ...state.rules.map(item => item.category)
+    ]);
 
     openModal(
         id ? "Modifica regola" : "Nuova regola",
@@ -5705,24 +5577,14 @@ function openRuleModal(id = null) {
                 <div class="fine-section-title"><span>01</span><h3>Descrivi la regola</h3></div>
                 <div class="field">
                     <label>CATEGORIA</label>
-                    <select id="ruleCategorySelect">
-                        ${existingCategories.map(category => `
-                            <option value="${escapeHtml(category)}"
-                                ${category === initialCategoryValue ? "selected" : ""}>
-                                ${escapeHtml(category)}
-                            </option>
-                        `).join("")}
-                        <option value="${newCategoryValue}"
-                            ${initialCategoryValue === newCategoryValue ? "selected" : ""}>
-                            + Nuova categoria…
-                        </option>
-                    </select>
-                </div>
-
-                <div class="field" id="ruleNewCategoryField" hidden>
-                    <label>NOME NUOVA CATEGORIA</label>
-                    <input id="ruleNewCategory" type="text"
-                        placeholder="Es. Allenamento" autocomplete="off">
+                    <input id="ruleCategory" type="text" list="ruleCategories"
+                        value="${escapeHtml(rule?.category || "")}"
+                        placeholder="Es. Allenamento">
+                    <datalist id="ruleCategories">
+                        ${categorySuggestions.map(category =>
+                            `<option value="${escapeHtml(category)}"></option>`
+                        ).join("")}
+                    </datalist>
                 </div>
 
                 <div class="field">
@@ -5785,9 +5647,6 @@ function openRuleModal(id = null) {
     );
     document.querySelector("#modalRoot .modal")?.classList.add("rule-modal-refresh");
 
-    const categorySelect = document.getElementById("ruleCategorySelect");
-    const newCategoryField = document.getElementById("ruleNewCategoryField");
-    const newCategoryInput = document.getElementById("ruleNewCategory");
     const calculationSelect = document.getElementById("ruleCalculation");
     const calculationFields = {
         fixed: ["ruleFixedField"],
@@ -5806,21 +5665,10 @@ function openRuleModal(id = null) {
 
     calculationSelect.addEventListener("change", updateRuleCalculationFields);
     updateRuleCalculationFields();
-
-    function updateNewCategoryField() {
-        const creatingCategory = categorySelect.value === newCategoryValue;
-        newCategoryField.hidden = !creatingCategory;
-        if (creatingCategory) newCategoryInput.focus();
-    }
-
-    categorySelect.addEventListener("change", updateNewCategoryField);
-    updateNewCategoryField();
     document.getElementById("cancelRule").onclick = closeModal;
 
     document.getElementById("saveRule").onclick = () => {
-        const category = categorySelect.value === newCategoryValue
-            ? newCategoryInput.value.trim()
-            : categorySelect.value.trim();
+        const category = document.getElementById("ruleCategory").value.trim();
         const type = document.getElementById("ruleType").value.trim();
         const selectedCalculation = calculationSelect.value;
         const values = {
@@ -6313,14 +6161,6 @@ document
             render();
         });
 
-    document.querySelectorAll("[data-overdue-month]").forEach(button => {
-        button.addEventListener("click", () => {
-            overdueMonthView = button.dataset.overdueMonth === "current" ? "current" : "previous";
-            showAllOverduePlayers = false;
-            render();
-        });
-    });
-
 
 
 
@@ -6412,24 +6252,6 @@ document
             () =>
                 openRuleModal()
         );
-
-
-    /* =========================
-       ASSEGNA DAL MULTARIO
-       ========================= */
-
-    document
-        .querySelectorAll("[data-assign-rule]")
-        .forEach(row => {
-            const assign = event => {
-                if (event.target.closest("[data-edit-rule], [data-delete-rule]")) return;
-                if (event.type === "keydown" && !["Enter", " "].includes(event.key)) return;
-                event.preventDefault();
-                openFineModal(null, row.dataset.assignRule);
-            };
-            row.addEventListener("click", assign);
-            row.addEventListener("keydown", assign);
-        });
 
 
     /* =========================
@@ -7041,79 +6863,12 @@ async function resolveTuttocampoTeamCode(teamId) {
     return data?.profile;
 }
 
-function applyVerifiedTeamProfile(profile) {
-    if (!profile || !Number(profile.teamId) || !/^https:\/\/www\.tuttocampo\.it\//i.test(profile.teamUrl || "") || !/^https:\/\/www\.tuttocampo\.it\//i.test(profile.calendarUrl || "")) {
-        throw new Error("Il profilo squadra non contiene collegamenti verificati.");
-    }
-    const currentConfig = state.seasonConfig || {};
-    const currentSources = Array.isArray(currentConfig.calendarSources) ? currentConfig.calendarSources : [];
-    const currentLeague = currentSources.find(source => source?.type === "league") || {};
-    const preservedSources = currentSources.filter(source => source?.type !== "league");
-    state.seasonConfig = {
-        ...currentConfig,
-        tuttocampoTeamId: Number(profile.teamId),
-        teamProfile: structuredClone(profile),
-        calendarSources: [
-            { ...currentLeague, type:"league", name:currentLeague.name || "Campionato", enabled:currentLeague.enabled !== false, url:profile.calendarUrl },
-            ...preservedSources
-        ]
-    };
-    state.teamCustomization = { ...(state.teamCustomization || {}), teamLink:profile.teamUrl };
-}
-
-function normalizeRosterPersonName(value) {
-    return String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/gi, " ").trim().toLocaleLowerCase("it");
-}
-
-function mergeSelectedRosterMembers(members, startMonth) {
-    const existingByName = new Map(state.players.map(name => [normalizeRosterPersonName(name), name]));
-    for (const member of members) {
-        const name = String(member?.name || "").trim();
-        const key = normalizeRosterPersonName(name);
-        if (!name || !key || existingByName.has(key)) continue;
-        state.players.push(name);
-        existingByName.set(key, name);
-        state.playerStartMonths = { ...(state.playerStartMonths || {}), [name]:startMonth };
-        if (/^\d{4}-\d{2}-\d{2}$/.test(member.birthDate || "")) state.playerBirthDates = { ...(state.playerBirthDates || {}), [name]:member.birthDate };
-        if (/^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(member.photoData || "")) state.playerPhotos = { ...(state.playerPhotos || {}), [name]:member.photoData };
-    }
-    state.players = getSortedPlayers(state.players);
-}
-
-async function resolveTuttocampoRoster(teamId) {
-    if (LOCAL_CUSTOMIZATION_PREVIEW) {
-        const response = await fetch(`/__team-roster?teamId=${encodeURIComponent(teamId)}`, { cache:"no-store" });
-        const payload = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(payload.error || "Rosa non disponibile.");
-        return payload;
-    }
-    const { data, error } = await supabaseClient.functions.invoke("import-tuttocampo-calendar", { body:{ mode:"roster", teamId:Number(teamId) } });
-    if (error) throw new Error(error.message || "Rosa non disponibile.");
-    return data;
-}
-
-async function fetchRosterPhotoData(photoUrl) {
-    if (!LOCAL_CUSTOMIZATION_PREVIEW || !photoUrl) return "";
-    const response = await fetch(`/__team-photo?url=${encodeURIComponent(photoUrl)}`, { cache:"no-store" });
-    if (!response.ok) return "";
-    const blob = await response.blob();
-    const image = await createImageBitmap(blob);
-    const size = 480;
-    const canvas = document.createElement("canvas"); canvas.width = size; canvas.height = size;
-    const context = canvas.getContext("2d");
-    const scale = Math.max(size / image.width, size / image.height);
-    const width = image.width * scale, height = image.height * scale;
-    context.drawImage(image, (size - width) / 2, (size - height) / 2, width, height);
-    image.close?.();
-    return canvas.toDataURL("image/jpeg", .86);
-}
-
 function openTeamCodeSetupModal() {
     if (!LOCAL_CUSTOMIZATION_PREVIEW) return;
     const currentCode = state.seasonConfig?.tuttocampoTeamId || "1199590";
     openModal("Configura da Tuttocampo", `
         <div class="team-code-setup">
-            <section class="team-code-hero"><span>PROVA LOCALE</span><h3>Un solo codice per tutta la squadra</h3><p>La ricerca prepara nome, stemma, pagina ufficiale e campionato. Le coppe già configurate restano al sicuro finché non vengono riconosciute con certezza. Nessun dato viene salvato online.</p></section>
+            <section class="team-code-hero"><span>PROVA LOCALE</span><h3>Un solo codice per tutta la squadra</h3><p>La ricerca prepara nome, stemma, pagina ufficiale, campionato, calendario e coppe. Nessun dato viene salvato online.</p></section>
             <label class="team-code-input"><span>CODICE SQUADRA TUTTOCAMPO</span><div><input id="tuttocampoTeamCode" inputmode="numeric" autocomplete="off" value="${escapeHtml(String(currentCode))}" placeholder="es. 1199590"><button class="btn" id="resolveTeamCode" type="button">Rileva squadra</button></div><small>È il numero presente nell’indirizzo della pagina della squadra.</small></label>
             <div id="teamCodeResult" class="team-code-result"><p>Inserisci il codice e controlla l’anteprima prima di applicare la configurazione.</p></div>
             <div class="modal-actions"><button class="btn secondary" id="cancelTeamCodeSetup" type="button">Chiudi</button><button class="btn" id="stageTeamCodeSetup" type="button" disabled>Usa nella prova locale</button></div>
@@ -7151,8 +6906,6 @@ function openTeamCodeSetupModal() {
     applyButton.onclick = () => {
         if (!resolvedProfile) return;
         sessionStorage.setItem("multesv_team_profile_preview_v1", JSON.stringify(resolvedProfile));
-        applyVerifiedTeamProfile(resolvedProfile);
-        saveLocalState();
         result.insertAdjacentHTML("beforeend", `<p class="team-code-staged">✓ Configurazione preparata soltanto per questa prova locale.</p>`);
         applyButton.disabled = true;
         applyButton.textContent = "Preparata";
@@ -7216,7 +6969,6 @@ function openSeasonSetupModal(editCurrent = false) {
     const paymentDueDay = Math.min(28, Math.max(1, Number(state.seasonConfig?.paymentDueDay ?? 15) || 15));
     const feeMode = state.teamCustomization?.feeMode || "monthly";
     const entryFee = Math.max(0, Number(state.teamCustomization?.entryFee) || 0);
-    let pendingRosterCandidates = [];
     const calendarMonthOptions = Array.from({ length: 12 }, (_, index) => {
         const month = index + 1;
         return `<option value="${month}">${getMonthName(month)}</option>`;
@@ -7253,14 +7005,8 @@ function openSeasonSetupModal(editCurrent = false) {
                 </div>
             </section>
 
-            ${editCurrent ? "" : `<section class="season-setup-section season-roster-import">
-                <div class="season-setup-title"><span>02</span><div><h3>Rosa della nuova stagione</h3><p>Importazione facoltativa da Tuttocampo, con scelta persona per persona.</p></div></div>
-                <div class="season-roster-toolbar"><div><strong>Giocatori e staff</strong><small>Le persone già presenti mantengono nome personalizzato, foto, compleanno e storico.</small></div><button class="btn secondary" id="loadSeasonRoster" type="button">Importa da Tuttocampo</button></div>
-                <div id="seasonRosterResult" class="season-roster-result"><p>Nessuna modifica alla rosa finché non selezioni e avvii la nuova stagione.</p></div>
-            </section>`}
-
             <section class="season-setup-section">
-                <div class="season-setup-title"><span>${editCurrent ? "02" : "03"}</span><div><h3>Quote mensili mese per mese</h3><p>Valgono dal mese successivo all’ingresso. Nel primo mese si applica soltanto la quota indicata sopra.</p></div></div>
+                <div class="season-setup-title"><span>02</span><div><h3>Quote mensili mese per mese</h3><p>Valgono dal mese successivo all’ingresso. Nel primo mese si applica soltanto la quota indicata sopra.</p></div></div>
                 <div class="season-month-rates">
                     ${monthLabels.map(([number, label]) => {
                         const configured = state.seasonConfig?.monthOverrides?.[number];
@@ -7271,7 +7017,7 @@ function openSeasonSetupModal(editCurrent = false) {
             </section>
 
             <section class="season-setup-section season-change-summary">
-                <div class="season-setup-title"><span>${editCurrent ? "03" : "04"}</span><div><h3>Cosa succede</h3><p>Controlla l’operazione prima di confermare.</p></div></div>
+                <div class="season-setup-title"><span>03</span><div><h3>Cosa succede</h3><p>Controlla l’operazione prima di confermare.</p></div></div>
                 <div class="season-change-list">
                     <div><i>✓</i><span><strong>${state.players.length} giocatori mantenuti</strong><small>Date e foto saranno conservate; nella nuova stagione il mese di partenza sarà quello scelto sopra.</small></span></div>
                     <div><i>✓</i><span><strong>${state.rules.length} regole mantenute</strong><small>Il Multario non verrà modificato.</small></span></div>
@@ -7338,33 +7084,6 @@ function openSeasonSetupModal(editCurrent = false) {
         document.getElementById("newSeasonTeamLogo").value = "";
         showToast("Stemma originale pronto. Salva per applicarlo.");
     };
-    const rosterButton = document.getElementById("loadSeasonRoster");
-    if (rosterButton) rosterButton.onclick = async () => {
-        const result = document.getElementById("seasonRosterResult");
-        const teamId = Number(state.seasonConfig?.tuttocampoTeamId) || 1199590;
-        rosterButton.disabled = true; rosterButton.textContent = "Lettura…";
-        result.className = "season-roster-result is-loading"; result.innerHTML = "<p>Controllo della rosa e dello staff in corso…</p>";
-        try {
-            const roster = await resolveTuttocampoRoster(teamId);
-            pendingRosterCandidates = Array.isArray(roster.members) ? roster.members : [];
-            const existing = new Set(state.players.map(normalizeRosterPersonName));
-            if (!pendingRosterCandidates.length) {
-                const warning = (roster.warnings || []).join(" ") || "Nessuna persona pubblicata nella rosa Tuttocampo.";
-                result.className = "season-roster-result is-warning";
-                result.innerHTML = `<strong>Rosa non importata</strong><p>${escapeHtml(warning)}</p><small>I giocatori attuali e tutte le loro personalizzazioni restano invariati.</small>`;
-                return;
-            }
-            result.className = "season-roster-result is-ready";
-            result.innerHTML = `<div class="season-roster-summary"><strong>${pendingRosterCandidates.length} persone trovate</strong><button class="btn secondary" id="selectNewRosterMembers" type="button">Seleziona nuovi</button></div><div class="season-roster-list">${pendingRosterCandidates.map((member,index) => {
-                const alreadyPresent = existing.has(normalizeRosterPersonName(member.name));
-                return `<label class="season-roster-person ${alreadyPresent ? "is-existing" : ""}"><input type="checkbox" data-roster-index="${index}" ${alreadyPresent ? "checked disabled" : ""}><span class="season-roster-photo">${member.photoUrl ? `<img src="${escapeHtml(member.photoUrl)}" alt="">` : escapeHtml(initials(member.name))}</span><span><strong>${escapeHtml(member.name)}</strong><small>${alreadyPresent ? "Già presente · dati conservati" : [member.kind === "staff" ? "Staff" : "Giocatore", member.birthDate ? member.birthDate.split("-").reverse().join("/") : ""].filter(Boolean).join(" · ")}</small></span></label>`;
-            }).join("")}</div>${(roster.warnings || []).length ? `<p class="season-roster-warning">${escapeHtml(roster.warnings.join(" "))}</p>` : ""}`;
-            document.getElementById("selectNewRosterMembers").onclick = () => result.querySelectorAll("[data-roster-index]:not(:disabled)").forEach(input => { input.checked = true; });
-        } catch (error) {
-            pendingRosterCandidates = [];
-            result.className = "season-roster-result is-warning"; result.innerHTML = `<strong>Controllo non riuscito</strong><p>${escapeHtml(error.message || "Riprova più tardi.")}</p>`;
-        } finally { rosterButton.disabled = false; rosterButton.textContent = "Importa da Tuttocampo"; }
-    };
     document.querySelectorAll("[data-import-calendar]").forEach(button => {
         button.onclick = async () => {
             const type = button.dataset.importCalendar;
@@ -7395,7 +7114,7 @@ function openSeasonSetupModal(editCurrent = false) {
         input.addEventListener("input", () => { pendingCalendarImports[type] = null; });
     });
     document.getElementById("cancelSeasonSetup").onclick = closeModal;
-    applyButton.onclick = async () => {
+    applyButton.onclick = () => {
         if (!requireOnlineAdmin()) return;
         const season = seasonInput.value.trim();
         if (!/^\d{4}\/\d{2}$/.test(season)) {
@@ -7422,11 +7141,6 @@ function openSeasonSetupModal(editCurrent = false) {
             showToast("Verifica i link dei calendari prima di salvare.");
             return;
         }
-        const selectedRosterMembers = editCurrent ? [] : [...document.querySelectorAll("[data-roster-index]:checked:not(:disabled)")].map(input => pendingRosterCandidates[Number(input.dataset.rosterIndex)]).filter(Boolean);
-        if (selectedRosterMembers.length) {
-            applyButton.disabled = true; applyButton.textContent = "Preparo la rosa…";
-            await Promise.all(selectedRosterMembers.map(async member => { if (member.photoUrl) member.photoData = await fetchRosterPhotoData(member.photoUrl).catch(() => ""); }));
-        }
         const monthlyBase = Math.max(0, Number(baseInput.value) || 0);
         state.teamCustomization = { ...(state.teamCustomization || {}), feeMode: document.getElementById("newSeasonFeeMode").value, entryFee: Math.max(0, Number(document.getElementById("newSeasonEntryFee").value) || 0), feesEnabled: document.getElementById("newSeasonFeeMode").value !== "none" };
         const paymentStartMonth = Number(startMonthInput.value);
@@ -7443,8 +7157,6 @@ function openSeasonSetupModal(editCurrent = false) {
             state.season = season;
             state.teamLogo = pendingTeamLogo || getTeamLogo();
             state.seasonConfig = {
-                tuttocampoTeamId: Number(state.seasonConfig?.tuttocampoTeamId) || 1199590,
-                teamProfile: state.seasonConfig?.teamProfile ? structuredClone(state.seasonConfig.teamProfile) : null,
                 monthlyBase,
                 paymentStartMonth,
                 paymentEndMonth,
@@ -7479,8 +7191,6 @@ function openSeasonSetupModal(editCurrent = false) {
             season,
             teamLogo: pendingTeamLogo || getTeamLogo(),
             seasonConfig: {
-                tuttocampoTeamId: Number(state.seasonConfig?.tuttocampoTeamId) || 1199590,
-                teamProfile: state.seasonConfig?.teamProfile ? structuredClone(state.seasonConfig.teamProfile) : null,
                 monthlyBase,
                 paymentStartMonth,
                 paymentEndMonth,
@@ -7498,7 +7208,6 @@ function openSeasonSetupModal(editCurrent = false) {
             fines: [],
             payments: {}
         };
-        mergeSelectedRosterMembers(selectedRosterMembers, `${startYear}-${String(paymentStartMonth).padStart(2, "0")}`);
         selectedPaymentMonth = `${startYear}-${String(paymentStartMonth).padStart(2, "0")}`;
         saveState();
         applyImportedCalendar();
@@ -7762,7 +7471,7 @@ createPaymentsExportCanvas = function(mode = "all") {
 /* Aggiorna subito il rimanente durante l’inserimento del versato. */
 document.addEventListener("input", event => {
  const input=event.target.closest?.("[data-payment-player]");if(!input)return;
- const player=input.dataset.paymentPlayer,month=getDisplayedPaymentMonth(),summary=getPlayerMonthSummary(player,month),paid=Math.max(0,Number(input.value)||0),remaining=Math.max(0,summary.total-paid),row=input.closest(".payment-row"),remainingCell=row?.querySelector(".payment-remaining,.payment-ok"),status=row?.querySelector(".payment-status");
+ const player=input.dataset.paymentPlayer,month=getDisplayedPaymentMonth(),summary=getPlayerMonthSummary(player,month),paid=Math.max(0,Number(input.value)||0),remaining=Math.max(0,summary.remaining-(paid-summary.paid)),row=input.closest(".payment-row"),remainingCell=row?.querySelector(".payment-remaining,.payment-ok"),status=row?.querySelector(".payment-status");
  if(row)row.dataset.paymentRemaining=String(remaining);
  if(remainingCell){remainingCell.textContent=money(remaining);remainingCell.classList.toggle("payment-remaining",remaining>0);remainingCell.classList.toggle("payment-ok",remaining<=0)}
  if(status){status.className="payment-status "+(remaining<=0?"payment-status-ok":paid>0?"payment-status-partial":"payment-status-due");status.textContent=remaining<=0?"✓ Saldato":paid>0?"€ Parziale":"! Da saldare"}

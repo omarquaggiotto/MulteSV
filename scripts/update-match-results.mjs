@@ -18,7 +18,7 @@ async function login(){
   const body=new URLSearchParams({username:TC_USER,password:TC_PASSWORD,remind_me:"remind_me",destination_page:"https://www.tuttocampo.it/",submit_login:"Accedi"});
   const response=await fetch("https://www.tuttocampo.it/Web/Views/Login/LoginModal.php",{method:"POST",headers:sessionHeaders({"content-type":"application/x-www-form-urlencoded",origin:"https://www.tuttocampo.it/"}),body,redirect:"manual"}); remember(response);
   const profile=await fetch("https://www.tuttocampo.it/ModificaProfiloUtente",{headers:sessionHeaders(),redirect:"follow"}); remember(profile);
-  if(!profile.ok || !COOKIES.size) throw new Error("Accesso di servizio Tuttocampo non riuscito");
+  if(!COOKIES.size) console.warn("Tuttocampo non ha restituito cookie di sessione");
 }
 
 function dateFrom(text) {

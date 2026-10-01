@@ -39,22 +39,13 @@ async function roundResults(source, round, type) {
   if (!competition) return [];
   const pageUrl = new URL(`${competition}/Giornata${round}`, sourceUrl.origin).href;
   const pageResponse = await fetch(pageUrl, { headers:HEADERS });
-  if (!pageResponse.ok) {
-    console.warn(`Giornata ${round} non disponibile (${pageResponse.status}); sarà riprovata al prossimo controllo.`);
-    return [];
-  }
+  if (!pageResponse.ok) { console.warn(`Giornata ${round} non disponibile (${pageResponse.status}); sarà riprovata al prossimo controllo.`); return []; }
   const page = await pageResponse.text();
   const token = page.match(/var\s+tckk\s*=\s*["']([^"']+)/i)?.[1];
-  if (!token) {
-    console.warn(`Giornata ${round} temporaneamente non leggibile da TuttoCampo; sarà riprovata al prossimo controllo.`);
-    return [];
-  }
+  if (!token) { console.warn(`Giornata ${round} temporaneamente non leggibile da TuttoCampo; sarà riprovata al prossimo controllo.`); return []; }
   const cookie = pageResponse.headers.get("set-cookie")?.split(";")[0] || "";
   const fragment = await fetch(new URL(`/Web/Views/Results/ResultsView.php?tckk=${encodeURIComponent(token)}&v=1`, sourceUrl.origin), { headers:{ ...HEADERS, "x-requested-with":"XMLHttpRequest", referer:pageUrl, ...(cookie ? {cookie} : {}) } });
-  if (!fragment.ok) {
-    console.warn(`Risultati della giornata ${round} non disponibili (${fragment.status}); saranno riprovati.`);
-    return [];
-  }
+  if (!fragment.ok) { console.warn(`Risultati della giornata ${round} non disponibili (${fragment.status}); saranno riprovati.`); return []; }
   return parse(await fragment.text(), type);
 }
 
@@ -75,13 +66,17 @@ function parseStandings(html) {
 
 async function fetchStandings(source) {
   const sourceUrl=new URL(source); const competition=sourceUrl.pathname.match(/^(\/[^/]+\/[^/]+\/[^/]+)/)?.[1];
-  if(!competition) throw new Error("Competizione classifica non riconosciuta");
-  const pageUrl=new URL(`${competition}/Classifica`,sourceUrl.origin).href; const pageResponse=await fetch(pageUrl,{headers:HEADERS}); const page=await pageResponse.text();
+  if(!competition) { console.warn("Competizione classifica non riconosciuta; i dati esistenti restano invariati."); return null; }
+  const pageUrl=new URL(`${competition}/Classifica`,sourceUrl.origin).href; const pageResponse=await fetch(pageUrl,{headers:HEADERS});
+  if(!pageResponse.ok) { console.warn(`Classifica non disponibile (${pageResponse.status}); sarà riprovata al prossimo controllo.`); return null; }
+  const page=await pageResponse.text();
   const token=page.match(/var\s+tckk\s*=\s*["']([^"']+)/i)?.[1]; const roundId=page.match(/var\s+roundID\s*=\s*["']([^"']+)/i)?.[1]; const matchDay=page.match(/var\s+currentMatchDay\s*=\s*["'](\d+)/i)?.[1]||"";
-  if(!token||!roundId) throw new Error("Dati classifica non disponibili");
+  if(!token||!roundId) { console.warn("Classifica temporaneamente non leggibile da TuttoCampo; sarà riprovata al prossimo controllo."); return null; }
   const cookie=pageResponse.headers.get("set-cookie")?.split(";")[0]||"";
   const fragmentUrl=new URL(`/Web/Views/Rankings/RankingView.php?tckk=${encodeURIComponent(token)}&category_id=${encodeURIComponent(roundId)}&match_day_id=${encodeURIComponent(matchDay)}&total=true&is_ranking_tab=true`,sourceUrl.origin);
-  const fragment=await fetch(fragmentUrl,{headers:{...HEADERS,"x-requested-with":"XMLHttpRequest",referer:pageUrl,...(cookie?{cookie}:{})}}); const html=await fragment.text();
+  const fragment=await fetch(fragmentUrl,{headers:{...HEADERS,"x-requested-with":"XMLHttpRequest",referer:pageUrl,...(cookie?{cookie}:{})}});
+  if(!fragment.ok) { console.warn(`Dettaglio classifica non disponibile (${fragment.status}); sarà riprovato.`); return null; }
+  const html=await fragment.text();
   return {competition:stripTitle(html.match(/<span[^>]*style=["'][^"']*font-size:20px[^"']*["'][^>]*>([\s\S]*?)<\/span>/i)?.[1]||"Campionato"),rows:parseStandings(html)};
 }
 function stripTitle(value){return value.replace(/<[^>]+>/g," ").replace(/\s+/g," ").trim();}
@@ -108,5 +103,5 @@ const leagueSource=sources.find(item=>item.enabled!==false&&item.type==="league"
 if(leagueSource){
   const previous=Date.parse(leagueSource.snapshot?.standings?.updatedAt||0)||0; const localHour=Number(new Intl.DateTimeFormat("it-IT",{timeZone:"Europe/Rome",hour:"2-digit",hour12:false}).format(new Date())); const day=Number(new Intl.DateTimeFormat("en-US",{timeZone:"Europe/Rome",weekday:"short"}).format(new Date())==="Sat"?6:new Intl.DateTimeFormat("en-US",{timeZone:"Europe/Rome",weekday:"short"}).format(new Date())==="Sun"?0:-1);
   const weekendAfterMatches=(day===0||day===6)&&localHour>=18; const due=Date.now()-previous>20*3600000||(weekendAfterMatches&&Date.now()-previous>2*3600000);
-  if(due){const standings=await fetchStandings(leagueSource.url);if(standings.rows.length){const saved=await fetch(`${CONFIG.projectUrl}/rest/v1/rpc/merge_calendar_standings`,{method:"POST",headers:{...auth,"content-type":"application/json"},body:JSON.stringify({p_rows:standings.rows,p_competition:standings.competition,p_updated_at:new Date().toISOString()})});if(!saved.ok)throw new Error(`Salvataggio classifica fallito: ${saved.status} ${await saved.text()}`);console.log(`Classifica: ${standings.rows.length} squadre`);}}
+  if(due){const standings=await fetchStandings(leagueSource.url);if(standings?.rows.length){const saved=await fetch(`${CONFIG.projectUrl}/rest/v1/rpc/merge_calendar_standings`,{method:"POST",headers:{...auth,"content-type":"application/json"},body:JSON.stringify({p_rows:standings.rows,p_competition:standings.competition,p_updated_at:new Date().toISOString()})});if(!saved.ok)throw new Error(`Salvataggio classifica fallito: ${saved.status} ${await saved.text()}`);console.log(`Classifica: ${standings.rows.length} squadre`);}}
 }

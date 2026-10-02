@@ -35,6 +35,8 @@ let modalScrollPosition = 0;
 let pendingCalendarImports = { league: null, cup: null };
 let pendingTeamLogo = null;
 let localFullCalendarPreview = null;
+let fullCompetitionCalendarCache = null;
+let fullCompetitionCalendarCacheKey = "";
 
 
 
@@ -701,6 +703,26 @@ function getCombinedImportedCalendar() {
         matches: [...matches.values()],
         venues
     };
+}
+
+async function loadFullCompetitionCalendar() {
+    const sources = (state.seasonConfig?.calendarSources || []).filter(source => source.enabled !== false && source.url);
+    if (!sources.length) return getCombinedImportedCalendar();
+    const cacheKey = `${state.season}|${sources.map(source => `${source.type}:${source.url}`).join("|")}`;
+    if (fullCompetitionCalendarCache && fullCompetitionCalendarCacheKey === cacheKey) return fullCompetitionCalendarCache;
+    const calendars = await Promise.all(sources.map(source => readConfiguredSportsWidget(source.type, source.url)));
+    const teams = new Map(), matches = new Map(), venues = {};
+    calendars.filter(Boolean).forEach(calendar => {
+        (calendar.teams || []).forEach(team => teams.set(Number(team.id), team));
+        (calendar.matches || []).forEach(match => matches.set(match.key || `${match.date}|${match.time}|${match.homeId}|${match.awayId}`, match));
+        Object.assign(venues, calendar.venues || {});
+    });
+    if (!matches.size) return getCombinedImportedCalendar();
+    const ownTeam = teams.get(1199590);
+    if (ownTeam) ownTeam.logo = getTeamLogo();
+    fullCompetitionCalendarCacheKey = cacheKey;
+    fullCompetitionCalendarCache = { season: state.season, teams: [...teams.values()], matches: [...matches.values()], venues };
+    return fullCompetitionCalendarCache;
 }
 
 function applyImportedCalendar() {
@@ -3353,8 +3375,12 @@ function openTeamStandings() {
     document.querySelector("#modalRoot .modal-backdrop")?.classList.add("team-calendar-backdrop");
 }
 window.openTeamStandings = openTeamStandings;
-function openTeamCalendar() {
-    const calendar = localFullCalendarPreview || getCombinedImportedCalendar() || window.MatchCalendar?.getData?.();
+async function openTeamCalendar() {
+    let calendar = localFullCalendarPreview || getCombinedImportedCalendar() || window.MatchCalendar?.getData?.();
+    if (!localFullCalendarPreview && navigator.onLine) {
+        try { calendar = await loadFullCompetitionCalendar() || calendar; }
+        catch (error) { console.warn("Calendario completo non aggiornato", error); }
+    }
     if (!calendar || !Array.isArray(calendar.matches)) {
         showToast("Calendario non disponibile.");
         return;
@@ -3366,8 +3392,8 @@ function openTeamCalendar() {
         .filter(match => Number.isFinite(match.kickoff))
         .sort((left, right) => left.kickoff - right.kickoff);
     const matches = allMatches.filter(match => Number(match.homeId) === 1199590 || Number(match.awayId) === 1199590);
-    const hasLeague = matches.some(match => match.competitionType !== "cup");
-    const hasCup = matches.some(match => match.competitionType === "cup");
+    const hasLeague = allMatches.some(match => match.competitionType !== "cup");
+    const hasCup = allMatches.some(match => match.competitionType === "cup");
     const safeExternalUrl = value => {
         try { const url = new URL(value); return url.protocol === "https:" ? url.href : ""; } catch { return ""; }
     };

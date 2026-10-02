@@ -2986,16 +2986,18 @@ function openTeamPaymentModal() {
     }
     openModal("Paga le multe", `
         <div class="team-pay-panel">
-            <div class="team-pay-hero"><span class="team-pay-mark">€</span><div><small>PAGAMENTO DI SQUADRA</small><h3>Per chi stai pagando?</h3><p>Puoi selezionare una o più persone.</p></div></div>
+            <div class="team-pay-hero"><div><small>${escapeHtml(monthLabel)}</small><strong>Seleziona una o più persone</strong></div><span class="team-pay-mark">€</span></div>
             <div class="team-pay-players">
                 ${candidates.map(({ player, summary }) => `<label class="team-pay-player"><input type="checkbox" data-team-pay-player value="${escapeHtml(player)}"><span class="player-avatar">${playerListPortrait(player)}</span><span><strong>${escapeHtml(player)}</strong><small>${money(summary.remaining)} · ${escapeHtml(monthLabel)}</small></span><b>${money(summary.remaining)}</b></label>`).join("")}
             </div>
-            <div class="team-pay-total"><span>Totale da versare</span><strong id="teamPayTotal">${money(0)}</strong></div>
-            <label class="team-pay-description"><span>Descrizione pagamento</span><textarea id="teamPayDescription" rows="3" readonly>Seleziona almeno una persona</textarea></label>
-            <p class="team-pay-note" id="teamPayNote">La descrizione verrà copiata automaticamente prima di aprire il pagamento.</p>
-            <div class="team-pay-actions">
-                ${satispayUrl ? `<button class="team-pay-button is-satispay" id="payWithSatispay" type="button" disabled><span class="team-pay-brand"><img src="satispay-icon.ico" alt=""></span><span><strong>Paga con Satispay</strong><small>Apri la colletta</small></span></button>` : ""}
-                ${paypalMeUrl ? `<button class="team-pay-button is-paypal" id="payWithPaypal" type="button" disabled><span class="team-pay-brand">P</span><span><strong>Paga con PayPal</strong><small>Importo già compilato</small></span></button>` : ""}
+            <div class="team-pay-checkout">
+                <div class="team-pay-total"><span>Totale</span><strong id="teamPayTotal">${money(0)}</strong></div>
+                <div class="team-pay-description"><div><small>Descrizione</small><p id="teamPayDescription">Seleziona almeno una persona</p></div><button class="btn secondary" id="copyTeamPayDescription" type="button" disabled>Copia</button></div>
+                <p class="team-pay-note">Su Satispay inserisci l’importo e incolla la descrizione copiata. PayPal apre già l’importo corretto.</p>
+                <div class="team-pay-actions">
+                    ${satispayUrl ? `<button class="team-pay-button is-satispay" id="payWithSatispay" type="button" disabled><span class="team-pay-brand"><img src="satispay-icon.ico" alt=""></span><span><strong>Satispay</strong><small>Copia e apri la colletta</small></span></button>` : ""}
+                    ${paypalMeUrl ? `<button class="team-pay-button is-paypal" id="payWithPaypal" type="button" disabled><span class="team-pay-brand">P</span><span><strong>PayPal</strong><small>Importo precompilato</small></span></button>` : ""}
+                </div>
             </div>
         </div>
     `);
@@ -3013,19 +3015,46 @@ function openTeamPaymentModal() {
     const update = () => {
         const data = paymentData();
         document.getElementById("teamPayTotal").textContent = money(data.total);
-        document.getElementById("teamPayDescription").value = data.entries.length ? data.description : "Seleziona almeno una persona";
+        document.getElementById("teamPayDescription").textContent = data.entries.length ? data.description : "Seleziona almeno una persona";
         document.querySelectorAll(".team-pay-button").forEach(button => { button.disabled = !data.entries.length; });
+        document.getElementById("copyTeamPayDescription").disabled = !data.entries.length;
     };
     document.querySelectorAll("[data-team-pay-player]").forEach(input => input.addEventListener("change", update));
+    const copyDescription = async (description) => {
+        try {
+            if (navigator.clipboard?.writeText) {
+                await navigator.clipboard.writeText(description);
+                return true;
+            }
+        } catch (_) {}
+        const field = document.createElement("textarea");
+        field.value = description;
+        field.setAttribute("readonly", "");
+        field.style.position = "fixed";
+        field.style.opacity = "0";
+        document.body.appendChild(field);
+        field.select();
+        let copied = false;
+        try { copied = document.execCommand("copy"); } catch (_) {}
+        field.remove();
+        return copied;
+    };
+    document.getElementById("copyTeamPayDescription")?.addEventListener("click", async () => {
+        const data = paymentData();
+        if (!data.entries.length) return;
+        showToast(await copyDescription(data.description) ? "Descrizione copiata negli appunti." : "Copia manualmente la descrizione mostrata.");
+    });
     const openPayment = (provider) => {
         const data = paymentData();
         if (!data.entries.length) return;
+        const copyPromise = copyDescription(data.description);
         let destination = satispayUrl;
         if (provider === "paypal") destination = `${paypalMeUrl}/${data.total.toFixed(2)}EUR`;
         const paymentWindow = window.open(destination, "_blank", "noopener,noreferrer");
-        navigator.clipboard?.writeText(data.description)
-            .then(() => showToast(provider === "paypal" ? "Descrizione copiata. Importo già compilato." : `Descrizione copiata. Inserisci ${money(data.total)} su Satispay.`))
-            .catch(() => showToast(`Inserisci ${money(data.total)} e usa la descrizione mostrata.`));
+        copyPromise.then(copied => {
+            if (provider === "paypal") showToast(copied ? "Importo compilato; descrizione copiata." : "Importo compilato su PayPal.");
+            else showToast(copied ? `Inserisci ${money(data.total)} e incolla la descrizione su Satispay.` : `Inserisci ${money(data.total)} su Satispay.`);
+        });
         if (!paymentWindow) window.location.href = destination;
     };
     document.getElementById("payWithSatispay")?.addEventListener("click", () => openPayment("satispay"));

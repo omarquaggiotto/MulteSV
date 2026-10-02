@@ -18,7 +18,7 @@
         feeMode: "monthly",
         entryFee: 0,
         satispayUrl: "https://web.satispay.com/download/qrcode/S6Y-SVN--C16B2EFB-E6F6-4EB8-943C-B494FDF0DCD8?locale=it_IT",
-        paypalMeUrl: "",
+        paypalMeUrl: "https://paypal.me/omarquaggiotto",
         finesEnabled: true,
         exportBirthdays: false,
         exportPhotos: true
@@ -26,6 +26,9 @@
 
     function ensureCustomization() {
         state.teamCustomization = { ...defaults, ...(state.teamCustomization || {}) };
+        if (!isGS && !state.teamCustomization.paypalMeUrl) {
+            state.teamCustomization.paypalMeUrl = defaults.paypalMeUrl;
+        }
         if (isGS && [["#8b1e2d", "#e8b44f"], ["#2563eb", "#1d4ed8"]].some(([primary, secondary]) => state.teamCustomization.primary === primary && state.teamCustomization.secondary === secondary)) {
             state.teamCustomization.primary = defaults.primary;
             state.teamCustomization.secondary = defaults.secondary;

@@ -56,8 +56,9 @@ window.TEAM_FIXTURES = {"updatedAt":"2026-09-23","season":"2026/27","competition
    refresh();
  }
  window.MatchCalendar={kickoff,select,contents,directions,setData,setTeamLogo,getData:()=>data};
- window.renderNextMatch=()=>`<section id="nextMatchBanner" class="next-match" aria-label="Prossima partita">${contents()}</section>`;
- function refresh(){const banner=document.getElementById('nextMatchBanner');if(banner)banner.innerHTML=contents();}
+ let lastBannerMarkup='';
+ window.renderNextMatch=()=>{lastBannerMarkup=contents();return `<section id="nextMatchBanner" class="next-match" aria-label="Prossima partita">${lastBannerMarkup}</section>`;};
+ function refresh(){const banner=document.getElementById('nextMatchBanner');if(!banner)return;const markup=contents();if(markup===lastBannerMarkup)return;banner.innerHTML=markup;lastBannerMarkup=markup;}
  setInterval(refresh,60000);
  document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh();});
  window.addEventListener('pageshow',refresh);

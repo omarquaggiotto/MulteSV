@@ -1,4 +1,4 @@
-const CACHE_NAME = "multefc-widgets-20261002-4";
+const CACHE_NAME = "multefc-widgets-20261002-5";
 const APP_SHELL = [
     "./widget-reader.mjs",
     "./sports-widgets.mjs",

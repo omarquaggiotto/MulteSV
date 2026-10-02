@@ -3375,23 +3375,19 @@ function openTeamStandings() {
     document.querySelector("#modalRoot .modal-backdrop")?.classList.add("team-calendar-backdrop");
 }
 window.openTeamStandings = openTeamStandings;
-async function openTeamCalendar() {
+function openTeamCalendar() {
     let calendar = localFullCalendarPreview || getCombinedImportedCalendar() || window.MatchCalendar?.getData?.();
-    if (!localFullCalendarPreview && navigator.onLine) {
-        try { calendar = await loadFullCompetitionCalendar() || calendar; }
-        catch (error) { console.warn("Calendario completo non aggiornato", error); }
-    }
     if (!calendar || !Array.isArray(calendar.matches)) {
         showToast("Calendario non disponibile.");
         return;
     }
-    const teams = new Map((calendar.teams || []).map(team => [Number(team.id), team]));
-    const allMatches = calendar.matches
+    let teams = new Map((calendar.teams || []).map(team => [Number(team.id), team]));
+    let allMatches = calendar.matches
         .filter(match => /^\d{4}-\d{2}-\d{2}$/.test(String(match.date || "")) && /^\d{2}:\d{2}$/.test(String(match.time || "")))
         .map(match => ({ ...match, kickoff: window.MatchCalendar.kickoff(match) }))
         .filter(match => Number.isFinite(match.kickoff))
         .sort((left, right) => left.kickoff - right.kickoff);
-    const matches = allMatches.filter(match => Number(match.homeId) === 1199590 || Number(match.awayId) === 1199590);
+    let matches = allMatches.filter(match => Number(match.homeId) === 1199590 || Number(match.awayId) === 1199590);
     const hasLeague = allMatches.some(match => match.competitionType !== "cup");
     const hasCup = allMatches.some(match => match.competitionType === "cup");
     const safeExternalUrl = value => {
@@ -3503,6 +3499,21 @@ async function openTeamCalendar() {
         draw(button.dataset.calendarFilter);
     });
     draw("team");
+    if (!localFullCalendarPreview && navigator.onLine) {
+        loadFullCompetitionCalendar().then(updatedCalendar => {
+            if (!updatedCalendar?.matches || !document.body.contains(list)) return;
+            calendar = updatedCalendar;
+            teams = new Map((calendar.teams || []).map(team => [Number(team.id), team]));
+            allMatches = calendar.matches
+                .filter(match => /^\d{4}-\d{2}-\d{2}$/.test(String(match.date || "")) && /^\d{2}:\d{2}$/.test(String(match.time || "")))
+                .map(match => ({ ...match, kickoff: window.MatchCalendar.kickoff(match) }))
+                .filter(match => Number.isFinite(match.kickoff))
+                .sort((left, right) => left.kickoff - right.kickoff);
+            matches = allMatches.filter(match => Number(match.homeId) === 1199590 || Number(match.awayId) === 1199590);
+            const activeFilter = document.querySelector("[data-calendar-filter].active")?.dataset.calendarFilter || "team";
+            draw(activeFilter);
+        }).catch(error => console.warn("Calendario completo non aggiornato", error));
+    }
 }
 window.openTeamCalendar = openTeamCalendar;
 

@@ -321,6 +321,7 @@ let currentPage = "home";
 let pageBeforeSettings = "home";
 let selectedMonth = "all";
 let selectedPaymentMonth = "";
+let selectedHomeDueMonth = "";
 let selectedFinePlayer = "all";
 let showAllRanking = false;
 let showMonthlySummary = false;
@@ -1562,14 +1563,27 @@ function getPaymentMonthsToDate() {
         : months.slice(0, currentIndex + 1);
 }
 
-function getRollingPaymentMonth() {
+function getRollingPaymentMonth(today = new Date()) {
     const months = getPaymentMonths();
-    for (const month of months) {
-        const summaries = getSortedPlayers().map(player => getPlayerMonthSummary(player, month));
-        const active = summaries.filter(summary => summary.total > 0 || summary.paid > 0);
-        if (active.some(summary => summary.remaining > 0)) return month;
+    const realCurrentMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
+    if (realCurrentMonth <= months[0]) return months[0];
+    if (realCurrentMonth > months[months.length - 1]) return months[months.length - 1];
+
+    const currentIndex = months.indexOf(realCurrentMonth);
+    if (currentIndex < 0) return months[months.length - 1];
+
+    // Durante la prima settimana resta visibile il mese precedente.
+    // Se quel mese viene saldato prima, si passa subito al mese corrente.
+    const referenceIndex = today.getDate() <= 7
+        ? Math.max(0, currentIndex - 1)
+        : currentIndex;
+    const referenceMonth = months[referenceIndex];
+    if (referenceIndex < currentIndex) {
+        const summaries = getSortedPlayers().map(player => getPlayerMonthSummary(player, referenceMonth));
+        const isSettled = !summaries.some(summary => summary.remaining > 0);
+        if (isSettled) return months[currentIndex];
     }
-    return months[months.length - 1];
+    return referenceMonth;
 }
 
 function getDisplayedPaymentMonth() {
@@ -1964,11 +1978,26 @@ function renderHome() {
     const overdueReference = !rollingPayments && today.getDate() >= paymentDueDay
         ? new Date(today.getFullYear(), today.getMonth() - 1, 1)
         : null;
-    const overdueMonth = rollingPayments
+    const automaticOverdueMonth = rollingPayments
         ? getRollingPaymentMonth()
         : overdueReference
             ? `${overdueReference.getFullYear()}-${String(overdueReference.getMonth() + 1).padStart(2, "0")}`
             : null;
+    const homeCurrentMonth = paymentMonths.includes(realCurrentMonth)
+        ? realCurrentMonth
+        : realCurrentMonth < paymentMonths[0]
+            ? paymentMonths[0]
+            : paymentMonths[paymentMonths.length - 1];
+    const previousDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+    const previousMonthCandidate = `${previousDate.getFullYear()}-${String(previousDate.getMonth() + 1).padStart(2, "0")}`;
+    const homePreviousMonth = paymentMonths.includes(previousMonthCandidate)
+        ? previousMonthCandidate
+        : paymentMonths[Math.max(0, paymentMonths.indexOf(homeCurrentMonth) - 1)];
+    // Il riquadro resta sempre disponibile: prima della scadenza mostra comunque
+    // il mese precedente e consente di passare rapidamente al mese corrente.
+    const overdueMonth = paymentMonths.includes(selectedHomeDueMonth)
+        ? selectedHomeDueMonth
+        : automaticOverdueMonth || homePreviousMonth;
     const overduePlayers = overdueMonth && paymentMonths.includes(overdueMonth)
         ? getSortedPlayers().map(player => ({
             player,
@@ -2328,9 +2357,14 @@ function renderHome() {
                             <div class="payment-due-icon">€</div>
                             <div>
                                 <strong>Da saldare</strong>
-                                <div class="small muted">${escapeHtml(overdueMonthLabel)} · ${rollingPayments ? "passa al mese successivo quando tutti hanno pagato" : `dal giorno ${paymentDueDay} del mese successivo`}</div>
+                                <div class="small muted">${escapeHtml(overdueMonthLabel)} · ${rollingPayments ? "passa al mese successivo quando tutti hanno pagato o dopo la prima settimana" : `dal giorno ${paymentDueDay} del mese successivo`}</div>
                             </div>
                             <span class="payment-due-count">${overduePlayers.length}</span>
+                        </div>
+                        <div class="due-month-shortcuts" aria-label="Mese da visualizzare">
+                            <button type="button" data-home-due-month="auto" class="${selectedHomeDueMonth ? "" : "active"}">Automatico</button>
+                            <button type="button" data-home-due-month="${escapeHtml(homeCurrentMonth)}" class="${selectedHomeDueMonth === homeCurrentMonth ? "active" : ""}">Mese corrente</button>
+                            <button type="button" data-home-due-month="${escapeHtml(homePreviousMonth)}" class="${selectedHomeDueMonth === homePreviousMonth ? "active" : ""}">Mese precedente</button>
                         </div>
                         ${
                             overduePlayers.length
@@ -3187,7 +3221,7 @@ function renderPayments() {
                 <span class="payment-filter-icon" aria-hidden="true">▦</span>
                 <div>
                     <span>PERIODO PAGAMENTI</span>
-                    <strong>${rollingPayments ? "Il mese avanza quando tutti hanno pagato" : "Scegli il mese da consultare"}</strong>
+                    <strong>${rollingPayments ? "Il mese avanza quando tutti hanno pagato o dopo la prima settimana" : "Scegli il mese da consultare"}</strong>
                 </div>
             </div>
             <div class="payment-filter-grid">
@@ -6419,6 +6453,18 @@ document
             render();
         });
 
+    document
+        .querySelectorAll("[data-home-due-month]")
+        .forEach(button => {
+            button.addEventListener("click", () => {
+                selectedHomeDueMonth = button.dataset.homeDueMonth === "auto"
+                    ? ""
+                    : button.dataset.homeDueMonth;
+                showAllOverduePlayers = false;
+                render();
+            });
+        });
+
 
 
 
@@ -7253,7 +7299,7 @@ function openSeasonSetupModal(editCurrent = false) {
                     <div class="field"><label for="newSeasonEntryFee">QUOTA DEL PRIMO MESE / INGRESSO (€)</label><input id="newSeasonEntryFee" type="number" min="0" step="0.5" value="${entryFee}"><small>È l’unica quota del primo mese assegnato: non si somma alla quota mensile.</small></div>
                     <div class="field"><label for="newSeasonStartMonth">PRIMO MESE DI PAGAMENTO</label><select id="newSeasonStartMonth">${calendarMonthOptions}</select></div>
                     <div class="field"><label for="newSeasonEndMonth">ULTIMO MESE DI PAGAMENTO</label><select id="newSeasonEndMonth">${calendarMonthOptions}</select></div>
-                    <div class="field"><label for="newSeasonPaymentMode">GESTIONE PAGAMENTO MULTE</label><select id="newSeasonPaymentMode"><option value="due_day" ${paymentMode === "due_day" ? "selected" : ""}>Scadenza mensile</option><option value="rolling" ${paymentMode === "rolling" ? "selected" : ""}>Mese corrente automatico</option></select><small>Con Mese corrente si passa al successivo solo quando tutti hanno saldato.</small></div>
+                    <div class="field"><label for="newSeasonPaymentMode">GESTIONE PAGAMENTO MULTE</label><select id="newSeasonPaymentMode"><option value="due_day" ${paymentMode === "due_day" ? "selected" : ""}>Scadenza mensile</option><option value="rolling" ${paymentMode === "rolling" ? "selected" : ""}>Mese corrente automatico</option></select><small>Con Mese corrente si passa al successivo quando tutti hanno saldato oppure dopo la prima settimana.</small></div>
                     <div class="field" id="newSeasonPaymentDueDayField"><label for="newSeasonPaymentDueDay">DAL GIORNO DEL MESE SUCCESSIVO</label><input id="newSeasonPaymentDueDay" type="number" min="1" max="28" step="1" value="${paymentDueDay}" inputmode="numeric"><small>Usato soltanto con Scadenza mensile.</small></div>
                 </div>
                 <div class="season-logo-editor">

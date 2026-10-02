@@ -17,6 +17,8 @@
         feesEnabled: true,
         feeMode: "monthly",
         entryFee: 0,
+        satispayUrl: "https://web.satispay.com/download/qrcode/S6Y-SVN--C16B2EFB-E6F6-4EB8-943C-B494FDF0DCD8?locale=it_IT",
+        paypalMeUrl: "",
         finesEnabled: true,
         exportBirthdays: false,
         exportPhotos: true
@@ -139,6 +141,8 @@
             <details open><summary><b>01</b><span><strong>Identità</strong><small>Nome, colori e collegamenti</small></span></summary><div class="custom-panel-grid">
                 <label>Nome app<input id="customShortName" value="${escapeHtml(c.shortName)}"></label><label>Nome completo<input id="customFullName" value="${escapeHtml(c.fullName)}"></label>
                 <label class="wide">Motto<input id="customMotto" value="${escapeHtml(c.motto)}"></label><label>Destinazione icona squadra<select id="customLinkType"><option value="tuttocampo" ${c.linkType === "tuttocampo" ? "selected" : ""}>Pagina Tuttocampo</option><option value="website" ${c.linkType === "website" ? "selected" : ""}>Sito della squadra</option></select></label><label>Link collegato allo stemma<input id="customPublicUrl" type="url" value="${escapeHtml(c.publicUrl)}" placeholder="https://..."></label>
+                <label class="wide">Colletta Satispay<input id="customSatispayUrl" type="url" value="${escapeHtml(c.satispayUrl || "")}" placeholder="https://web.satispay.com/download/qrcode/..."><small>Il pulsante di pagamento compare solo quando il link è presente.</small></label>
+                <label class="wide">PayPal.Me<input id="customPaypalMeUrl" type="url" value="${escapeHtml(c.paypalMeUrl || "")}" placeholder="https://paypal.me/nome"><small>Con PayPal.Me l’importo viene precompilato automaticamente.</small></label>
                 <label>Colore principale<input id="customPrimary" type="color" value="${c.primary}"></label><label>Colore secondario<input id="customSecondary" type="color" value="${c.secondary}"></label><label>Colore accento<input id="customAccent" type="color" value="${c.accent}"></label>
             </div></details>
             <details><summary><b>02</b><span><strong>Report</strong><small>Contenuti dei riepiloghi esportati</small></span></summary><div class="custom-panel-grid">
@@ -176,6 +180,10 @@
         document.getElementById("saveCustomization").onclick = () => {
             const publicUrl = document.getElementById("customPublicUrl").value.trim();
             if (publicUrl && !/^https:\/\//i.test(publicUrl)) return showToast("Inserisci un link completo che inizi con https://");
+            const satispayUrl = document.getElementById("customSatispayUrl").value.trim();
+            const paypalMeUrl = document.getElementById("customPaypalMeUrl").value.trim().replace(/\/$/, "");
+            if (satispayUrl && !/^https:\/\/(?:web\.|www\.)?satispay\.com\/download\/qrcode\//i.test(satispayUrl)) return showToast("Inserisci un link colletta Satispay valido.");
+            if (paypalMeUrl && !/^https:\/\/(?:www\.)?paypal\.me\/[a-z0-9]+$/i.test(paypalMeUrl)) return showToast("Inserisci un link PayPal.Me valido, senza importo finale.");
             const categoryRows = [...document.querySelectorAll("[data-category-original]")];
             const categoryNames = categoryRows.map(row => row.querySelector("[data-category-name]").value.trim());
             if (categoryNames.some(name => !name)) return showToast("Ogni categoria deve avere un nome.");
@@ -191,7 +199,7 @@
                 nextCategorySettings[next] = { color, order: index };
             });
             state.categorySettings = nextCategorySettings;
-            state.teamCustomization = { ...state.teamCustomization, shortName: document.getElementById("customShortName").value.trim() || defaults.shortName, fullName: document.getElementById("customFullName").value.trim() || defaults.fullName, motto: document.getElementById("customMotto").value.trim(), linkType: document.getElementById("customLinkType").value, publicUrl, primary: document.getElementById("customPrimary").value, secondary: document.getElementById("customSecondary").value, accent: document.getElementById("customAccent").value, colorsCustomized: true, exportPhotos: document.getElementById("customExportPhotos").checked, exportBirthdays: document.getElementById("customExportBirthdays").checked };
+            state.teamCustomization = { ...state.teamCustomization, shortName: document.getElementById("customShortName").value.trim() || defaults.shortName, fullName: document.getElementById("customFullName").value.trim() || defaults.fullName, motto: document.getElementById("customMotto").value.trim(), linkType: document.getElementById("customLinkType").value, publicUrl, satispayUrl, paypalMeUrl, primary: document.getElementById("customPrimary").value, secondary: document.getElementById("customSecondary").value, accent: document.getElementById("customAccent").value, colorsCustomized: true, exportPhotos: document.getElementById("customExportPhotos").checked, exportBirthdays: document.getElementById("customExportBirthdays").checked };
             state.team = state.teamCustomization.fullName;
             document.querySelectorAll("[data-rule-custom]").forEach(row => { const rule=state.rules.find(item=>item.id===Number(row.dataset.ruleCustom)); if(rule) rule.audience=row.querySelector("[data-rule-audience]").value; });
             saveState(); closeModal(); render(); showToast("Personalizzazioni salvate.");

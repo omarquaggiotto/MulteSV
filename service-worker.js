@@ -1,4 +1,4 @@
-const CACHE_NAME = "multefc-widgets-20261002-2";
+const CACHE_NAME = "multefc-widgets-20261002-4";
 const APP_SHELL = [
     "./widget-reader.mjs",
     "./sports-widgets.mjs",
@@ -13,6 +13,7 @@ const APP_SHELL = [
     "./standings-data.js",
     "./customization-lab.js",
     "./customization-lab.css",
+    "./satispay-icon.ico",
     "./manifest.json",
     "./assets/multe-sv-icon.png",
     "./san-vitale-logo.png",

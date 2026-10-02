@@ -3058,6 +3058,49 @@ body.modal-open .global-fab {
     font-weight: 900;
 }
 
+.due-month-shortcuts {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 14px;
+    padding: 5px;
+    border: 1px solid color-mix(in srgb, var(--primary) 22%, var(--border));
+    border-radius: 15px;
+    background: color-mix(in srgb, var(--primary) 7%, var(--surface-2));
+}
+
+.due-month-shortcuts button {
+    min-width: 0;
+    padding: 10px 8px;
+    border: 1px solid transparent;
+    border-radius: 11px;
+    background: transparent;
+    color: var(--muted);
+    font: inherit;
+    font-size: 12px;
+    font-weight: 850;
+    line-height: 1.15;
+    cursor: pointer;
+}
+
+.due-month-shortcuts button span {
+    display: block;
+    margin-bottom: 3px;
+    color: inherit;
+    font-size: 9px;
+    font-weight: 900;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    opacity: .72;
+}
+
+.due-month-shortcuts button.active {
+    border-color: color-mix(in srgb, var(--primary) 50%, transparent);
+    background: linear-gradient(135deg, color-mix(in srgb, var(--primary) 88%, #fff 12%), var(--primary));
+    color: #fff;
+    box-shadow: 0 7px 18px color-mix(in srgb, var(--primary) 24%, transparent);
+}
+
 .home-income-card {
     margin-top: 16px;
 }

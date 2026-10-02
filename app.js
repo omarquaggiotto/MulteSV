@@ -2362,9 +2362,8 @@ function renderHome() {
                             <span class="payment-due-count">${overduePlayers.length}</span>
                         </div>
                         <div class="due-month-shortcuts" aria-label="Mese da visualizzare">
-                            <button type="button" data-home-due-month="auto" class="${selectedHomeDueMonth ? "" : "active"}">Automatico</button>
-                            <button type="button" data-home-due-month="${escapeHtml(homeCurrentMonth)}" class="${selectedHomeDueMonth === homeCurrentMonth ? "active" : ""}">Mese corrente</button>
-                            <button type="button" data-home-due-month="${escapeHtml(homePreviousMonth)}" class="${selectedHomeDueMonth === homePreviousMonth ? "active" : ""}">Mese precedente</button>
+                            <button type="button" data-home-due-month="${escapeHtml(homeCurrentMonth)}" class="${overdueMonth === homeCurrentMonth ? "active" : ""}"><span>Adesso</span>Mese corrente</button>
+                            <button type="button" data-home-due-month="${escapeHtml(homePreviousMonth)}" class="${overdueMonth === homePreviousMonth ? "active" : ""}"><span>Prima</span>Mese precedente</button>
                         </div>
                         ${
                             overduePlayers.length

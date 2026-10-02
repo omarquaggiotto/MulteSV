@@ -97,7 +97,7 @@ function renameBirthdayPlayer(oldName,newName,birthDate,startMonth=getPlayerStar
  if(!getPaymentMonths().includes(startMonth))return 'Mensilità iniziale non valida.';
  if(newName!==oldName) {
   const equal=n=>typeof n==='string'&&n!==oldName&&n.trim().toLocaleLowerCase('it')===newName.toLocaleLowerCase('it');
-  const occupied=[...state.players,...state.fines.map(f=>f.player),...Object.values(state.payments||{}).flatMap(month=>Object.keys(month||{})),...Object.keys(state.playerBirthDates||{}),...Object.keys(state.playerStartMonths||{})];
+  const occupied=[...state.players,...state.fines.map(f=>f.player),...Object.values(state.payments||{}).flatMap(month=>Object.keys(month||{})),...Object.keys(state.playerBirthDates||{}),...Object.keys(state.playerStartMonths||{}),...Object.keys(state.playerEntryFees||{})];
   if(occupied.some(equal))return 'Nome già presente nella rosa o nello storico. Scegli un nome diverso.';
  }
  const next=structuredClone(state);
@@ -112,6 +112,7 @@ function renameBirthdayPlayer(oldName,newName,birthDate,startMonth=getPlayerStar
  if(newName!==oldName)delete next.playerBirthDates[oldName];
  next.playerStartMonths={...(next.playerStartMonths||{}),[newName]:startMonth};
  if(newName!==oldName)delete next.playerStartMonths[oldName];
+ if(newName!==oldName&&Object.hasOwn(next.playerEntryFees||{},oldName)){next.playerEntryFees={...next.playerEntryFees,[newName]:next.playerEntryFees[oldName]};delete next.playerEntryFees[oldName];}
  if(newName!==oldName&&Object.hasOwn(next.playerPhotos||{},oldName)){next.playerPhotos={...next.playerPhotos,[newName]:next.playerPhotos[oldName]};delete next.playerPhotos[oldName];}
  state=next;
  if(newName!==oldName){

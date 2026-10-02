@@ -1,5 +1,7 @@
-const CACHE_NAME = "multefc-v83-multario-prefill";
+const CACHE_NAME = "multefc-widgets-20261002-1";
 const APP_SHELL = [
+    "./widget-reader.mjs",
+    "./sports-widgets.mjs",
     "./",
     "./index.html",
     "./style.css",

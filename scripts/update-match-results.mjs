@@ -7,6 +7,8 @@ const CONFIG = {
 };
 const auth={apikey:CONFIG.apiKey,Authorization:'Bearer '+CONFIG.apiKey,'content-type':'application/json'};
 const dryRun=process.argv.includes('--dry-run');
+const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+async function importWithRetry(options,attempts=3){let lastError;for(let attempt=1;attempt<=attempts;attempt++){try{return await importSportsWidget(options);}catch(error){lastError=error;if(attempt<attempts){console.warn(`${options.type}: tentativo ${attempt} non riuscito (${error.message}); nuovo tentativo…`);await wait(2500*attempt);}}}throw lastError;}
 const response=await fetch(CONFIG.projectUrl+'/rest/v1/app_state?id=eq.'+encodeURIComponent(CONFIG.stateId)+'&select=data',{headers:auth});
 if(!response.ok)throw new Error('Lettura stato fallita: '+response.status);
 const state=(await response.json())[0]?.data;if(!state)throw new Error('Stato squadra assente');
@@ -15,7 +17,7 @@ for(const source of (state.seasonConfig?.calendarSources||[]).filter(s=>s.enable
  try{
   const options={type:source.type,url:source.url,teamId:CONFIG.teamId,season:state.season,previous:source.snapshot};
   if(!supportsWidget(options))throw new Error('Widget da configurare per questa stagione/competizione');
-  const calendar=await importSportsWidget(options);
+  const calendar=await importWithRetry(options);
   const completed=calendar.matches.filter(m=>/^\d{1,2}-\d{1,2}$/.test(m.result||'')&&m.status==='played');
   if(!dryRun&&completed.length){const saved=await fetch(CONFIG.projectUrl+'/rest/v1/rpc/merge_calendar_results',{method:'POST',headers:auth,body:JSON.stringify({p_source_type:source.type,p_matches:completed})});if(!saved.ok)throw new Error('Salvataggio risultati fallito: '+saved.status);}
   if(!dryRun&&calendar.standings){const saved=await fetch(CONFIG.projectUrl+'/rest/v1/rpc/merge_calendar_standings',{method:'POST',headers:auth,body:JSON.stringify({p_rows:calendar.standings.rows,p_competition:calendar.competition,p_updated_at:calendar.standings.updatedAt})});if(!saved.ok)throw new Error('Salvataggio classifica fallito: '+saved.status);}

@@ -3823,3 +3823,5 @@ body.modal-open::after { visibility: hidden; }
     padding: 0;
     text-align: center;
 }
+/* Procedura guidata cambio stagione */
+.season-calendar-discovery{margin:18px 0 12px;padding:16px;border:1px solid color-mix(in srgb,var(--primary,#4f8cff) 28%,var(--border,#334155));border-radius:18px;background:color-mix(in srgb,var(--primary,#4f8cff) 7%,var(--card,#111827));display:grid;gap:10px}.season-calendar-discovery .field{margin:0}.season-calendar-discovery .calendar-import-result{margin:0}

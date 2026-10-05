@@ -589,7 +589,14 @@ async function importCalendarFromLink(type, url) {
     if (!requireOnlineAdmin()) return null;
     if (!isValidTuttocampoCalendarUrl(url)) throw new Error("Inserisci un link Calendario o Risultati di Tuttocampo.");
     let payload;
-    const widgetCalendar = typeof window.__MULTE_SV_CALENDAR_IMPORT_MOCK__ === "function" ? null : await readConfiguredSportsWidget(type, url);
+    let widgetCalendar = null;
+    if (typeof window.__MULTE_SV_CALENDAR_IMPORT_MOCK__ !== "function") {
+        try {
+            widgetCalendar = await readConfiguredSportsWidget(type, url);
+        } catch (error) {
+            console.warn("Widget non utilizzabile per questo calendario, provo l'importazione diretta.", error);
+        }
+    }
     if (widgetCalendar) return validateImportedCalendar(widgetCalendar, type);
     if (typeof window.__MULTE_SV_CALENDAR_IMPORT_MOCK__ === "function") {
         payload = await window.__MULTE_SV_CALENDAR_IMPORT_MOCK__({ type, url, teamId: 1199590 });
@@ -7305,10 +7312,14 @@ function openSeasonSetupModal(editCurrent = false) {
                     <img id="seasonTeamLogoPreview" src="${escapeHtml(getTeamLogo())}" alt="Anteprima stemma squadra">
                     <div><strong>Stemma della squadra</strong><small>Viene adattato senza deformazioni e usato automaticamente in tutta l’app.</small><div class="season-logo-actions"><label class="btn secondary" for="newSeasonTeamLogo">Carica nuovo stemma</label><button class="btn secondary" id="restoreDefaultTeamLogo" type="button">Ripristina originale</button></div><input id="newSeasonTeamLogo" type="file" accept="image/png,image/jpeg,image/webp" hidden></div>
                 </div>
+                <div class="season-calendar-discovery">
+                    <label class="field" for="newSeasonTeamCode"><span>CODICE SQUADRA TUTTOCAMPO</span><div class="season-calendar-input"><input id="newSeasonTeamCode" inputmode="numeric" autocomplete="off" value="${escapeHtml(String(state.seasonConfig?.tuttocampoTeamId || 1199590))}"><button class="btn secondary" id="detectSeasonSources" type="button">Rileva calendari</button></div></label>
+                    <div id="seasonSourceDiscoveryResult" class="calendar-import-result"><span>L’app cercherà campionato e coppa senza modificare i dati attuali.</span></div>
+                </div>
                 <div class="season-calendar-sources">
-                    <div class="field season-calendar-field"><label for="newSeasonLeagueCalendar">CALENDARIO CAMPIONATO</label><div class="season-calendar-input"><input id="newSeasonLeagueCalendar" type="url" value="${escapeHtml(state.seasonConfig?.calendarSources?.find(source => source.type === "league")?.url || "")}" placeholder="https://www.tuttocampo.it/.../Calendario"><button class="btn secondary calendar-import-button" data-import-calendar="league" type="button">Verifica link</button></div><div class="calendar-import-result" data-import-result="league"></div></div>
+                    <div class="field season-calendar-field"><label for="newSeasonLeagueCalendar">CALENDARIO CAMPIONATO</label><div class="season-calendar-input"><input id="newSeasonLeagueCalendar" type="url" value="${editCurrent ? escapeHtml(state.seasonConfig?.calendarSources?.find(source => source.type === "league")?.url || "") : ""}" placeholder="Rileva automaticamente o incolla quando disponibile"><button class="btn secondary calendar-import-button" data-import-calendar="league" type="button">Verifica link</button></div><div class="calendar-import-result" data-import-result="league"></div></div>
                     <label class="season-source-toggle"><input id="newSeasonCupEnabled" type="checkbox" ${state.seasonConfig?.calendarSources?.find(source => source.type === "cup")?.enabled ? "checked" : ""}><span><strong>Aggiungi Coppa</strong><small>Competizione dinamica: dopo ogni gara verrà cercato automaticamente il turno successivo.</small></span></label>
-                    <div class="field season-calendar-field" id="newSeasonCupField"><label for="newSeasonCupCalendar">CALENDARIO COPPA</label><div class="season-calendar-input"><input id="newSeasonCupCalendar" type="url" value="${escapeHtml(state.seasonConfig?.calendarSources?.find(source => source.type === "cup")?.url || "")}" placeholder="https://www.tuttocampo.it/.../Risultati"><button class="btn secondary calendar-import-button" data-import-calendar="cup" type="button">Verifica link</button></div><div class="calendar-import-result" data-import-result="cup"></div></div>
+                    <div class="field season-calendar-field" id="newSeasonCupField"><label for="newSeasonCupCalendar">CALENDARIO COPPA</label><div class="season-calendar-input"><input id="newSeasonCupCalendar" type="url" value="${editCurrent ? escapeHtml(state.seasonConfig?.calendarSources?.find(source => source.type === "cup")?.url || "") : ""}" placeholder="Facoltativo: puoi aggiungerlo anche più avanti"><button class="btn secondary calendar-import-button" data-import-calendar="cup" type="button">Verifica link</button></div><div class="calendar-import-result" data-import-result="cup"></div></div>
                 </div>
             </section>
 
@@ -7351,6 +7362,11 @@ function openSeasonSetupModal(editCurrent = false) {
     const paymentModeInput = document.getElementById("newSeasonPaymentMode");
     const paymentDueDayInput = document.getElementById("newSeasonPaymentDueDay");
     const paymentDueDayField = document.getElementById("newSeasonPaymentDueDayField");
+    const seasonTeamCodeInput = document.getElementById("newSeasonTeamCode");
+    let verifiedSeasonTeamId = Number(state.seasonConfig?.tuttocampoTeamId) || 1199590;
+    seasonTeamCodeInput.addEventListener("input", () => {
+        if (Number(seasonTeamCodeInput.value) !== verifiedSeasonTeamId) verifiedSeasonTeamId = null;
+    });
     pendingCalendarImports = { league: null, cup: null };
     pendingTeamLogo = getTeamLogo();
     startMonthInput.value = String(paymentStartMonth);
@@ -7365,6 +7381,38 @@ function openSeasonSetupModal(editCurrent = false) {
     const updateCupVisibility = () => { cupField.hidden = !cupEnabledInput.checked; };
     cupEnabledInput.addEventListener("change", updateCupVisibility);
     updateCupVisibility();
+    document.getElementById("detectSeasonSources").onclick = async event => {
+        const button = event.currentTarget;
+        const result = document.getElementById("seasonSourceDiscoveryResult");
+        button.disabled = true;
+        button.textContent = "Ricerca…";
+        result.className = "calendar-import-result is-loading";
+        result.textContent = "Ricerca delle competizioni della nuova stagione…";
+        try {
+            const profile = await resolveTuttocampoTeamCode(document.getElementById("newSeasonTeamCode").value);
+            verifiedSeasonTeamId = Number(profile.teamId);
+            const sources = Array.isArray(profile?.competitions) ? profile.competitions : [];
+            const league = sources.find(source => source.type === "league")?.url || profile?.calendarUrl || "";
+            const cup = sources.find(source => source.type === "cup");
+            if (!isValidTuttocampoCalendarUrl(league)) throw new Error("Calendario campionato non ancora pubblicato su Tuttocampo.");
+            document.getElementById("newSeasonLeagueCalendar").value = league;
+            pendingCalendarImports.league = null;
+            if (cup?.url && isValidTuttocampoCalendarUrl(cup.url)) {
+                document.getElementById("newSeasonCupCalendar").value = cup.url;
+                cupEnabledInput.checked = true;
+                pendingCalendarImports.cup = null;
+            }
+            updateCupVisibility();
+            result.className = "calendar-import-result is-valid";
+            result.innerHTML = `<strong>✓ ${escapeHtml(profile.name || "Squadra riconosciuta")}</strong><span>Campionato rilevato${cup?.url ? " · Coppa rilevata" : " · Coppa non ancora disponibile"}</span><small>Ora verifica i calendari prima di avviare la stagione.</small>`;
+        } catch (error) {
+            result.className = "calendar-import-result is-error";
+            result.innerHTML = `<strong>Controllo non completato</strong><span>${escapeHtml(error.message || "Riprova più tardi.")}</span><small>Puoi iniziare la stagione e collegare il calendario quando sarà pubblicato.</small>`;
+        } finally {
+            button.disabled = false;
+            button.textContent = "Rileva calendari";
+        }
+    };
     baseInput.addEventListener("change", () => {
         const previousBase = base;
         const nextBase = Math.max(0, Number(baseInput.value) || 0);
@@ -7401,7 +7449,13 @@ function openSeasonSetupModal(editCurrent = false) {
             result.className = "calendar-import-result is-loading";
             result.textContent = "Lettura del calendario in corso…";
             try {
+                const targetSeason = seasonInput.value.trim();
                 const calendar = await importCalendarFromLink(type, input.value.trim());
+                const startYear = Number(targetSeason.slice(0, 4));
+                if (!/^\d{4}\/\d{2}$/.test(targetSeason) || !calendar.matches.some(match => {
+                    const year = Number(String(match.date || "").slice(0, 4));
+                    return year === startYear || year === startYear + 1;
+                })) throw new Error(`Il calendario non appartiene alla stagione ${targetSeason}.`);
                 pendingCalendarImports[type] = { url: input.value.trim(), snapshot: calendar };
                 const future = calendar.matches.filter(match => new Date(`${match.date}T${match.time}:00`).getTime() > Date.now()).length;
                 result.className = "calendar-import-result is-valid";
@@ -7430,8 +7484,8 @@ function openSeasonSetupModal(editCurrent = false) {
         }
         const leagueUrl = document.getElementById("newSeasonLeagueCalendar").value.trim();
         const cupUrl = document.getElementById("newSeasonCupCalendar").value.trim();
-        if (!isValidTuttocampoCalendarUrl(leagueUrl) || (cupEnabledInput.checked && !isValidTuttocampoCalendarUrl(cupUrl))) {
-            showToast("Inserisci link Calendario/Risultati validi di Tuttocampo.");
+        if ((leagueUrl && !isValidTuttocampoCalendarUrl(leagueUrl)) || (cupEnabledInput.checked && cupUrl && !isValidTuttocampoCalendarUrl(cupUrl))) {
+            showToast("Controlla i link Tuttocampo oppure lasciali vuoti per aggiungerli più avanti.");
             return;
         }
         const existingLeague = state.seasonConfig?.calendarSources?.find(source => source.type === "league");
@@ -7444,10 +7498,16 @@ function openSeasonSetupModal(editCurrent = false) {
         const cupSnapshot = pendingCalendarImports.cup?.url === cupUrl
             ? pendingCalendarImports.cup.snapshot
             : (existingCup?.url === cupUrl ? existingCup.snapshot : null);
-        if (!leagueSnapshot || (cupEnabledInput.checked && !cupSnapshot)) {
-            showToast("Verifica i link dei calendari prima di salvare.");
+        if ((leagueUrl && !leagueSnapshot) || (cupEnabledInput.checked && cupUrl && !cupSnapshot)) {
+            showToast("Verifica i calendari inseriti oppure svuota i campi per collegarli più avanti.");
             return;
         }
+        const requestedTeamId = Number(document.getElementById("newSeasonTeamCode").value);
+        if (!verifiedSeasonTeamId || requestedTeamId !== verifiedSeasonTeamId) {
+            showToast("Verifica il codice squadra prima di salvare.");
+            return;
+        }
+        const configuredTeamId = verifiedSeasonTeamId;
         const monthlyBase = Math.max(0, Number(baseInput.value) || 0);
         state.teamCustomization = { ...(state.teamCustomization || {}), feeMode: document.getElementById("newSeasonFeeMode").value, entryFee: Math.max(0, Number(document.getElementById("newSeasonEntryFee").value) || 0), feesEnabled: document.getElementById("newSeasonFeeMode").value !== "none" };
         const paymentStartMonth = Number(startMonthInput.value);
@@ -7464,6 +7524,8 @@ function openSeasonSetupModal(editCurrent = false) {
             state.season = season;
             state.teamLogo = pendingTeamLogo || getTeamLogo();
             state.seasonConfig = {
+                tuttocampoTeamId: configuredTeamId,
+                teamProfile: state.seasonConfig?.teamProfile ? structuredClone(state.seasonConfig.teamProfile) : null,
                 monthlyBase,
                 paymentStartMonth,
                 paymentEndMonth,
@@ -7472,8 +7534,8 @@ function openSeasonSetupModal(editCurrent = false) {
                 paymentDueDay,
                 monthOverrides,
                 calendarSources: [
-                    { type: "league", name: "Campionato", enabled: true, url: leagueUrl, snapshot: leagueSnapshot, lastCheckedAt: new Date().toISOString() },
-                    { type: "cup", name: "Coppa", enabled: cupEnabledInput.checked, dynamic: true, refreshPolicy: "after_match", url: cupEnabledInput.checked ? cupUrl : "", snapshot: cupEnabledInput.checked ? cupSnapshot : null, lastCheckedAt: cupEnabledInput.checked ? new Date().toISOString() : "" }
+                    { type: "league", name: "Campionato", enabled: Boolean(leagueUrl), url: leagueUrl, snapshot: leagueSnapshot, lastCheckedAt: leagueSnapshot ? new Date().toISOString() : "" },
+                    { type: "cup", name: "Coppa", enabled: cupEnabledInput.checked && Boolean(cupUrl), dynamic: true, refreshPolicy: "after_match", url: cupEnabledInput.checked ? cupUrl : "", snapshot: cupEnabledInput.checked ? cupSnapshot : null, lastCheckedAt: cupSnapshot ? new Date().toISOString() : "" }
                 ]
             };
             saveState();
@@ -7499,6 +7561,8 @@ function openSeasonSetupModal(editCurrent = false) {
             season,
             teamLogo: pendingTeamLogo || getTeamLogo(),
             seasonConfig: {
+                tuttocampoTeamId: configuredTeamId,
+                teamProfile: state.seasonConfig?.teamProfile ? structuredClone(state.seasonConfig.teamProfile) : null,
                 monthlyBase,
                 paymentStartMonth,
                 paymentEndMonth,
@@ -7507,8 +7571,8 @@ function openSeasonSetupModal(editCurrent = false) {
                 paymentDueDay,
                 monthOverrides,
                 calendarSources: [
-                    { type: "league", name: "Campionato", enabled: true, url: leagueUrl, snapshot: leagueSnapshot, lastCheckedAt: new Date().toISOString() },
-                    { type: "cup", name: "Coppa", enabled: cupEnabledInput.checked, dynamic: true, refreshPolicy: "after_match", url: cupEnabledInput.checked ? cupUrl : "", snapshot: cupEnabledInput.checked ? cupSnapshot : null, lastCheckedAt: cupEnabledInput.checked ? new Date().toISOString() : "" }
+                    { type: "league", name: "Campionato", enabled: Boolean(leagueUrl), url: leagueUrl, snapshot: leagueSnapshot, lastCheckedAt: leagueSnapshot ? new Date().toISOString() : "" },
+                    { type: "cup", name: "Coppa", enabled: cupEnabledInput.checked && Boolean(cupUrl), dynamic: true, refreshPolicy: "after_match", url: cupEnabledInput.checked ? cupUrl : "", snapshot: cupEnabledInput.checked ? cupSnapshot : null, lastCheckedAt: cupSnapshot ? new Date().toISOString() : "" }
                 ]
             },
             seasonArchives: [...(state.seasonArchives || []), archive],

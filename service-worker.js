@@ -1,4 +1,4 @@
-const CACHE_NAME = "multesv-widgets-20261005-11";
+const CACHE_NAME = "multesv-season-guide-20261005-12";
 const APP_SHELL = [
     "./widget-reader.mjs",
     "./sports-widgets.mjs",

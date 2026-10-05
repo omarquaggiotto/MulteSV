@@ -5264,4 +5264,2525 @@ function openFineModal(id = null) {
                 "block";
 
             quantityLabel.textContent =
-                [Truncated]
+                "NUMERO DI PEZZI";
+
+            quantityInput.min =
+                "1";
+
+            quantityInput.step =
+                "1";
+
+            quantityInput.value =
+                fine?.quantity ??
+                1;
+
+
+            amountInput.disabled =
+                true;
+
+            amountInput.value = calculateRuleAmount(
+                rule,
+                Number(quantityInput.value) || 1
+            );
+
+            return;
+
+        }
+
+
+        /* =========================
+           IMPORTO MINIMO
+           ========================= */
+
+        if (
+            rule.calculation ===
+            "custom_min"
+        ) {
+
+            quantityField.style.display =
+                "none";
+
+            amountInput.disabled =
+                false;
+
+            amountInput.min =
+                rule.minAmount;
+
+            amountInput.value =
+                fine?.amount ??
+                rule.minAmount;
+
+            return;
+
+        }
+
+
+        /* =========================
+           MULTA FISSA
+           ========================= */
+
+        quantityField.style.display =
+            "none";
+
+        amountInput.disabled =
+            true;
+
+        amountInput.min =
+            "0";
+
+        amountInput.value =
+            rule.amount;
+
+    }
+
+
+    /* =========================
+       AGGIORNA REGOLE
+       ========================= */
+
+    function updateRules() {
+
+        const category =
+            categorySelect.value;
+
+        const rules = state.rules.filter(
+            rule => rule.category === category
+        );
+
+        ruleSelect.innerHTML =
+            '<option value="">Seleziona il tipo di multa</option>' +
+            rules
+                .map(
+                    rule => `
+
+                        <option
+                            value="${rule.id}"
+                        >
+                            ${escapeHtml(
+                                rule.type
+                            )}
+                            ·
+                            ${formatRuleAmount(rule)}
+                        </option>
+
+                    `
+                )
+            .join("") + `
+                <option value="${CUSTOM_RULE_ID}">
+                    ✏️ Multa personalizzata
+                </option>
+            `;
+
+        ruleSelect.value = "";
+
+        refreshRuleMenu();
+        updateFineInterface();
+
+    }
+
+    /* =========================
+       CAMBIO CATEGORIA
+       ========================= */
+
+    categorySelect.addEventListener(
+        "change",
+        updateRules
+    );
+
+
+    /* =========================
+       CAMBIO TIPO
+       ========================= */
+
+    ruleSelect.addEventListener(
+        "change",
+        updateFineInterface
+    );
+
+    recipientsSelect?.addEventListener("change", updateFineInterface);
+
+
+    /* =========================
+       CAMBIO QUANTITÀ
+       ========================= */
+
+    quantityInput.addEventListener(
+        "input",
+        () => {
+
+            const selectedValue =
+                ruleSelect.value;
+
+
+            const rule =
+                state.rules.find(
+                    item =>
+                        String(item.id) ===
+                        String(selectedValue)
+                );
+
+
+            if (!rule) {
+                return;
+            }
+
+
+            const quantity =
+                Number(
+                    quantityInput.value
+                ) || 0;
+
+
+            if (
+                rule.calculation ===
+                "per_minute"
+            ) {
+
+                amountInput.value = calculateRuleAmount(rule, quantity);
+
+            }
+
+
+            if (
+                rule.calculation ===
+                "per_piece"
+            ) {
+
+                amountInput.value = calculateRuleAmount(rule, quantity);
+
+            }
+
+        }
+    );
+
+
+    /* =========================
+       ANNULLA
+       ========================= */
+
+    document
+        .getElementById(
+            "cancelFine"
+        )
+        .onclick =
+            closeModal;
+
+
+    /* =========================
+       SALVA
+       ========================= */
+
+    /* =========================
+   SALVA
+   ========================= */
+
+document
+    .getElementById(
+        "saveFine"
+    )
+    .onclick = () => {
+
+        const previousState = structuredClone(state);
+
+        const singlePlayerSelect =
+            document.getElementById(
+                "finePlayer"
+            );
+
+        const player =
+            singlePlayerSelect
+                ? singlePlayerSelect.value
+                : "";
+
+        const recipientMode = isEdit
+            ? "single"
+            : recipientsSelect?.value || "single";
+
+        const selectedPlayers = recipientMode === "team"
+            ? getSortedPlayers()
+            : recipientMode === "multiple"
+                ? Array.from(
+                    document.querySelectorAll("[data-fine-recipient]:checked")
+                ).map(input => input.value)
+                : [player].filter(Boolean);
+
+        const date =
+            parseFineDate(
+                document
+                    .getElementById(
+                        "fineDate"
+                    )
+                    .value
+            );
+
+        const selectedRule =
+            ruleSelect.value;
+
+        const rule =
+            state.rules.find(
+                item =>
+                    String(item.id) ===
+                    String(selectedRule)
+            );
+
+        /* =========================
+           MULTA PERSONALIZZATA
+           ========================= */
+
+        if (
+            selectedRule ===
+            CUSTOM_RULE_ID
+        ) {
+
+            const description =
+                customDescription.value.trim();
+
+            const customAmount =
+                Number(
+                    amountInput.value
+                );
+
+            if (
+                (isEdit ? !player : selectedPlayers.length === 0) ||
+                !date ||
+                !description ||
+                !Number.isFinite(
+                    customAmount
+                ) ||
+                customAmount < 0
+            ) {
+
+                showToast(
+                    "Controlla i dati inseriti."
+                );
+
+                return;
+            }
+
+
+            if (isEdit) {
+
+                fine.player =
+                    player;
+
+                fine.category =
+                    "Personalizzata";
+
+                fine.type =
+                    description;
+
+                fine.ruleId =
+                    null;
+
+                fine.custom =
+                    true;
+
+                fine.quantity =
+                    null;
+
+                fine.date =
+                    date;
+
+                fine.amount =
+                    customAmount;
+
+            } else {
+
+                selectedPlayers.forEach(playerName => {
+                    state.fines.push({
+                        id: generateId(),
+                        date,
+                        player: playerName,
+                        category: recipientMode === "team" ? "Squadra" : "Personalizzata",
+                        type: description,
+                        ruleId: null,
+                        custom: true,
+                        team: recipientMode === "team",
+                        createdAt: new Date().toISOString(),
+                        quantity: null,
+                        amount: customAmount
+                    });
+                });
+
+            }
+
+
+            saveState();
+
+            closeModal();
+
+            render();
+
+            offerUndo(
+                isEdit
+                    ? "Multa modificata"
+                    : selectedPlayers.length > 1
+                        ? `${selectedPlayers.length} multe aggiunte`
+                        : "Multa aggiunta",
+                previousState
+            );
+
+            return;
+        }
+
+        /* =========================
+           REGOLA NORMALE
+           ========================= */
+
+        const ruleId =
+            Number(
+                selectedRule
+            );
+
+
+        if (
+            (isEdit ? !player : selectedPlayers.length === 0) ||
+            !rule ||
+            !date
+        ) {
+
+            showToast(
+                "Controlla i dati inseriti."
+            );
+
+            return;
+        }
+
+
+        let amount =
+            Number(
+                amountInput.value
+            );
+
+        let quantity =
+            null;
+
+
+        /* =========================
+           CALCOLO AL MINUTO
+           ========================= */
+
+        if (
+            rule.calculation ===
+            "per_minute"
+        ) {
+
+            quantity =
+                Number(
+                    quantityInput.value
+                ) || 0;
+
+            amount = calculateRuleAmount(rule, quantity);
+        }
+
+
+        /* =========================
+           CALCOLO PER PEZZO
+           ========================= */
+
+        if (
+            rule.calculation ===
+            "per_piece"
+        ) {
+
+            quantity =
+                Number(
+                    quantityInput.value
+                ) || 0;
+
+
+            if (
+                quantity < 1
+            ) {
+
+                showToast(
+                    "Inserisci almeno 1 pezzo."
+                );
+
+                return;
+            }
+
+
+            amount = calculateRuleAmount(rule, quantity);
+        }
+
+
+        /* =========================
+           IMPORTO MINIMO
+           ========================= */
+
+        if (
+            rule.calculation ===
+            "custom_min"
+        ) {
+
+            if (
+                amount <
+                rule.minAmount
+            ) {
+
+                showToast(
+                    `L'importo minimo è ${money(
+                        rule.minAmount
+                    )}.`
+                );
+
+                return;
+            }
+        }
+
+
+        if (
+            !Number.isFinite(
+                amount
+            ) ||
+            amount < 0
+        ) {
+
+            showToast(
+                "Controlla l'importo."
+            );
+
+            return;
+        }
+
+
+        /* =========================
+           MODIFICA
+           ========================= */
+
+        if (isEdit) {
+
+            fine.player =
+                player;
+
+            fine.ruleId =
+                ruleId;
+
+            fine.category =
+                rule.category;
+
+            fine.type =
+                rule.type;
+
+            fine.date =
+                date;
+
+            fine.amount =
+                amount;
+
+            fine.quantity =
+                quantity;
+
+            fine.custom =
+                false;
+
+        }
+
+
+        /* =========================
+           NUOVA MULTA
+           ========================= */
+
+        else {
+
+            selectedPlayers.forEach(playerName => {
+                state.fines.push({
+                    id: generateId(),
+                    date,
+                    player: playerName,
+                    category: rule.category,
+                    type: rule.type,
+                    ruleId,
+                    quantity,
+                    custom: false,
+                    team: recipientMode === "team",
+                    createdAt: new Date().toISOString(),
+                    amount
+                });
+            });
+
+        }
+
+
+        saveState();
+
+        closeModal();
+
+        render();
+
+        offerUndo(
+            isEdit
+                ? "Multa modificata"
+            : selectedPlayers.length > 1
+                ? `${selectedPlayers.length} multe aggiunte`
+                : "Multa aggiunta",
+            previousState
+        );
+
+    };
+
+
+    /* =========================
+       INIZIALIZZAZIONE
+       ========================= */
+
+    updateFineInterface();
+
+}
+
+/* =========================================================
+   MODALE REGOLA
+   ========================================================= */
+
+function openRuleModal(id = null) {
+
+    if (!requireOnlineAdmin()) return;
+
+    const rule = id
+        ? state.rules.find(item => item.id === id)
+        : null;
+    const calculation = getRuleCalculation(rule);
+    const categorySuggestions = getSortedCategories([
+        ...PREFERRED_CATEGORY_ORDER,
+        ...state.rules.map(item => item.category)
+    ]);
+
+    openModal(
+        id ? "Modifica regola" : "Nuova regola",
+        `
+            <div class="form rule-form-refresh">
+                <section class="rule-form-section">
+                <div class="fine-section-title"><span>01</span><h3>Descrivi la regola</h3></div>
+                <div class="field">
+                    <label>CATEGORIA</label>
+                    <input id="ruleCategory" type="text" list="ruleCategories"
+                        value="${escapeHtml(rule?.category || "")}"
+                        placeholder="Es. Allenamento">
+                    <datalist id="ruleCategories">
+                        ${categorySuggestions.map(category =>
+                            `<option value="${escapeHtml(category)}"></option>`
+                        ).join("")}
+                    </datalist>
+                </div>
+
+                <div class="field">
+                    <label>TIPOLOGIA</label>
+                    <input id="ruleType" type="text"
+                        value="${escapeHtml(rule?.type || "")}"
+                        placeholder="Es. Ritardo allenamento">
+                </div>
+                </section>
+
+                <section class="rule-form-section rule-calculation-section">
+                <div class="fine-section-title"><span>02</span><h3>Imposta il calcolo</h3></div>
+                <div class="field">
+                    <label>TIPO DI CALCOLO</label>
+                    <select id="ruleCalculation">
+                        <option value="fixed" ${calculation === "fixed" ? "selected" : ""}>Importo fisso</option>
+                        <option value="per_minute" ${calculation === "per_minute" ? "selected" : ""}>Importo × minuti</option>
+                        <option value="per_piece" ${calculation === "per_piece" ? "selected" : ""}>Importo × quantità</option>
+                        <option value="custom_min" ${calculation === "custom_min" ? "selected" : ""}>Importo libero con minimo</option>
+                    </select>
+                </div>
+
+                <div class="field" id="ruleFixedField">
+                    <label>IMPORTO FISSO (€)</label>
+                    <input id="ruleAmount" type="number" min="0" step="0.01"
+                        value="${rule?.amount ?? 5}">
+                </div>
+
+                <div class="field" id="ruleMinuteBaseField">
+                    <label>IMPORTO BASE (€)</label>
+                    <input id="ruleBaseAmount" type="number" min="0" step="0.01"
+                        value="${rule?.baseAmount ?? rule?.amount ?? 0}">
+                </div>
+
+                <div class="field" id="ruleMinuteRateField">
+                    <label>IMPORTO PER MINUTO (€)</label>
+                    <input id="rulePerMinute" type="number" min="0" step="0.01"
+                        value="${rule?.perMinute ?? 1}">
+                </div>
+
+                <div class="field" id="rulePieceField">
+                    <label>IMPORTO PER PEZZO (€)</label>
+                    <input id="rulePerPiece" type="number" min="0" step="0.01"
+                        value="${rule?.perPiece ?? rule?.amount ?? 1}">
+                </div>
+
+                <div class="field" id="ruleMinimumField">
+                    <label>IMPORTO MINIMO (€)</label>
+                    <input id="ruleMinimum" type="number" min="0" step="0.01"
+                        value="${rule?.minAmount ?? rule?.amount ?? 0}">
+                </div>
+                </section>
+
+                <div class="modal-actions">
+                    <button class="btn secondary" id="cancelRule" type="button">Annulla</button>
+                    <button class="btn" id="saveRule" type="button">Salva</button>
+                </div>
+            </div>
+        `
+    );
+    document.querySelector("#modalRoot .modal")?.classList.add("rule-modal-refresh");
+
+    const calculationSelect = document.getElementById("ruleCalculation");
+    const calculationFields = {
+        fixed: ["ruleFixedField"],
+        per_minute: ["ruleMinuteBaseField", "ruleMinuteRateField"],
+        per_piece: ["rulePieceField"],
+        custom_min: ["ruleMinimumField"]
+    };
+
+    function updateRuleCalculationFields() {
+        Object.entries(calculationFields).forEach(([key, ids]) => {
+            ids.forEach(fieldId => {
+                document.getElementById(fieldId).hidden = key !== calculationSelect.value;
+            });
+        });
+    }
+
+    calculationSelect.addEventListener("change", updateRuleCalculationFields);
+    updateRuleCalculationFields();
+    document.getElementById("cancelRule").onclick = closeModal;
+
+    document.getElementById("saveRule").onclick = () => {
+        const category = document.getElementById("ruleCategory").value.trim();
+        const type = document.getElementById("ruleType").value.trim();
+        const selectedCalculation = calculationSelect.value;
+        const values = {
+            amount: Number(document.getElementById("ruleAmount").value),
+            baseAmount: Number(document.getElementById("ruleBaseAmount").value),
+            perMinute: Number(document.getElementById("rulePerMinute").value),
+            perPiece: Number(document.getElementById("rulePerPiece").value),
+            minAmount: Number(document.getElementById("ruleMinimum").value)
+        };
+
+        if (!category || !type) {
+            showToast("Compila categoria e tipologia.");
+            return;
+        }
+
+        const requiredValues = selectedCalculation === "fixed"
+            ? [values.amount]
+            : selectedCalculation === "per_minute"
+                ? [values.baseAmount, values.perMinute]
+                : selectedCalculation === "per_piece"
+                    ? [values.perPiece]
+                    : [values.minAmount];
+
+        if (requiredValues.some(value => !Number.isFinite(value) || value < 0)) {
+            showToast("Inserisci importi validi.");
+            return;
+        }
+
+        // Mantiene eventuali campi legacy o estensioni future della regola.
+        const newRule = {
+            ...(rule || {}),
+            id: id || generateId(),
+            category,
+            type,
+            calculation: selectedCalculation
+        };
+
+        if (selectedCalculation === "fixed") {
+            newRule.amount = values.amount;
+        } else if (selectedCalculation === "per_minute") {
+            newRule.baseAmount = values.baseAmount;
+            newRule.perMinute = values.perMinute;
+            newRule.amount = values.baseAmount;
+        } else if (selectedCalculation === "per_piece") {
+            newRule.perPiece = values.perPiece;
+            newRule.amount = values.perPiece;
+        } else {
+            newRule.minAmount = values.minAmount;
+            newRule.amount = values.minAmount;
+        }
+
+        if (id) {
+            const index = state.rules.findIndex(item => item.id === id);
+            if (index === -1) {
+                showToast("Regola non trovata.");
+                return;
+            }
+            state.rules[index] = newRule;
+        } else {
+            state.rules.push(newRule);
+        }
+
+        saveState();
+        closeModal();
+        render();
+        showToast("Regola salvata");
+    };
+
+}
+
+
+/* =========================================================
+   MODALE GIOCATORE
+   ========================================================= */
+
+function openPlayerModal() {
+
+    if (!requireOnlineAdmin()) return;
+
+    const playerStartOptions = getPaymentMonths();
+    const currentMonth = birthdayToday().slice(0, 7);
+    const defaultStartMonth = playerStartOptions.includes(currentMonth)
+        ? currentMonth
+        : playerStartOptions[0];
+    let pendingPhoto = "";
+    let photoBusy = false;
+
+    openModal(
+
+        "Nuovo giocatore",
+
+        `
+
+        <div class="form">
+
+            <div class="photo-editor">
+                <div class="photo-editor-preview" id="newPlayerPhotoPreview">${playerPortrait("Nuovo giocatore", "")}</div>
+                <div class="photo-editor-actions">
+                    <label class="btn secondary photo-upload-button" for="newPlayerPhotoFile">Scegli foto</label>
+                    <input id="newPlayerPhotoFile" class="photo-file-input" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif">
+                    <button class="btn secondary" id="removeNewPlayerPhoto" type="button" disabled>Rimuovi</button>
+                </div>
+                <span class="small muted" id="newPlayerPhotoStatus">Puoi aggiungere e centrare subito la foto del giocatore.</span>
+            </div>
+
+            <div class="photo-crop-controls" id="photoCropControls" hidden>
+                <canvas id="photoCropCanvas" width="320" height="320" aria-label="Anteprima ritaglio foto"></canvas>
+                <label for="photoCropZoom">Zoom</label><input id="photoCropZoom" type="range" min="1" max="3" step="0.01" value="1">
+                <label for="photoCropX">Spostamento orizzontale</label><input id="photoCropX" type="range" min="-100" max="100" step="1" value="0">
+                <label for="photoCropY">Spostamento verticale</label><input id="photoCropY" type="range" min="-100" max="100" step="1" value="0">
+            </div>
+
+            <div class="field">
+
+                <label>
+                    NOME
+                </label>
+
+                <input
+                    id="playerName"
+                    type="text"
+                    placeholder="Nome giocatore"
+                >
+
+            </div>
+
+
+            <div class="field"><label for="playerBirthDate">DATA DI NASCITA (facoltativa)</label><input id="playerBirthDate" type="date" min="1900-01-01" max="${birthdayToday()}"></div>
+
+            <div class="field">
+                <label for="playerStartMonth">CONTEGGIA QUOTE E MULTE DA</label>
+                <select id="playerStartMonth">
+                    ${playerStartOptions.map(month => `
+                        <option value="${month}" ${month === defaultStartMonth ? "selected" : ""}>
+                            ${escapeHtml(new Date(`${month}-01T12:00:00`).toLocaleDateString("it-IT", { month: "long", year: "numeric" }))}
+                        </option>
+                    `).join("")}
+                </select>
+                <span class="small muted">I mesi precedenti non genereranno quote o arretrati.</span>
+            </div>
+            <div class="field">
+                <label for="playerEntryFee">QUOTA DEL PRIMO MESE / INGRESSO (€)</label>
+                <input id="playerEntryFee" type="number" min="0" step="0.5" value="${getMonthlyBase(defaultStartMonth)}">
+                <span class="small muted">Sostituisce la quota ordinaria soltanto nel primo mese del giocatore.</span>
+            </div>
+            <div class="modal-actions">
+
+                <button
+                    class="btn secondary"
+                    id="cancelPlayer"
+                    type="button"
+                >
+                    Annulla
+                </button>
+
+
+                <button
+                    class="btn"
+                    id="savePlayer"
+                    type="button"
+                >
+                    Aggiungi
+                </button>
+
+            </div>
+
+        </div>
+
+        `
+
+    );
+
+    document.querySelector("#modalRoot .modal")?.classList.add("player-create-modal");
+
+
+    const photoInput = document.getElementById("newPlayerPhotoFile");
+    const photoPreview = document.getElementById("newPlayerPhotoPreview");
+    const photoStatus = document.getElementById("newPlayerPhotoStatus");
+    const removePhoto = document.getElementById("removeNewPlayerPhoto");
+    const savePlayer = document.getElementById("savePlayer");
+
+    photoInput.onchange = async () => {
+        const file = photoInput.files?.[0];
+        if (!file || !requireOnlineAdmin()) return;
+        photoBusy = true;
+        savePlayer.disabled = true;
+        photoStatus.textContent = "Preparazione foto…";
+        try {
+            const result = await preparePlayerPhoto(file, data => {
+                pendingPhoto = data;
+                photoPreview.innerHTML = playerPortrait("Nuovo giocatore", data);
+            });
+            pendingPhoto = result;
+            photoPreview.innerHTML = playerPortrait("Nuovo giocatore", result);
+            removePhoto.disabled = false;
+            photoStatus.textContent = "Foto pronta. Premi Aggiungi per salvare tutto insieme.";
+        } catch (error) {
+            photoStatus.textContent = error?.message || "Impossibile preparare la foto.";
+        } finally {
+            photoBusy = false;
+            savePlayer.disabled = false;
+        }
+    };
+
+    removePhoto.onclick = () => {
+        pendingPhoto = "";
+        photoInput.value = "";
+        photoPreview.innerHTML = playerPortrait("Nuovo giocatore", "");
+        removePhoto.disabled = true;
+        photoStatus.textContent = "Puoi aggiungere e centrare subito la foto del giocatore.";
+        document.getElementById("photoCropControls").hidden = true;
+    };
+
+
+    document
+        .getElementById(
+            "cancelPlayer"
+        )
+        .onclick = closeModal;
+
+
+    document
+        .getElementById(
+            "savePlayer"
+        )
+        .onclick = () => {
+            if (!requireOnlineAdmin()) return;
+            if (photoBusy) return showToast("Attendi la preparazione della foto.");
+            const birthDate = document.getElementById("playerBirthDate").value;
+            const startMonth = document.getElementById("playerStartMonth").value;
+            const entryFee = Number(document.getElementById("playerEntryFee").value);
+            if (birthDate && !validBirthday(birthDate)) return showToast("Inserisci una data di nascita valida.");
+            if (!playerStartOptions.includes(startMonth)) return showToast("Seleziona una mensilità valida.");
+            if (!Number.isFinite(entryFee) || entryFee < 0) return showToast("Inserisci una quota d’ingresso valida.");
+
+            const name =
+                document
+                    .getElementById(
+                        "playerName"
+                    )
+                    .value
+                    .trim();
+
+
+            if (!name) {
+
+                showToast(
+                    "Inserisci il nome."
+                );
+
+                return;
+
+            }
+
+
+            if (
+                state.players.includes(
+                    name
+                )
+            ) {
+
+                showToast(
+                    "Giocatore già presente."
+                );
+
+                return;
+
+            }
+
+
+            const previousState = structuredClone(state);
+
+            state.players.push(
+                name
+            );
+
+
+            state.playerStartMonths = {
+                ...(state.playerStartMonths || {}),
+                [name]: startMonth
+            };
+
+            state.playerEntryFees = {
+                ...(state.playerEntryFees || {}),
+                [name]: entryFee
+            };
+
+
+            if (pendingPhoto) {
+                state.playerPhotos = {
+                    ...(state.playerPhotos || {}),
+                    [name]: pendingPhoto
+                };
+            }
+
+            if (birthDate) setBirthday(name, birthDate);
+            try {
+                saveState();
+            } catch (error) {
+                state = previousState;
+                showToast("Spazio insufficiente: il giocatore non è stato aggiunto.");
+                return;
+            }
+
+            closeModal();
+
+            render();
+
+            showToast(
+                "Giocatore aggiunto"
+            );
+
+        };
+
+}
+
+
+/* =========================================================
+   EVENTI PAGINA
+   ========================================================= */
+
+function bindPageEvents() {
+
+    /* =========================
+       NAVIGAZIONE
+       ========================= */
+
+    document
+        .querySelectorAll(
+            ".nav-button"
+        )
+        .forEach(button => {
+
+            button.onclick = () => {
+
+                if (button.dataset.page === "settings" && currentPage === "settings") {
+                    currentPage = pageBeforeSettings;
+                    render();
+                    return;
+                }
+
+                if (button.dataset.page === "settings" && !isAdmin) {
+                    showToast("Per aprire Impostazioni devi accedere come amministratore.");
+                    return;
+                }
+
+                if (button.dataset.page === "settings" && !navigator.onLine) {
+                    showToast("Le impostazioni si modificano solo online.");
+                    return;
+                }
+
+                if (button.dataset.page === "settings") pageBeforeSettings = currentPage;
+                currentPage = button.dataset.page;
+
+                render();
+
+            };
+
+        });
+
+
+/* =========================
+   MESI
+   ========================= */
+
+document
+    .getElementById("monthSelect")
+    ?.addEventListener("change", event => {
+
+        selectedMonth =
+            event.target.value;
+
+        render();
+
+    });
+
+document
+    .querySelectorAll("[data-fine-period]")
+    .forEach(button => {
+        button.addEventListener("click", () => {
+            selectedMonth = button.dataset.finePeriod;
+            render();
+        });
+    });
+
+
+/* =========================
+   GIOCATORE MULTE
+   ========================= */
+
+document
+    .getElementById("finePlayerSelect")
+    ?.addEventListener(
+        "change",
+        event => {
+
+            selectedFinePlayer =
+                event.target.value;
+
+            render();
+
+        }
+    );
+
+
+document
+    .getElementById("fineSearch")
+    ?.addEventListener("input", event => {
+        fineSearchQuery = event.target.value;
+        render();
+        requestAnimationFrame(() => {
+            const input = document.getElementById("fineSearch");
+            input?.focus();
+            input?.setSelectionRange(fineSearchQuery.length, fineSearchQuery.length);
+        });
+    });
+
+
+/* =========================
+   MESE PAGAMENTI
+   ========================= */
+
+    document
+       .getElementById("paymentMonthSelect")
+       ?.addEventListener("change", event => {
+
+           selectedPaymentMonth =
+            event.target.value;
+
+           render();
+
+    });
+
+    /* =========================
+       NUOVA MULTA
+       ========================= */
+
+    document
+        .getElementById(
+            "addFine"
+        )
+        ?.addEventListener(
+            "click",
+            () =>
+                openFineModal()
+        );
+
+    document
+        .getElementById("globalAddFine")
+        .onclick = openFineModal;
+
+
+    document
+        .getElementById(
+            "addFineEmpty"
+        )
+        ?.addEventListener(
+            "click",
+            () =>
+                openFineModal()
+        );
+
+
+    /* =========================
+       HOME → MULTE
+       ========================= */
+
+    document
+        .getElementById(
+            "goToFines"
+        )
+        ?.addEventListener(
+            "click",
+            () => {
+
+                currentPage =
+                    "fines";
+
+                render();
+
+            }
+        );
+
+    document
+        .getElementById("toggleRanking")
+        ?.addEventListener("click", () => {
+            showAllRanking = !showAllRanking;
+            render();
+        });
+
+    document
+        .getElementById("toggleMonthlySummary")
+        ?.addEventListener("click", () => {
+            showMonthlySummary = !showMonthlySummary;
+            render();
+        });
+
+    document
+        .getElementById("toggleOverduePlayers")
+        ?.addEventListener("click", () => {
+            showAllOverduePlayers = !showAllOverduePlayers;
+            render();
+        });
+
+    document
+        .querySelectorAll("[data-home-due-month]")
+        .forEach(button => {
+            button.addEventListener("click", () => {
+                selectedHomeDueMonth = button.dataset.homeDueMonth === "auto"
+                    ? ""
+                    : button.dataset.homeDueMonth;
+                showAllOverduePlayers = false;
+                render();
+            });
+        });
+
+
+
+
+    /* =========================
+       MODIFICA MULTA
+       ========================= */
+
+    document
+        .querySelectorAll(
+            "[data-edit-fine]"
+        )
+        .forEach(button => {
+
+            button.onclick = () => {
+
+                openFineModal(
+                    Number(
+                        button.dataset
+                            .editFine
+                    )
+                );
+
+            };
+
+        });
+
+
+    /* =========================
+       ELIMINA MULTA
+       ========================= */
+
+    document
+        .querySelectorAll(
+            "[data-delete-fine]"
+        )
+        .forEach(button => {
+
+            button.onclick = () => {
+
+                if (!requireOnlineAdmin()) return;
+
+                const id =
+                    Number(
+                        button.dataset
+                            .deleteFine
+                    );
+
+
+                if (
+                    !confirm(
+                        "Eliminare questa multa?"
+                    )
+                ) {
+
+                    return;
+
+                }
+
+                const previousState = structuredClone(state);
+
+                state.fines =
+                    state.fines.filter(
+                        fine =>
+                            fine.id !== id
+                    );
+
+
+                saveState();
+
+                render();
+
+                offerUndo("Multa eliminata", previousState);
+
+            };
+
+        });
+
+
+    /* =========================
+       NUOVA REGOLA
+       ========================= */
+
+    document
+        .getElementById(
+            "addRule"
+        )
+        ?.addEventListener(
+            "click",
+            () =>
+                openRuleModal()
+        );
+
+
+    /* =========================
+       MODIFICA REGOLA
+       ========================= */
+
+    document
+        .querySelectorAll(
+            "[data-edit-rule]"
+        )
+        .forEach(button => {
+
+            button.onclick = () => {
+
+                openRuleModal(
+                    Number(
+                        button.dataset
+                            .editRule
+                    )
+                );
+
+            };
+
+        });
+
+
+    /* =========================
+       ELIMINA REGOLA
+       ========================= */
+
+    document
+        .querySelectorAll(
+            "[data-delete-rule]"
+        )
+        .forEach(button => {
+
+            button.onclick = () => {
+
+                if (!requireOnlineAdmin()) return;
+
+                const id =
+                    Number(
+                        button.dataset
+                            .deleteRule
+                    );
+
+
+                if (
+                    !confirm(
+                        "Eliminare questa regola?"
+                    )
+                ) {
+
+                    return;
+
+                }
+
+
+                state.rules =
+                    state.rules.filter(
+                        rule =>
+                            rule.id !== id
+                    );
+
+
+                saveState();
+
+                render();
+
+                showToast(
+                    "Regola eliminata"
+                );
+
+            };
+
+        });
+
+
+    /* =========================
+       GIOCATORE
+       ========================= */
+
+    document
+        .getElementById(
+            "addPlayer"
+        )
+        ?.addEventListener(
+            "click",
+            openPlayerModal
+        );
+
+
+    /* =========================
+       ELIMINA GIOCATORE
+       ========================= */
+
+    document
+        .querySelectorAll(
+            "[data-delete-player]"
+        )
+        .forEach(button => {
+
+            button.onclick = () => {
+
+                if (!requireOnlineAdmin()) return;
+
+                const player = button.dataset.deletePlayer;
+                const index = state.players.indexOf(player);
+
+
+                if (!player || index < 0) {
+
+                    return;
+
+                }
+
+
+                if (
+                    !confirm(
+                        `Rimuovere ${player} dalla rosa?`
+                    )
+                ) {
+
+                    return;
+
+                }
+
+
+                state.players.splice(
+                    index,
+                    1
+                );
+
+
+                saveState();
+
+                render();
+
+            };
+
+        });
+
+   document
+   .getElementById("exportPaymentsImage")
+    ?.addEventListener(
+        "click",
+        () => exportPaymentsImage("all")
+    );
+
+   document
+    .getElementById("exportDuePaymentsImage")
+    ?.addEventListener(
+        "click",
+        () => exportPaymentsImage("due")
+    );
+
+   document
+    .getElementById("openTeamPayment")
+    ?.addEventListener("click", openTeamPaymentModal);
+
+   document
+    .getElementById("exportSeasonImage")
+    ?.addEventListener(
+        "click",
+        exportSeasonImage
+    );
+
+   document
+    .getElementById("exportSeasonDetailedImage")
+    ?.addEventListener(
+        "click",
+        openSeasonDetailedReport
+    );
+
+    document
+        .querySelectorAll("[data-player-history]")
+        .forEach(button => {
+            button.onclick = () => openPlayerHistoryModal(
+                button.dataset.playerHistory
+            );
+        });
+    /* =========================
+       SALVA IMPOSTAZIONI
+       ========================= */
+
+    document
+        .getElementById(
+            "saveSettings"
+        )
+        ?.addEventListener(
+            "click",
+            () => {
+
+                if (!requireOnlineAdmin()) return;
+
+                const team =
+                    document
+                        .getElementById(
+                            "teamName"
+                        )
+                        .value
+                        .trim();
+
+
+                const season =
+                    document
+                        .getElementById(
+                            "season"
+                        )
+                        .value
+                        .trim();
+
+
+                state.team =
+                    team ||
+                    "Multe SV";
+
+
+                state.season =
+                    season ||
+                    "2026/27";
+
+
+                saveState();
+
+                render();
+
+                showToast(
+                    "Impostazioni salvate"
+                );
+
+            }
+        );
+
+
+    /* =========================
+       BACKUP
+       ========================= */
+
+    document
+        .getElementById(
+            "exportData"
+        )
+        ?.addEventListener(
+            "click",
+            exportBackup
+        );
+
+    document
+        .getElementById("exportAutoBackup")
+        ?.addEventListener("click", exportAutomaticBackup);
+
+
+    /* =========================
+       IMPORT
+       ========================= */
+
+    document
+        .getElementById(
+            "importData"
+        )
+        ?.addEventListener(
+            "click",
+            () => {
+
+                document
+                    .getElementById(
+                        "importFile"
+                    )
+                    .click();
+
+            }
+        );
+
+
+    /* =========================
+       RESET
+       ========================= */
+
+    document
+        .getElementById(
+            "resetData"
+        )
+        ?.addEventListener(
+            "click",
+            resetData
+        );
+
+    document
+        .getElementById("resetSeason")
+        ?.addEventListener("click", resetSeason);
+
+    document
+        .getElementById("editSeasonConfig")
+        ?.addEventListener("click", () => openSeasonSetupModal(true));
+    document
+        .getElementById("openTeamCodeSetup")
+        ?.addEventListener("click", openTeamCodeSetupModal);
+    document
+        .getElementById("refreshAllTeamInfo")
+        ?.addEventListener("click", openGeneralTeamRefreshModal);
+
+    document
+        .getElementById("changeAdminPassword")
+        ?.addEventListener("click", openChangeAdminPasswordModal);
+
+    document
+        .getElementById("resetTotal")
+        ?.addEventListener("click", resetTotal);
+/* =========================
+   PAGAMENTI
+   ========================= */
+
+document
+    .querySelectorAll(
+        "[data-payment-player]"
+    )
+    .forEach(input => {
+
+        input.addEventListener(
+            "change",
+            event => {
+
+                if (!requireOnlineAdmin()) {
+                    render();
+                    return;
+                }
+
+                const previousState = structuredClone(state);
+
+                const player =
+                    event.target.dataset
+                        .paymentPlayer;
+
+                const month = getDisplayedPaymentMonth();
+
+                const amount =
+                    Math.max(
+                        0,
+                        Number(
+                            event.target.value
+                        ) || 0
+                    );
+
+                if (
+                    !state.payments
+                ) {
+                    state.payments = {};
+                }
+
+                if (
+                    !state.payments[month]
+                ) {
+                    state.payments[month] = {};
+                }
+
+                state.payments[month][player] =
+                    amount;
+
+                saveState();
+
+                render();
+
+                offerUndo("Pagamento aggiornato", previousState);
+
+            }
+        );
+
+    });
+
+document
+    .querySelectorAll("[data-fill-payment]")
+    .forEach(button => {
+        button.addEventListener("click", () => {
+            if (!requireOnlineAdmin()) return;
+            const player = button.dataset.fillPayment;
+            const input = [...document.querySelectorAll("[data-payment-player]")]
+                .find(candidate => candidate.dataset.paymentPlayer === player);
+            if (!input) return;
+            input.value = button.dataset.fillPaymentValue || "0";
+            input.focus();
+            input.select();
+        });
+    });
+}
+
+
+/* =========================================================
+   BACKUP EXPORT
+   ========================================================= */
+
+function exportBackup() {
+
+    downloadBackup("multesv-backup");
+    showToast("Backup esportato");
+
+}
+
+function exportAutomaticBackup() {
+    try {
+        const storedBackup = JSON.parse(
+            localStorage.getItem(AUTO_BACKUP_STORAGE_KEY) || "null"
+        );
+        downloadBackup("multesv-backup-automatico", storedBackup?.data || state);
+        showToast("Copia automatica esportata");
+    } catch (error) {
+        console.error("Errore backup automatico:", error);
+        showToast("Backup automatico non disponibile");
+    }
+}
+
+function downloadBackup(prefix, backupState = state) {
+
+    const data =
+        JSON.stringify(
+            {
+                ...structuredClone(backupState),
+                _backupMetadata: {
+                    app: "Multe SV",
+                    format: 2,
+                    exportedAt: new Date().toISOString()
+                }
+            },
+            null,
+            2
+        );
+
+
+    const blob =
+        new Blob(
+            [data],
+            {
+                type:
+                    "application/json"
+            }
+        );
+
+
+    const url =
+        URL.createObjectURL(
+            blob
+        );
+
+
+    const link =
+        document.createElement(
+            "a"
+        );
+
+
+    link.href = url;
+
+
+    link.download =
+        `${prefix}-${new Date()
+            .toISOString()
+            .slice(0, 10)}.json`;
+
+
+    document.body.appendChild(
+        link
+    );
+
+
+    link.click();
+
+
+    link.remove();
+
+
+    URL.revokeObjectURL(
+        url
+    );
+
+}
+
+
+/* =========================================================
+   BACKUP IMPORT
+   ========================================================= */
+
+function validateBackupState(imported) {
+    if (!imported || typeof imported !== "object" || Array.isArray(imported)) throw new Error("Il file non contiene un backup valido.");
+    if (!Array.isArray(imported.players) || !Array.isArray(imported.fines) || !Array.isArray(imported.rules)) throw new Error("Nel backup mancano giocatori, multe o regole.");
+    if (imported.players.length > 1000 || imported.fines.length > 200000 || imported.rules.length > 5000) throw new Error("Il backup supera i limiti di sicurezza.");
+    if (imported.players.some(player => typeof player !== "string" || !player.trim())) throw new Error("Il backup contiene un giocatore non valido.");
+    if (imported.fines.some(fine => !fine || typeof fine !== "object" || Array.isArray(fine))) throw new Error("Il backup contiene una multa non valida.");
+    if (imported.rules.some(rule => !rule || typeof rule !== "object" || Array.isArray(rule))) throw new Error("Il backup contiene una regola non valida.");
+    if (imported.payments !== undefined && (!imported.payments || typeof imported.payments !== "object" || Array.isArray(imported.payments))) throw new Error("La sezione pagamenti non è valida.");
+    if (imported.teamLogo !== undefined && !(imported.teamLogo === "san-vitale-logo.png" || /^data:image\/(png|webp|jpeg);base64,[A-Za-z0-9+/=]+$/i.test(imported.teamLogo))) throw new Error("Lo stemma nel backup non è valido.");
+    return true;
+}
+
+function commitImportedBackup(imported) {
+    validateBackupState(imported);
+    const previousSerialized = localStorage.getItem(STORAGE_KEY);
+    const previousState = structuredClone(state);
+    try {
+        const normalized = normalizeIncomingState(imported);
+        validateBackupState(normalized);
+        const normalizedSerialized = JSON.stringify(normalized);
+        localStorage.setItem(AUTO_BACKUP_STORAGE_KEY, JSON.stringify({ savedAt: new Date().toISOString(), reason: "before_import", data: previousState }));
+        localStorage.setItem(STORAGE_KEY, normalizedSerialized);
+        state = normalized;
+        queueCloudSave();
+        applyImportedCalendar();
+        deviceTheme = getDeviceTheme(state.theme);
+        selectedPaymentMonth = getPaymentMonths()[0];
+        render();
+        return true;
+    } catch (error) {
+        state = previousState;
+        if (previousSerialized === null) localStorage.removeItem(STORAGE_KEY);
+        else localStorage.setItem(STORAGE_KEY, previousSerialized);
+        throw error;
+    }
+}
+
+document
+    .getElementById(
+        "importFile"
+    )
+    .addEventListener(
+    "change",
+    event => {
+
+        if (!requireOnlineAdmin()) {
+            event.target.value = "";
+            return;
+        }
+
+            const file = event.target.files[0];
+
+
+            if (!file) {
+
+                return;
+
+            }
+
+
+            if (file.size > 25 * 1024 * 1024) {
+                showToast("Il backup supera 25 MB.");
+                event.target.value = "";
+                return;
+            }
+
+            const reader = new FileReader();
+
+
+            reader.onload = () => {
+
+                try {
+
+                    const imported =
+                        JSON.parse(
+                            reader.result
+                        );
+
+
+                    commitImportedBackup(imported);
+
+                    showToast(
+                        "Backup importato"
+                    );
+
+                } catch (error) {
+
+                    console.error(
+                        error
+                    );
+
+                    showToast(error.message || "Backup non valido");
+
+                }
+
+            };
+
+
+            reader.onerror = () => showToast("Impossibile leggere il backup.");
+            reader.readAsText(file);
+
+
+            event.target.value = "";
+
+        }
+    );
+
+
+/* =========================================================
+   RESET
+   ========================================================= */
+
+function getSuggestedNextSeason() {
+    const nextStart = getSeasonStartYear() + 1;
+    return `${nextStart}/${String(nextStart + 1).slice(-2)}`;
+}
+
+async function resolveTuttocampoTeamCode(teamId) {
+    const normalized = String(teamId || "").trim();
+    if (!/^\d{5,10}$/.test(normalized)) throw new Error("Inserisci un codice Tuttocampo valido.");
+    if (LOCAL_CUSTOMIZATION_PREVIEW) {
+        const response = await fetch(`/__team-profile?teamId=${encodeURIComponent(normalized)}`, { cache: "no-store" });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(payload.error || "Squadra non trovata su Tuttocampo.");
+        return payload.profile;
+    }
+    if (!supabaseClient) throw new Error("Servizio di configurazione non disponibile.");
+    const { data, error } = await supabaseClient.functions.invoke("import-tuttocampo-calendar", {
+        body: { mode: "profile", teamId: Number(normalized) }
+    });
+    if (error) throw new Error(error.message || "Squadra non trovata su Tuttocampo.");
+    return data?.profile;
+}
+
+function openTeamCodeSetupModal() {
+    if (!LOCAL_CUSTOMIZATION_PREVIEW) return;
+    const currentCode = state.seasonConfig?.tuttocampoTeamId || "1199590";
+    openModal("Configura da Tuttocampo", `
+        <div class="team-code-setup">
+            <section class="team-code-hero"><span>PROVA LOCALE</span><h3>Un solo codice per tutta la squadra</h3><p>La ricerca prepara nome, stemma, pagina ufficiale, campionato, calendario e coppe. Nessun dato viene salvato online.</p></section>
+            <label class="team-code-input"><span>CODICE SQUADRA TUTTOCAMPO</span><div><input id="tuttocampoTeamCode" inputmode="numeric" autocomplete="off" value="${escapeHtml(String(currentCode))}" placeholder="es. 1199590"><button class="btn" id="resolveTeamCode" type="button">Rileva squadra</button></div><small>È il numero presente nell’indirizzo della pagina della squadra.</small></label>
+            <div id="teamCodeResult" class="team-code-result"><p>Inserisci il codice e controlla l’anteprima prima di applicare la configurazione.</p></div>
+            <div class="modal-actions"><button class="btn secondary" id="cancelTeamCodeSetup" type="button">Chiudi</button><button class="btn" id="stageTeamCodeSetup" type="button" disabled>Usa nella prova locale</button></div>
+        </div>
+    `);
+    document.querySelector("#modalRoot .modal")?.classList.add("team-code-setup-modal");
+    const input = document.getElementById("tuttocampoTeamCode");
+    const resolveButton = document.getElementById("resolveTeamCode");
+    const applyButton = document.getElementById("stageTeamCodeSetup");
+    const result = document.getElementById("teamCodeResult");
+    let resolvedProfile = null;
+    const resolve = async () => {
+        resolveButton.disabled = true;
+        applyButton.disabled = true;
+        resolvedProfile = null;
+        result.className = "team-code-result is-loading";
+        result.innerHTML = "<p>Ricerca della squadra e delle competizioni…</p>";
+        try {
+            resolvedProfile = await resolveTuttocampoTeamCode(input.value);
+            const sources = Array.isArray(resolvedProfile.competitions) ? resolvedProfile.competitions : [];
+            result.className = "team-code-result is-ready";
+            result.innerHTML = `<div class="team-code-identity"><img src="${escapeHtml(resolvedProfile.logo)}" alt=""><div><small>SQUADRA TROVATA</small><strong>${escapeHtml(resolvedProfile.name)}</strong><span>Codice ${escapeHtml(String(resolvedProfile.teamId))}</span></div></div><div class="team-code-detected"><div><span>Pagina squadra</span><strong>Collegata</strong></div><div><span>Campionato</span><strong>${escapeHtml(resolvedProfile.league || "Rilevato")}</strong></div><div><span>Calendario</span><strong>Pronto</strong></div><div><span>Coppe rilevate</span><strong>${sources.filter(source => source.type === "cup").length}</strong></div></div><details><summary>Collegamenti rilevati</summary>${sources.map(source => `<p><b>${escapeHtml(source.name)}</b><small>${escapeHtml(source.url)}</small></p>`).join("") || "<p>Nessuna competizione aggiuntiva rilevata.</p>"}</details><p class="team-code-safe-note">Questa anteprima non modifica rosa, multe, pagamenti, Multario o password.</p>`;
+            applyButton.disabled = false;
+        } catch (error) {
+            result.className = "team-code-result is-error";
+            result.innerHTML = `<strong>Configurazione non trovata</strong><p>${escapeHtml(error.message || "Controllo non riuscito.")}</p>`;
+        } finally {
+            resolveButton.disabled = false;
+        }
+    };
+    resolveButton.onclick = resolve;
+    input.addEventListener("keydown", event => { if (event.key === "Enter") resolve(); });
+    input.addEventListener("input", () => { applyButton.disabled = true; resolvedProfile = null; });
+    document.getElementById("cancelTeamCodeSetup").onclick = closeModal;
+    applyButton.onclick = () => {
+        if (!resolvedProfile) return;
+        sessionStorage.setItem("multesv_team_profile_preview_v1", JSON.stringify(resolvedProfile));
+        result.insertAdjacentHTML("beforeend", `<p class="team-code-staged">✓ Configurazione preparata soltanto per questa prova locale.</p>`);
+        applyButton.disabled = true;
+        applyButton.textContent = "Preparata";
+    };
+}
+
+async function openGeneralTeamRefreshModal() {
+    if (!LOCAL_CUSTOMIZATION_PREVIEW) return;
+    const staged = JSON.parse(sessionStorage.getItem("multesv_team_profile_preview_v1") || "null");
+    const teamId = staged?.teamId || state.seasonConfig?.tuttocampoTeamId || 1199590;
+    openModal("Aggiorna tutte le info", `
+        <div class="team-refresh-panel">
+            <div class="team-refresh-heading"><span class="team-refresh-spinner">↻</span><div><strong>Controllo completo in corso</strong><small>Codice Tuttocampo ${escapeHtml(String(teamId))}</small></div></div>
+            <div id="teamRefreshChecks" class="team-refresh-checks"><p>Collegamento a Tuttocampo…</p></div>
+            <p class="team-code-safe-note">Il controllo prepara una nuova versione delle informazioni. Non modifica rosa, multe, quote o pagamenti.</p>
+            <div class="modal-actions"><button class="btn secondary" id="closeTeamRefresh" type="button">Chiudi</button><button class="btn" id="stageTeamRefresh" type="button" disabled>Applica aggiornamento locale</button></div>
+        </div>
+    `);
+    const checks = document.getElementById("teamRefreshChecks");
+    const apply = document.getElementById("stageTeamRefresh");
+    document.getElementById("closeTeamRefresh").onclick = closeModal;
+    try {
+        const response = await fetch(`/__team-profile?teamId=${encodeURIComponent(teamId)}&refresh=1`, { cache: "no-store" });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(payload.error || "Controllo non riuscito.");
+        const report = payload.report || {};
+        const rows = [
+            ["Profilo squadra", report.profile], ["Stemma", report.logo], ["Calendario campionato", report.calendar],
+            ["Prossima partita", report.nextMatch], ["Risultati", report.results], ["Classifica", report.standings], ["Coppe", report.cups]
+        ];
+        checks.innerHTML = rows.map(([label,item]) => `<div class="team-refresh-check ${item?.ok ? "is-ok" : "is-warning"}"><i>${item?.ok ? "✓" : "!"}</i><span><strong>${escapeHtml(label)}</strong><small>${escapeHtml(item?.detail || "Da verificare")}</small></span></div>`).join("");
+        document.querySelector(".team-refresh-heading strong").textContent = "Controllo completato";
+        document.querySelector(".team-refresh-spinner").textContent = "✓";
+        apply.disabled = false;
+        apply.onclick = () => {
+            sessionStorage.setItem("multesv_team_refresh_preview_v1", JSON.stringify(payload));
+            apply.disabled = true; apply.textContent = "Aggiornato nella prova";
+            showToast("Informazioni aggiornate soltanto nella versione locale.");
+        };
+    } catch (error) {
+        checks.innerHTML = `<div class="team-refresh-check is-warning"><i>!</i><span><strong>Controllo interrotto</strong><small>${escapeHtml(error.message || "Riprova più tardi.")}</small></span></div>`;
+        document.querySelector(".team-refresh-heading strong").textContent = "Aggiornamento non completato";
+        document.querySelector(".team-refresh-spinner").textContent = "!";
+    }
+}
+
+function openSeasonSetupModal(editCurrent = false) {
+    if (!requireOnlineAdmin()) return;
+
+    const nextSeason = editCurrent ? state.season : getSuggestedNextSeason();
+    const monthLabels = [
+        ["08", "Agosto"], ["09", "Settembre"], ["10", "Ottobre"],
+        ["11", "Novembre"], ["12", "Dicembre"], ["01", "Gennaio"],
+        ["02", "Febbraio"], ["03", "Marzo"], ["04", "Aprile"], ["05", "Maggio"],
+        ["06", "Giugno"], ["07", "Luglio"]
+    ];
+    const base = Math.max(0, Number(state.seasonConfig?.monthlyBase ?? 5) || 0);
+    const paymentStartMonth = Number(state.seasonConfig?.paymentStartMonth ?? 8);
+    const paymentEndMonth = Number(state.seasonConfig?.paymentEndMonth ?? 5);
+    const paymentMode = state.seasonConfig?.paymentMode === "rolling" ? "rolling" : "due_day";
+    const paymentDueDay = Math.min(28, Math.max(1, Number(state.seasonConfig?.paymentDueDay ?? 15) || 15));
+    const feeMode = state.teamCustomization?.feeMode || "monthly";
+    const entryFee = Math.max(0, Number(state.teamCustomization?.entryFee) || 0);
+    const calendarMonthOptions = Array.from({ length: 12 }, (_, index) => {
+        const month = index + 1;
+        return `<option value="${month}">${getMonthName(month)}</option>`;
+    }).join("");
+
+    openModal(editCurrent ? "Modifica stagione" : "Prepara nuova stagione", `
+        <div class="season-setup">
+            <section class="season-setup-hero">
+                <span>${editCurrent ? "CONFIGURAZIONE ATTUALE" : "PASSAGGIO GUIDATO"}</span>
+                <h3>${editCurrent ? `<strong id="seasonPreviewLabel">${escapeHtml(state.season)}</strong>` : `${escapeHtml(state.season)} <b aria-hidden="true">→</b> <strong id="seasonPreviewLabel">${escapeHtml(nextSeason)}</strong>`}</h3>
+                <p>${editCurrent ? "Quote e calendari possono essere aggiornati senza modificare multe o pagamenti." : "La stagione attuale verrà archiviata. Giocatori e Multario resteranno disponibili."}</p>
+            </section>
+
+            <section class="season-setup-section">
+                <div class="season-setup-title"><span>01</span><div><h3>Nuova annata</h3><p>Imposta stagione e collegamento al calendario.</p></div></div>
+                <div class="season-setup-grid">
+                    <div class="field"><label for="newSeasonName">STAGIONE</label><input id="newSeasonName" type="text" value="${escapeHtml(nextSeason)}" placeholder="2027/28" inputmode="numeric" ${editCurrent ? "readonly" : ""}></div>
+                    <div class="field"><label for="newSeasonFeeMode">TIPO DI QUOTA</label><select id="newSeasonFeeMode"><option value="none" ${feeMode === "none" ? "selected" : ""}>Nessuna quota</option><option value="monthly" ${feeMode === "monthly" ? "selected" : ""}>Solo quota mensile</option><option value="entry" ${feeMode === "entry" ? "selected" : ""}>Solo quota d’ingresso</option><option value="monthly_entry" ${feeMode === "monthly_entry" ? "selected" : ""}>Quota d’ingresso, poi mensile</option></select></div>
+                    <div class="field"><label for="newSeasonBase">QUOTA MENSILE ORDINARIA (€)</label><input id="newSeasonBase" type="number" min="0" step="0.5" value="${base}"></div>
+                    <div class="field"><label for="newSeasonEntryFee">QUOTA DEL PRIMO MESE / INGRESSO (€)</label><input id="newSeasonEntryFee" type="number" min="0" step="0.5" value="${entryFee}"><small>È l’unica quota del primo mese assegnato: non si somma alla quota mensile.</small></div>
+                    <div class="field"><label for="newSeasonStartMonth">PRIMO MESE DI PAGAMENTO</label><select id="newSeasonStartMonth">${calendarMonthOptions}</select></div>
+                    <div class="field"><label for="newSeasonEndMonth">ULTIMO MESE DI PAGAMENTO</label><select id="newSeasonEndMonth">${calendarMonthOptions}</select></div>
+                    <div class="field"><label for="newSeasonPaymentMode">GESTIONE PAGAMENTO MULTE</label><select id="newSeasonPaymentMode"><option value="due_day" ${paymentMode === "due_day" ? "selected" : ""}>Scadenza mensile</option><option value="rolling" ${paymentMode === "rolling" ? "selected" : ""}>Mese corrente automatico</option></select><small>Con Mese corrente si passa al successivo quando tutti hanno saldato oppure dopo la prima settimana.</small></div>
+                    <div class="field" id="newSeasonPaymentDueDayField"><label for="newSeasonPaymentDueDay">DAL GIORNO DEL MESE SUCCESSIVO</label><input id="newSeasonPaymentDueDay" type="number" min="1" max="28" step="1" value="${paymentDueDay}" inputmode="numeric"><small>Usato soltanto con Scadenza mensile.</small></div>
+                </div>
+                <div class="season-logo-editor">
+                    <img id="seasonTeamLogoPreview" src="${escapeHtml(getTeamLogo())}" alt="Anteprima stemma squadra">
+                    <div><strong>Stemma della squadra</strong><small>Viene adattato senza deformazioni e usato automaticamente in tutta l’app.</small><div class="season-logo-actions"><label class="btn secondary" for="newSeasonTeamLogo">Carica nuovo stemma</label><button class="btn secondary" id="restoreDefaultTeamLogo" type="button">Ripristina originale</button></div><input id="newSeasonTeamLogo" type="file" accept="image/png,image/jpeg,image/webp" hidden></div>
+                </div>
+                <div class="season-calendar-sources">
+                    <div class="field season-calendar-field"><label for="newSeasonLeagueCalendar">CALENDARIO CAMPIONATO</label><div class="season-calendar-input"><input id="newSeasonLeagueCalendar" type="url" value="${escapeHtml(state.seasonConfig?.calendarSources?.find(source => source.type === "league")?.url || "")}" placeholder="https://www.tuttocampo.it/.../Calendario"><button class="btn secondary calendar-import-button" data-import-calendar="league" type="button">Verifica link</button></div><div class="calendar-import-result" data-import-result="league"></div></div>
+                    <label class="season-source-toggle"><input id="newSeasonCupEnabled" type="checkbox" ${state.seasonConfig?.calendarSources?.find(source => source.type === "cup")?.enabled ? "checked" : ""}><span><strong>Aggiungi Coppa</strong><small>Competizione dinamica: dopo ogni gara verrà cercato automaticamente il turno successivo.</small></span></label>
+                    <div class="field season-calendar-field" id="newSeasonCupField"><label for="newSeasonCupCalendar">CALENDARIO COPPA</label><div class="season-calendar-input"><input id="newSeasonCupCalendar" type="url" value="${escapeHtml(state.seasonConfig?.calendarSources?.find(source => source.type === "cup")?.url || "")}" placeholder="https://www.tuttocampo.it/.../Risultati"><button class="btn secondary calendar-import-button" data-import-calendar="cup" type="button">Verifica link</button></div><div class="calendar-import-result" data-import-result="cup"></div></div>
+                </div>
+            </section>
+
+            <section class="season-setup-section">
+                <div class="season-setup-title"><span>02</span><div><h3>Quote mensili mese per mese</h3><p>Valgono dal mese successivo all’ingresso. Nel primo mese si applica soltanto la quota indicata sopra.</p></div></div>
+                <div class="season-month-rates">
+                    ${monthLabels.map(([number, label]) => {
+                        const configured = state.seasonConfig?.monthOverrides?.[number];
+                        const value = configured !== undefined ? configured : base;
+                        return `<label><span>${label}</span><span class="season-rate-input"><input data-season-rate="${number}" type="number" min="0" step="0.5" value="${value}"><b>€</b></span></label>`;
+                    }).join("")}
+                </div>
+            </section>
+
+            <section class="season-setup-section season-change-summary">
+                <div class="season-setup-title"><span>03</span><div><h3>Cosa succede</h3><p>Controlla l’operazione prima di confermare.</p></div></div>
+                <div class="season-change-list">
+                    <div><i>✓</i><span><strong>${state.players.length} giocatori mantenuti</strong><small>Date e foto saranno conservate; nella nuova stagione il mese di partenza sarà quello scelto sopra.</small></span></div>
+                    <div><i>✓</i><span><strong>${state.rules.length} regole mantenute</strong><small>Il Multario non verrà modificato.</small></span></div>
+                    ${editCurrent
+                        ? `<div><i>✓</i><span><strong>Dati stagionali invariati</strong><small>${state.fines.length} multe e tutti i pagamenti attuali rimarranno intatti.</small></span></div>`
+                        : `<div><i>↥</i><span><strong>Backup e archivio automatici</strong><small>${state.fines.length} multe e tutti i pagamenti della stagione ${escapeHtml(state.season)} resteranno recuperabili.</small></span></div><div class="is-reset"><i>0</i><span><strong>Nuovi dati stagionali vuoti</strong><small>La nuova stagione partirà senza multe e pagamenti.</small></span></div>`}
+                </div>
+            </section>
+
+            <label class="season-confirm"><input id="confirmSeasonSetup" type="checkbox"><span>Ho controllato stagione, quote e calendari.</span></label>
+            <div class="modal-actions"><button class="btn secondary" id="cancelSeasonSetup" type="button">Annulla</button><button class="btn" id="applySeasonSetup" type="button" disabled>${editCurrent ? "Salva configurazione" : "Avvia nuova stagione"}</button></div>
+        </div>
+    `);
+
+    document.querySelector("#modalRoot .modal")?.classList.add("season-setup-modal");
+    const seasonInput = document.getElementById("newSeasonName");
+    const baseInput = document.getElementById("newSeasonBase");
+    const confirmInput = document.getElementById("confirmSeasonSetup");
+    const applyButton = document.getElementById("applySeasonSetup");
+    const cupEnabledInput = document.getElementById("newSeasonCupEnabled");
+    const cupField = document.getElementById("newSeasonCupField");
+    const startMonthInput = document.getElementById("newSeasonStartMonth");
+    const endMonthInput = document.getElementById("newSeasonEndMonth");
+    const paymentModeInput = document.getElementById("newSeasonPaymentMode");
+    const paymentDueDayInput = document.getElementById("newSeasonPaymentDueDay");
+    const paymentDueDayField = document.getElementById("newSeasonPaymentDueDayField");
+    pendingCalendarImports = { league: null, cup: null };
+    pendingTeamLogo = getTeamLogo();
+    startMonthInput.value = String(paymentStartMonth);
+    endMonthInput.value = String(paymentEndMonth);
+    const updatePaymentMode = () => { paymentDueDayField.hidden = paymentModeInput.value === "rolling"; };
+    paymentModeInput.addEventListener("change", updatePaymentMode);
+    updatePaymentMode();
+    const updatePreview = () => {
+        document.getElementById("seasonPreviewLabel").textContent = seasonInput.value.trim() || "—";
+    };
+    seasonInput.addEventListener("input", updatePreview);
+    const updateCupVisibility = () => { cupField.hidden = !cupEnabledInput.checked; };
+    cupEnabledInput.addEventListener("change", updateCupVisibility);
+    updateCupVisibility();
+    baseInput.addEventListener("change", () => {
+        const previousBase = base;
+        const nextBase = Math.max(0, Number(baseInput.value) || 0);
+        document.querySelectorAll("[data-season-rate]").forEach(input => {
+            if (Number(input.value) === previousBase) input.value = nextBase;
+        });
+    });
+    confirmInput.addEventListener("change", () => { applyButton.disabled = !confirmInput.checked; });
+    document.getElementById("newSeasonTeamLogo").addEventListener("change", async event => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        try {
+            pendingTeamLogo = await prepareTeamLogo(file);
+            document.getElementById("seasonTeamLogoPreview").src = pendingTeamLogo;
+            showToast("Nuovo stemma pronto. Salva per applicarlo.");
+        } catch (error) {
+            event.target.value = "";
+            showToast(error.message || "Immagine non valida.");
+        }
+    });
+    document.getElementById("restoreDefaultTeamLogo").onclick = () => {
+        pendingTeamLogo = "san-vitale-logo.png";
+        document.getElementById("seasonTeamLogoPreview").src = pendingTeamLogo;
+        document.getElementById("newSeasonTeamLogo").value = "";
+        showToast("Stemma originale pronto. Salva per applicarlo.");
+    };
+    document.querySelectorAll("[data-import-calendar]").forEach(button => {
+        button.onclick = async () => {
+            const type = button.dataset.importCalendar;
+            const input = document.getElementById(type === "cup" ? "newSeasonCupCalendar" : "newSeasonLeagueCalendar");
+            const result = document.querySelector(`[data-import-result="${type}"]`);
+            button.disabled = true;
+            button.textContent = "Controllo…";
+            result.className = "calendar-import-result is-loading";
+            result.textContent = "Lettura del calendario in corso…";
+            try {
+                const calendar = await importCalendarFromLink(type, input.value.trim());
+                pendingCalendarImports[type] = { url: input.value.trim(), snapshot: calendar };
+                const future = calendar.matches.filter(match => new Date(`${match.date}T${match.time}:00`).getTime() > Date.now()).length;
+                result.className = "calendar-import-result is-valid";
+                result.innerHTML = `<strong>✓ ${calendar.competition ? escapeHtml(calendar.competition) : (type === "cup" ? "Coppa" : "Campionato")}</strong><span>${calendar.matches.length} partite trovate · ${future} ancora da giocare</span><small>Anteprima verificata. Verrà salvata solo confermando la stagione.</small>`;
+            } catch (error) {
+                pendingCalendarImports[type] = null;
+                result.className = "calendar-import-result is-error";
+                result.innerHTML = `<strong>Link non importato</strong><span>${escapeHtml(error.message || "Controllo non riuscito.")}</span><small>Il calendario già salvato non è stato modificato.</small>`;
+            } finally {
+                button.disabled = false;
+                button.textContent = "Verifica link";
+            }
+        };
+    });
+    ["league", "cup"].forEach(type => {
+        const input = document.getElementById(type === "cup" ? "newSeasonCupCalendar" : "newSeasonLeagueCalendar");
+        input.addEventListener("input", () => { pendingCalendarImports[type] = null; });
+    });
+    document.getElementById("cancelSeasonSetup").onclick = closeModal;
+    applyButton.onclick = () => {
+        if (!requireOnlineAdmin()) return;
+        const season = seasonInput.value.trim();
+        if (!/^\d{4}\/\d{2}$/.test(season)) {
+            showToast("Inserisci la stagione nel formato 2027/28.");
+            return;
+        }
+        const leagueUrl = document.getElementById("newSeasonLeagueCalendar").value.trim();
+        const cupUrl = document.getElementById("newSeasonCupCalendar").value.trim();
+        if (!isValidTuttocampoCalendarUrl(leagueUrl) || (cupEnabledInput.checked && !isValidTuttocampoCalendarUrl(cupUrl))) {
+            showToast("Inserisci link Calendario/Risultati validi di Tuttocampo.");
+            return;
+        }
+        const existingLeague = state.seasonConfig?.calendarSources?.find(source => source.type === "league");
+        const existingCup = state.seasonConfig?.calendarSources?.find(source => source.type === "cup");
+        const leagueSnapshot = pendingCalendarImports.league?.url === leagueUrl
+            ? pendingCalendarImports.league.snapshot
+            : (existingLeague?.url === leagueUrl
+                ? (existingLeague.snapshot || (editCurrent ? getRuntimeCalendarSnapshot("league") : null))
+                : null);
+        const cupSnapshot = pendingCalendarImports.cup?.url === cupUrl
+            ? pendingCalendarImports.cup.snapshot
+            : (existingCup?.url === cupUrl ? existingCup.snapshot : null);
+        if (!leagueSnapshot || (cupEnabledInput.checked && !cupSnapshot)) {
+            showToast("Verifica i link dei calendari prima di salvare.");
+            return;
+        }
+        const monthlyBase = Math.max(0, Number(baseInput.value) || 0);
+        state.teamCustomization = { ...(state.teamCustomization || {}), feeMode: document.getElementById("newSeasonFeeMode").value, entryFee: Math.max(0, Number(document.getElementById("newSeasonEntryFee").value) || 0), feesEnabled: document.getElementById("newSeasonFeeMode").value !== "none" };
+        const paymentStartMonth = Number(startMonthInput.value);
+        const paymentEndMonth = Number(endMonthInput.value);
+        const paymentFrequency = "monthly";
+        const paymentMode = paymentModeInput.value === "rolling" ? "rolling" : "due_day";
+        const paymentDueDay = Math.min(28, Math.max(1, Number(paymentDueDayInput.value) || 15));
+        const monthOverrides = {};
+        document.querySelectorAll("[data-season-rate]").forEach(input => {
+            const amount = Math.max(0, Number(input.value) || 0);
+            if (amount !== monthlyBase) monthOverrides[input.dataset.seasonRate] = amount;
+        });
+        if (editCurrent) {
+            state.season = season;
+            state.teamLogo = pendingTeamLogo || getTeamLogo();
+            state.seasonConfig = {
+                monthlyBase,
+                paymentStartMonth,
+                paymentEndMonth,
+                paymentFrequency,
+                paymentMode,
+                paymentDueDay,
+                monthOverrides,
+                calendarSources: [
+                    { type: "league", name: "Campionato", enabled: true, url: leagueUrl, snapshot: leagueSnapshot, lastCheckedAt: new Date().toISOString() },
+                    { type: "cup", name: "Coppa", enabled: cupEnabledInput.checked, dynamic: true, refreshPolicy: "after_match", url: cupEnabledInput.checked ? cupUrl : "", snapshot: cupEnabledInput.checked ? cupSnapshot : null, lastCheckedAt: cupEnabledInput.checked ? new Date().toISOString() : "" }
+                ]
+            };
+            saveState();
+            closeModal();
+            applyImportedCalendar();
+            render();
+            showToast("Configurazione stagione aggiornata.");
+            return;
+        }
+
+        downloadBackup("multesv-backup-prima-nuova-stagione");
+        const archive = {
+            season: state.season,
+            closedAt: new Date().toISOString(),
+            fines: structuredClone(state.fines),
+            payments: structuredClone(state.payments),
+            playerEntryFees: structuredClone(state.playerEntryFees || {}),
+            seasonConfig: structuredClone(state.seasonConfig || {})
+        };
+        const startYear = Number(season.slice(0, 4));
+        state = {
+            ...state,
+            season,
+            teamLogo: pendingTeamLogo || getTeamLogo(),
+            seasonConfig: {
+                monthlyBase,
+                paymentStartMonth,
+                paymentEndMonth,
+                paymentFrequency,
+                paymentMode,
+                paymentDueDay,
+                monthOverrides,
+                calendarSources: [
+                    { type: "league", name: "Campionato", enabled: true, url: leagueUrl, snapshot: leagueSnapshot, lastCheckedAt: new Date().toISOString() },
+                    { type: "cup", name: "Coppa", enabled: cupEnabledInput.checked, dynamic: true, refreshPolicy: "after_match", url: cupEnabledInput.checked ? cupUrl : "", snapshot: cupEnabledInput.checked ? cupSnapshot : null, lastCheckedAt: cupEnabledInput.checked ? new Date().toISOString() : "" }
+                ]
+            },
+            seasonArchives: [...(state.seasonArchives || []), archive],
+            playerStartMonths: Object.fromEntries(state.players.map(player => [player, `${startYear}-${String(paymentStartMonth).padStart(2, "0")}`])),
+            playerEntryFees: {},
+            fines: [],
+            payments: {}
+        };
+        selectedPaymentMonth = `${startYear}-${String(paymentStartMonth).padStart(2, "0")}`;
+        saveState();
+        applyImportedCalendar();
+        closeModal();
+        render();
+        showToast(`Stagione ${season} avviata. Backup scaricato.`);
+    };
+}
+
+function resetSeason() {
+    openSeasonSetupModal();
+}
+
+function resetTotal() {
+    if (!requireOnlineAdmin()) return;
+
+    const code = prompt(
+        "Operazione irreversibile. Verrà scaricato un backup automatico.\n\nDigita RESET per continuare:"
+    );
+
+    if (code !== "RESET") {
+        showToast("Reset totale annullato.");
+        return;
+    }
+
+    downloadBackup("multesv-backup-prima-reset-totale");
+    state = structuredClone(defaultState);
+    saveState();
+    render();
+    showToast("Reset totale eseguito. Backup scaricato.");
+}
+
+function resetData() {
+
+    if (!requireOnlineAdmin()) return;
+
+    const confirmed =
+        confirm(
+            "Sei sicuro?\n\n" +
+            "Tutti i dati attuali " +
+            "verranno sostituiti " +
+            "dai dati demo."
+        );
+
+
+    if (!confirmed) {
+
+        return;
+
+    }
+
+    downloadBackup("multesv-backup-prima-ripristino-demo");
+
+
+    state =
+        structuredClone(
+            defaultState
+        );
+
+
+    saveState();
+
+    render();
+
+    showToast(
+        "Dati ripristinati"
+    );
+
+}
+
+
+/* =========================================================
+   TOAST
+   ========================================================= */
+
+function showToast(message) {
+
+    const toast =
+        document.getElementById(
+            "toast"
+        );
+
+    clearTimeout(undoTimer);
+    toast.classList.remove("has-action");
+
+    toast.textContent =
+        message;
+
+
+    toast.classList.add(
+        "show"
+    );
+
+
+    setTimeout(
+        () => {
+
+            toast.classList.remove(
+                "show"
+            );
+
+        },
+        2200
+    );
+
+}
+
+function showAppUpdateNotice(registration) {
+    if (!registration?.waiting || document.getElementById("appUpdateNotice")) return;
+
+    const notice = document.createElement("div");
+    notice.id = "appUpdateNotice";
+    notice.className = "app-update-notice";
+    notice.setAttribute("role", "status");
+    notice.innerHTML = `
+        <div><strong>Nuova versione disponibile</strong><span>Aggiorna quando sei pronto.</span></div>
+        <button type="button" id="applyAppUpdate">Aggiorna</button>
+    `;
+    document.body.appendChild(notice);
+    document.getElementById("applyAppUpdate").onclick = () => {
+        notice.querySelector("button").disabled = true;
+        reloadForServiceWorkerUpdate = true;
+        registration.waiting.postMessage({ type: "SKIP_WAITING" });
+    };
+}
+
+function watchServiceWorkerUpdate(registration) {
+    if (registration.waiting && navigator.serviceWorker.controller) {
+        showAppUpdateNotice(registration);
+    }
+
+    registration.addEventListener("updatefound", () => {
+        const worker = registration.installing;
+        worker?.addEventListener("statechange", () => {
+            if (worker.state === "installed" && navigator.serviceWorker.controller) {
+                showAppUpdateNotice(registration);
+            }
+        });
+    });
+}
+
+
+/* =========================================================
+   TEMA
+   ========================================================= */
+
+document
+    .getElementById(
+        "themeButton"
+    )
+    .addEventListener(
+        "click",
+        () => {
+
+            deviceTheme =
+                deviceTheme === "dark"
+                    ? "light"
+                    : "dark";
+
+            localStorage.setItem(THEME_STORAGE_KEY, deviceTheme);
+
+            applyTheme();
+
+        }
+    );
+
+
+/* =========================================================
+   AVVIO
+   ========================================================= */
+
+render();
+window.addEventListener("online", handleConnectionRestored);
+window.addEventListener("offline", handleConnectionLost);
+initializeCloud();
+setInterval(() => refreshMatchResults().catch(() => {}), 60 * 60 * 1000);
+document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) refreshMatchResults().catch(() => {});
+});
+if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+        navigator.serviceWorker
+            .register("./service-worker.js")
+            .then(registration => {
+                console.log("Multe SV: Service Worker attivo");
+                watchServiceWorkerUpdate(registration);
+                registration.update().catch(() => {});
+            })
+            .catch(error => {
+                console.error("Multe SV: errore Service Worker", error);
+            });
+    });
+
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+        if (!reloadForServiceWorkerUpdate) return;
+        reloadForServiceWorkerUpdate = false;
+        window.location.reload();
+    });
+}
+
+
+/* Export Pagamenti coordinato con colori, stemma e foto squadra. */
+const createPaymentsExportCanvasBase = createPaymentsExportCanvas;
+createPaymentsExportCanvas = function(mode = "all") {
+ const base=createPaymentsExportCanvasBase(mode); if(!base)return null;
+ const m=getDisplayedPaymentMonth(), due=mode==="due";
+ const list=getSortedPlayers().map(function(p){return {player:p,summary:getPlayerMonthSummary(p,m)}}).filter(function(e){return !due||e.summary.remaining>0});
+ const scale=base.width/1133, canvas=document.createElement("canvas"); canvas.width=Math.round(698*scale); canvas.height=base.height;
+ const c=canvas.getContext("2d"); c.drawImage(base,0,0,canvas.width,base.height,0,0,canvas.width,base.height); c.scale(scale,scale); c.textBaseline="middle";
+ const css=getComputedStyle(document.documentElement), primary=state.teamCustomization?.primary||css.getPropertyValue("--primary").trim()||"#2563eb", accent=state.teamCustomization?.accent||css.getPropertyValue("--preview-accent").trim()||"#60a5fa";
+ c.fillStyle="#f7f9fc";c.fillRect(44,82,610,24);c.fillStyle="#5b677a";c.font="500 15px system-ui,sans-serif";c.fillText(due?"Solo i giocatori con un importo ancora da versare":"Situazione dei versamenti del mese selezionato",114,74);
+ c.fillStyle=primary;c.fillRect(44,108,610,46);c.fillStyle=accent;c.fillRect(44,108,7,46);c.fillStyle="#fff";c.font="700 14px system-ui,sans-serif";c.fillText("Giocatore",59,131);c.fillText("Versato",359,131);c.fillText("Rimanente",504,131);
+ const photos=Array.from(document.querySelectorAll("[data-player-history] img.player-list-photo"));
+ list.forEach(function(e,i){const y=154+i*52;c.fillStyle=i%2?"#eef3f9":"#fff";c.fillRect(44,y,300,52);c.strokeStyle="#d7e0ec";c.strokeRect(44,y,300,52);const img=photos.find(function(n){return n.closest("[data-player-history]")?.getAttribute("data-player-history")===e.player&&n.complete&&n.naturalWidth});const x=57,s=36,r=18;c.save();c.beginPath();c.arc(x+r,y+26,r,0,Math.PI*2);c.clip();if(img){const k=Math.max(s/img.naturalWidth,s/img.naturalHeight),w=img.naturalWidth*k,h=img.naturalHeight*k;c.drawImage(img,x+(s-w)/2,y+8+(s-h)/2,w,h)}else{c.fillStyle=accent;c.fillRect(x,y+8,s,s);c.fillStyle="#fff";c.font="800 13px system-ui,sans-serif";c.textAlign="center";c.fillText(initials(e.player),x+r,y+27)}c.restore();c.textAlign="left";c.fillStyle="#172236";c.font="650 16px system-ui,sans-serif";c.fillText(e.player,104,y+26,225);c.fillStyle=e.summary.remaining>0?"#ba2a31":"#16835b";c.font="600 16px system-ui,sans-serif";c.fillText(e.summary.remaining>0?money(e.summary.remaining):money(0)+"  ✓ Saldato",504,y+26,135)});
+ return canvas;
+};
+
+
+/* Precarica tutte le foto prima di comporre il PNG, anche fuori schermo. */
+const exportPaymentsImageWithVisiblePortraits = exportPaymentsImage;
+exportPaymentsImage = async function(mode = "all") {
+ const holder=document.createElement("div");holder.hidden=true;document.body.appendChild(holder);
+ const images=getSortedPlayers().map(function(player){const src=typeof getPlayerPhoto==="function"?getPlayerPhoto(player):"";if(!src)return Promise.resolve();const wrap=document.createElement("span");wrap.setAttribute("data-player-history",player);const img=document.createElement("img");img.className="player-list-photo";img.src=src;wrap.appendChild(img);holder.appendChild(wrap);return new Promise(function(done){if(img.complete)return done();img.onload=done;img.onerror=done})});
+ try{await Promise.all(images);return exportPaymentsImageWithVisiblePortraits(mode)}finally{holder.remove()}
+};
+
+
+/* Mantiene nell'export solo Giocatore, Versato e Rimanente. */
+const createPaymentsExportCanvasVisibleColumns = createPaymentsExportCanvas;
+createPaymentsExportCanvas = function(mode = "all") {
+ const canvas=createPaymentsExportCanvasVisibleColumns(mode);if(!canvas)return null;const scale=canvas.width/698,c=canvas.getContext("2d");c.fillStyle="#f7f9fc";c.fillRect(655*scale,108*scale,43*scale,canvas.height-108*scale);return canvas;
+};
+
+
+/* Export pagamenti definitivo: solo Giocatore, Versato e Rimanente. */
+createPaymentsExportCanvas = function(mode = "all") {
+ const due=mode==="due", month=getDisplayedPaymentMonth();
+ const rows=getSortedPlayers().map(player=>({player,summary:getPlayerMonthSummary(player,month)})).filter(row=>!due||row.summary.remaining>0);
+ if(!rows.length)return null;
+ const cols=[400,170,200], pad=36, top=104, head=46, rowH=54, tableW=cols.reduce((a,b)=>a+b,0), w=tableW+pad*2, h=top+head+rows.length*rowH+pad;
+ const ratio=typeof getExportScale==="function"?getExportScale(w,h):Math.min(window.devicePixelRatio||1,2), canvas=document.createElement("canvas");
+ canvas.width=Math.round(w*ratio);canvas.height=Math.round(h*ratio);const c=canvas.getContext("2d");if(!c)return null;c.scale(ratio,ratio);c.textBaseline="middle";
+ const css=getComputedStyle(document.documentElement), primary=state.teamCustomization?.primary||css.getPropertyValue("--primary").trim()||"#2563eb", accent=state.teamCustomization?.accent||css.getPropertyValue("--preview-accent").trim()||"#60a5fa";
+ c.fillStyle="#f7f9fc";c.fillRect(0,0,w,h);
+ const logo=[...document.querySelectorAll("[data-team-logo],.team-link img")].find(img=>img.complete&&img.naturalWidth);let titleX=pad;
+ if(logo){const s=Math.min(52/logo.naturalWidth,52/logo.naturalHeight),dw=logo.naturalWidth*s,dh=logo.naturalHeight*s;c.drawImage(logo,pad+(52-dw)/2,22+(52-dh)/2,dw,dh);titleX=pad+68;}
+ const label=new Date(month+"-01T12:00:00").toLocaleDateString("it-IT",{month:"long",year:"numeric"});
+ c.fillStyle="#13213a";c.font="700 27px system-ui,sans-serif";c.fillText((due?"Da pagare":"Pagamenti")+" — "+label.charAt(0).toUpperCase()+label.slice(1),titleX,40);
+ c.fillStyle="#5b677a";c.font="500 14px system-ui,sans-serif";c.fillText(due?"Solo chi deve ancora versare":"Situazione dei versamenti del mese",titleX,70);
+ c.fillStyle=primary;c.fillRect(pad,top,tableW,head);c.fillStyle=accent;c.fillRect(pad,top,7,head);c.fillStyle="#fff";c.font="700 14px system-ui,sans-serif";
+ let x=pad;["Giocatore","Versato","Rimanente"].forEach((v,i)=>{c.fillText(v,x+14,top+head/2);x+=cols[i]});
+ const photos=[...document.querySelectorAll("[data-player-history] img.player-list-photo")];
+ rows.forEach((entry,i)=>{const y=top+head+i*rowH;c.fillStyle=i%2?"#eef3f9":"#fff";c.fillRect(pad,y,tableW,rowH);c.strokeStyle="#d7e0ec";c.strokeRect(pad,y,tableW,rowH);
+    const img=photos.find(n=>n.closest("[data-player-history]")?.getAttribute("data-player-history")===entry.player&&n.complete&&n.naturalWidth),size=36,px=pad+12,py=y+9;c.save();c.beginPath();c.arc(px+18,py+18,18,0,Math.PI*2);c.clip();if(img&&img.complete&&img.naturalWidth){const s=Math.max(size/img.naturalWidth,size/img.naturalHeight),dw=img.naturalWidth*s,dh=img.naturalHeight*s;c.drawImage(img,px+(size-dw)/2,py+(size-dh)/2,dw,dh)}else{c.fillStyle=accent;c.fillRect(px,py,size,size);c.fillStyle="#fff";c.font="800 12px system-ui,sans-serif";c.textAlign="center";c.fillText(initials(entry.player),px+18,py+19)}c.restore();c.textAlign="left";
+  c.font="650 15px system-ui,sans-serif";c.fillStyle="#172236";c.fillText(entry.player,pad+58,y+rowH/2,cols[0]-72);
+  c.font="600 15px system-ui,sans-serif";c.fillText(money(entry.summary.paid),pad+cols[0]+14,y+rowH/2);
+  c.fillStyle=entry.summary.remaining>0?"#ba2a31":"#16835b";c.fillText(entry.summary.remaining>0?money(entry.summary.remaining):money(0)+"  ✓ Saldato",pad+cols[0]+cols[1]+14,y+rowH/2);
+ });return canvas;
+};
+
+/* Aggiorna subito il rimanente durante l’inserimento del versato. */
+document.addEventListener("input", event => {
+ const input=event.target.closest?.("[data-payment-player]");if(!input)return;
+ const player=input.dataset.paymentPlayer,month=getDisplayedPaymentMonth(),summary=getPlayerMonthSummary(player,month),paid=Math.max(0,Number(input.value)||0),remaining=Math.max(0,summary.remaining-(paid-summary.paid)),row=input.closest(".payment-row"),remainingCell=row?.querySelector(".payment-remaining,.payment-ok"),status=row?.querySelector(".payment-status");
+ if(row)row.dataset.paymentRemaining=String(remaining);
+ if(remainingCell){remainingCell.textContent=money(remaining);remainingCell.classList.toggle("payment-remaining",remaining>0);remainingCell.classList.toggle("payment-ok",remaining<=0)}
+ if(status){status.className="payment-status "+(remaining<=0?"payment-status-ok":paid>0?"payment-status-partial":"payment-status-due");status.textContent=remaining<=0?"✓ Saldato":paid>0?"€ Parziale":"! Da saldare"}
+});
+document.addEventListener("click",event=>{const button=event.target.closest?.("[data-fill-payment]");if(!button)return;const input=button.closest(".payment-row")?.querySelector("[data-payment-player]");queueMicrotask(()=>input?.dispatchEvent(new Event("change",{bubbles:true}))) });

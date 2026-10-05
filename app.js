@@ -1971,6 +1971,7 @@ function render() {
 
    if (currentPage === "settings") {
     app.innerHTML = `<div class="settings-page">${renderSettings()}</div>`;
+    setupSettingsNavigation();
    }
 
     bindPageEvents();
@@ -4542,6 +4543,62 @@ function renderSettings() {
 
     `;
 
+}
+
+
+function setupSettingsNavigation() {
+    const page = document.querySelector(".settings-page");
+    if (!page) return;
+    const headings = [...page.querySelectorAll(":scope > .settings-group-heading")];
+    if (!headings.length) return;
+
+    const teamSettings = [...page.querySelectorAll(":scope > details")].find(item => item.querySelector("summary strong")?.textContent?.trim() === "Squadra e stagione");
+    const peopleCard = page.querySelector(":scope > .birthday-settings");
+    if (teamSettings && peopleCard) peopleCard.after(teamSettings);
+
+    const sections = [];
+    headings.forEach((heading, index) => {
+        const panel = document.createElement("section");
+        panel.className = "settings-area";
+        panel.dataset.settingsArea = String(index);
+        panel.hidden = true;
+        const back = document.createElement("button");
+        back.type = "button";
+        back.className = "settings-area-back";
+        back.textContent = "‹ Tutte le impostazioni";
+        panel.append(back);
+        page.insertBefore(panel, heading);
+        let node = heading;
+        while (node && (node === heading || !node.classList?.contains("settings-group-heading"))) {
+            const next = node.nextSibling;
+            panel.append(node);
+            node = next;
+        }
+        sections.push(panel);
+    });
+
+    const meta = [
+        { icon: "👥", title: "Squadra e persone", note: "Rosa, ruoli e dati della squadra" },
+        { icon: "⚖️", title: "Quote e multe", note: "Moltiplicatori e mesi speciali" },
+        { icon: "🔐", title: "Accessi", note: "Inviti e sicurezza Admin" },
+        { icon: "💾", title: "Stagione e dati", note: "Calendari, backup e ripristino" }
+    ];
+    const hub = document.createElement("section");
+    hub.className = "settings-hub";
+    hub.innerHTML = `<div class="settings-hub-intro"><span>IMPOSTAZIONI</span><h2>Cosa vuoi configurare?</h2><p>Scegli un’area. Ogni pagina contiene solo le opzioni collegate.</p></div><div class="settings-hub-grid">${sections.map((_, index) => `<button type="button" data-settings-open="${index}"><span>${meta[index]?.icon || "⚙"}</span><strong>${meta[index]?.title || "Impostazioni"}</strong><small>${meta[index]?.note || "Configura questa area"}</small><b>›</b></button>`).join("")}</div>`;
+    page.prepend(hub);
+
+    const showHub = () => {
+        sections.forEach(panel => { panel.hidden = true; });
+        hub.hidden = false;
+        window.scrollTo({ top: 0, behavior: "smooth" });
+    };
+    hub.querySelectorAll("[data-settings-open]").forEach(button => button.addEventListener("click", () => {
+        hub.hidden = true;
+        sections.forEach((panel, index) => { panel.hidden = index !== Number(button.dataset.settingsOpen); });
+        window.scrollTo({ top: 0, behavior: "smooth" });
+    }));
+    sections.forEach(panel => panel.querySelector(".settings-area-back")?.addEventListener("click", showHub));
 }
 
 

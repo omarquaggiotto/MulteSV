@@ -1,4 +1,4 @@
-const CACHE_NAME = "multefc-widgets-20261002-7";
+const CACHE_NAME = "multesv-widgets-20261005-8";
 const APP_SHELL = [
     "./widget-reader.mjs",
     "./sports-widgets.mjs",
@@ -37,7 +37,8 @@ self.addEventListener("activate", event => {
         caches.keys()
             .then(keys => Promise.all(
                 keys
-                    .filter(key => key.startsWith("multefc-") && key !== CACHE_NAME)
+                    // Elimina anche le cache delle versioni precedenti al cambio di nome.
+                    .filter(key => (key.startsWith("multesv-") || key.startsWith("multefc-")) && key !== CACHE_NAME)
                     .map(key => caches.delete(key))
             ))
             .then(() => self.clients.claim())

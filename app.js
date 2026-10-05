@@ -2357,7 +2357,7 @@ function renderHome() {
                             <div class="payment-due-icon">€</div>
                             <div>
                                 <strong>Da saldare</strong>
-                                <div class="small muted">${escapeHtml(overdueMonthLabel)} · ${rollingPayments ? "passa al mese successivo quando tutti hanno pagato o dopo la prima settimana" : `dal giorno ${paymentDueDay} del mese successivo`}</div>
+                                <div class="small muted">${escapeHtml(overdueMonthLabel)}</div>
                             </div>
                             <span class="payment-due-count">${overduePlayers.length}</span>
                         </div>

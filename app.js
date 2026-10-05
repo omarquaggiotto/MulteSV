@@ -59,6 +59,8 @@ const defaultState = {
         paymentFrequency: "monthly",
         paymentMode: "due_day",
         paymentDueDay: 15,
+        captainFineMultiplier: 1,
+        staffFineMultiplier: 1,
         monthOverrides: { "08": 10 },
         calendarSources: [
             { type: "league", name: "Campionato", enabled: true, url: "https://www.tuttocampo.it/Veneto/TerzaCategoria/GironeAVicenza/Squadra/SanVitale1995SqB/1199590/Calendario" },
@@ -80,6 +82,8 @@ const defaultState = {
     ],
 
     playerStartMonths: {},
+
+    playerRoles: {},
 
     playerEntryFees: {},
 
@@ -375,6 +379,8 @@ function loadState() {
                 paymentFrequency: "monthly",
                 paymentMode: savedSeasonConfig.paymentMode === "rolling" ? "rolling" : "due_day",
                 paymentDueDay: Math.min(28, Math.max(1, Number(savedSeasonConfig.paymentDueDay ?? 15) || 15)),
+                captainFineMultiplier: Math.min(5, Math.max(1, Number(savedSeasonConfig.captainFineMultiplier ?? 1) || 1)),
+                staffFineMultiplier: Math.min(5, Math.max(1, Number(savedSeasonConfig.staffFineMultiplier ?? 1) || 1)),
                 monthOverrides: savedSeasonConfig.monthOverrides && typeof savedSeasonConfig.monthOverrides === "object"
                     ? { ...savedSeasonConfig.monthOverrides }
                     : { "08": 10 },
@@ -428,6 +434,7 @@ function loadState() {
                         : legacyStartMonth
                 ])
             );
+            loaded.playerRoles = normalizePlayerRoles(loaded.players, loaded.playerRoles);
             const savedEntryFees = loaded.playerEntryFees && typeof loaded.playerEntryFees === "object" && !Array.isArray(loaded.playerEntryFees)
                 ? loaded.playerEntryFees
                 : {};
@@ -512,6 +519,8 @@ function normalizeIncomingState(raw) {
         paymentFrequency: "monthly",
         paymentMode: savedConfig.paymentMode === "rolling" ? "rolling" : "due_day",
         paymentDueDay: Math.min(28, Math.max(1, Number(savedConfig.paymentDueDay ?? 15) || 15)),
+        captainFineMultiplier: Math.min(5, Math.max(1, Number(savedConfig.captainFineMultiplier ?? 1) || 1)),
+        staffFineMultiplier: Math.min(5, Math.max(1, Number(savedConfig.staffFineMultiplier ?? 1) || 1)),
         monthOverrides: savedConfig.monthOverrides && typeof savedConfig.monthOverrides === "object" && !Array.isArray(savedConfig.monthOverrides) ? { ...savedConfig.monthOverrides } : { "08": 10 },
         calendarSources: Array.isArray(savedConfig.calendarSources) ? savedConfig.calendarSources.map(source => ({
             type: source?.type === "cup" ? "cup" : "league",
@@ -528,6 +537,7 @@ function normalizeIncomingState(raw) {
     const year = Number(loaded.season.slice(0, 4)) || 2026;
     const starts = loaded.playerStartMonths && typeof loaded.playerStartMonths === "object" ? loaded.playerStartMonths : {};
     loaded.playerStartMonths = Object.fromEntries(loaded.players.map(player => [player, typeof starts[player] === "string" && /^\d{4}-\d{2}$/.test(starts[player]) ? starts[player] : `${year}-08`]));
+    loaded.playerRoles = normalizePlayerRoles(loaded.players, loaded.playerRoles);
     const entryFees = loaded.playerEntryFees && typeof loaded.playerEntryFees === "object" && !Array.isArray(loaded.playerEntryFees) ? loaded.playerEntryFees : {};
     loaded.playerEntryFees = Object.fromEntries(Object.entries(entryFees)
         .filter(([player, amount]) => typeof player === "string" && player.trim() && Number.isFinite(Number(amount)) && Number(amount) >= 0)
@@ -539,7 +549,7 @@ function isValidTuttocampoCalendarUrl(value) {
     try {
         const url = new URL(/^https?:\/\//i.test(value) ? value : `https://${value}`);
         return url.protocol === "https:" && /^(?:www\.)?tuttocampo\.it$/i.test(url.hostname) &&
-            /\/(Calendario|Risultati)\/?$/i.test(url.pathname);
+            (/\/(Calendario|Risultati)\/?$/i.test(url.pathname) || /^\/WidgetV2\/(?:Risultati|Classifica)\/[0-9a-f-]{36}(?:\/\d+)?\/?$/i.test(url.pathname));
     } catch {
         return false;
     }
@@ -587,7 +597,7 @@ async function readConfiguredSportsWidget(type, url) {
 
 async function importCalendarFromLink(type, url) {
     if (!requireOnlineAdmin()) return null;
-    if (!isValidTuttocampoCalendarUrl(url)) throw new Error("Inserisci un link Calendario o Risultati di Tuttocampo.");
+    if (!isValidTuttocampoCalendarUrl(url)) throw new Error("Inserisci un link Calendario, Risultati o Widget di Tuttocampo.");
     let payload;
     let widgetCalendar = null;
     if (typeof window.__MULTE_SV_CALENDAR_IMPORT_MOCK__ !== "function") {
@@ -1221,6 +1231,56 @@ function getSortedPlayers(players = state.players) {
     return [...players].sort(compareItalian);
 }
 
+function normalizePlayerRoles(players, source) {
+    const saved = source && typeof source === "object" && !Array.isArray(source) ? source : {};
+    let captainAssigned = false;
+    return Object.fromEntries(players.map(player => {
+        let role = ["player", "captain", "staff"].includes(saved[player]) ? saved[player] : "player";
+        if (role === "captain") {
+            if (captainAssigned) role = "player";
+            captainAssigned = true;
+        }
+        return [player, role];
+    }));
+}
+
+function getPersonRole(name) {
+    const role = state.playerRoles?.[name];
+    return ["captain", "staff"].includes(role) ? role : "player";
+}
+
+function personRoleLabel(name) {
+    const role = getPersonRole(name);
+    return role === "captain" ? "Capitano" : role === "staff" ? "Staff" : "Giocatore";
+}
+
+function personNameText(name) {
+    const role = getPersonRole(name);
+    return `${name}${role === "captain" ? " (C)" : role === "staff" ? " · Staff" : ""}`;
+}
+
+function personNameHtml(name) {
+    const role = getPersonRole(name);
+    const badge = role === "captain"
+        ? '<span class="person-role-badge captain" title="Capitano" aria-label="Capitano">C</span>'
+        : role === "staff"
+            ? '<span class="person-role-badge staff" title="Staff">Staff</span>'
+            : "";
+    return `<span class="person-name-with-role"><span>${escapeHtml(name)}</span>${badge}</span>`;
+}
+
+function getFineMultiplier(name) {
+    const role = getPersonRole(name);
+    if (role === "captain") return Math.min(5, Math.max(1, Number(state.seasonConfig?.captainFineMultiplier ?? 1) || 1));
+    if (role === "staff") return Math.min(5, Math.max(1, Number(state.seasonConfig?.staffFineMultiplier ?? 1) || 1));
+    return 1;
+}
+
+function applyFineMultiplier(amount, name) {
+    const multiplier = getFineMultiplier(name);
+    return { amount: Math.round((Number(amount) || 0) * multiplier * 100) / 100, multiplier };
+}
+
 function getSortedCategories(categories) {
     return [...new Set(categories.filter(Boolean))]
         .sort((left, right) => {
@@ -1628,6 +1688,7 @@ function getPlayerStartMonth(player) {
 }
 
 function getPlayerMonthBase(player, monthId) {
+    if (getPersonRole(player) === "staff") return 0;
     const startMonth = getPlayerStartMonth(player);
     if (monthId < startMonth) return 0;
     if (monthId === startMonth && Object.hasOwn(state.playerEntryFees || {}, player)) {
@@ -2166,7 +2227,7 @@ function renderHome() {
                                         type="button"
                                         data-player-history="${escapeHtml(player.player)}"
                                     >
-                                        ${escapeHtml(player.player)}
+                                            ${personNameHtml(player.player)}
                                     </button>
 
                                     <strong>
@@ -2249,7 +2310,7 @@ function renderHome() {
                                             type="button"
                                             data-player-history="${escapeHtml(player.player)}"
                                         >
-                                            ${escapeHtml(player.player)}
+                                        ${personNameHtml(player.player)}
                                         </button>
 
                                         <strong>
@@ -2885,7 +2946,7 @@ if (fineSearchQuery.trim()) {
                                     : ""
                             }
                         >
-                            ${escapeHtml(player)}
+                            ${escapeHtml(personNameText(player))}
                         </option>
 
                     `)
@@ -3152,7 +3213,7 @@ function renderPayments() {
 
                         <div>
                             <strong>
-                                ${escapeHtml(player)}
+                                ${personNameHtml(player)}
                             </strong>
 
                             ${
@@ -3971,7 +4032,7 @@ function openPlayerHistoryModal(player) {
     openModal(
         `Scheda giocatore`,
         `
-            <div class="player-profile-hero">${playerPortrait(player)}<div><small>SAN VITALE NEXT GEN</small><h3>${escapeHtml(player)}</h3><p>Stagione ${escapeHtml(state.season)}</p>${validBirthday(getBirthday(player))?'<p>🎂 '+getBirthday(player).split('-').reverse().join('/')+'</p>':''}</div><button class="player-photo-edit-button" id="editSharedPlayerPhoto" type="button" ${navigator.onLine?'':'disabled'} aria-label="Cambia la foto di ${escapeHtml(player)}">📷<span>Cambia foto</span></button></div>
+            <div class="player-profile-hero">${playerPortrait(player)}<div><small>SAN VITALE NEXT GEN</small><h3>${personNameHtml(player)}</h3><p>${personRoleLabel(player)} · Stagione ${escapeHtml(state.season)}</p>${validBirthday(getBirthday(player))?'<p>🎂 '+getBirthday(player).split('-').reverse().join('/')+'</p>':''}</div><button class="player-photo-edit-button" id="editSharedPlayerPhoto" type="button" ${navigator.onLine?'':'disabled'} aria-label="Cambia la foto di ${escapeHtml(player)}">📷<span>Cambia foto</span></button></div>
             <div class="player-profile-status">${remainingTotal>0?'Da saldare · '+money(remainingTotal):'✓ Tutto saldato'}</div>
             <div class="player-share-controls"><label for="playerShareMonth">Mese da condividere</label><select id="playerShareMonth">${months.map(m=>`<option value="${m}">${escapeHtml(new Date(m+'-01T12:00:00').toLocaleDateString('it-IT',{month:'long',year:'numeric'}))}</option>`).join('')}</select><button class="btn secondary" id="sharePlayerSummary" type="button">Condividi scheda mensile</button></div><div class="player-history-summary">
                 <div><span>Dovuto stagione</span><strong>${money(dueTotal)}</strong></div>
@@ -4039,7 +4100,7 @@ function renderFineRow(fine) {
                             type="button"
                             data-player-history="${escapeHtml(fine.player)}"
                         >
-                            ${escapeHtml(fine.player)}
+                            ${personNameHtml(fine.player)}
                         </button>
 
                         <div class="fine-row-type">
@@ -4058,7 +4119,7 @@ function renderFineRow(fine) {
                 </div>
 
 
-                <div class="fine-row-amount">${money(fine.amount)}</div>
+                <div class="fine-row-amount">${money(fine.amount)}${Number(fine.roleMultiplier || 1) > 1 ? `<small class="fine-multiplier">×${fine.roleMultiplier}</small>` : ""}</div>
 
             </div>
 
@@ -4300,6 +4361,15 @@ function renderSettings() {
     return `
 
         ${renderBirthdaySettings()}
+        <details class="card team-settings-details">
+          <summary><span class="settings-menu-icon" aria-hidden="true">×2</span><span class="settings-menu-label"><strong>Moltiplicatori multe</strong><small>Capitano e staff</small></span><span class="settings-chevron" aria-hidden="true">⌄</span></summary>
+          <p class="small muted">Si applicano solo alle nuove multe. Gli importi già registrati non vengono modificati.</p>
+          <div class="form role-multiplier-form">
+            <div class="field"><label for="captainFineMultiplier">Multe capitano</label><select id="captainFineMultiplier">${[1,1.5,2,3].map(value => `<option value="${value}" ${Number(state.seasonConfig?.captainFineMultiplier ?? 1) === value ? "selected" : ""}>${value === 1 ? "Normali" : `× ${value}`}</option>`).join("")}</select></div>
+            <div class="field"><label for="staffFineMultiplier">Multe staff</label><select id="staffFineMultiplier">${[1,1.5,2,3].map(value => `<option value="${value}" ${Number(state.seasonConfig?.staffFineMultiplier ?? 1) === value ? "selected" : ""}>${value === 1 ? "Normali" : `× ${value}`}</option>`).join("")}</select></div>
+            <button class="btn secondary" id="saveRoleMultipliers" type="button">Salva moltiplicatori</button>
+          </div>
+        </details>
         <details class="card team-settings-details">
           <summary><span class="settings-menu-icon" aria-hidden="true">⚙</span><span class="settings-menu-label"><strong>Squadra e stagione</strong><small>Preferenze della squadra</small></span><span class="settings-chevron" aria-hidden="true">⌄</span></summary>
           <p class="small muted">La stagione determina i mesi dei pagamenti e i riepiloghi.</p>
@@ -4620,7 +4690,7 @@ function openFineModal(id = null) {
                                         : ""
                                 }
                             >
-                                ${escapeHtml(player)}
+                                ${escapeHtml(personNameText(player))}
                             </option>
 
                         `
@@ -4757,7 +4827,6 @@ function openFineModal(id = null) {
                             : ""
                     }"
                 >
-
             </div>
 
 
@@ -4830,11 +4899,14 @@ function openFineModal(id = null) {
                     min="0"
                     step="1"
                     value="${
+                        fine?.baseAmount ??
                         fine?.amount ??
                         initialRule?.amount ??
                         0
                     }"
                 >
+
+                <span class="small muted">L’eventuale moltiplicatore di capitano o staff viene applicato automaticamente al salvataggio.</span>
 
             </div>
 
@@ -5120,7 +5192,7 @@ function openFineModal(id = null) {
                                 value="${escapeHtml(player)}"
                                 ${selectedPlayers.includes(player) ? "checked" : ""}
                             >
-                            <span>${escapeHtml(player)}</span>
+                            <span>${personNameHtml(player)}</span>
                         </label>
                     `).join("")}
                 </div>
@@ -5150,7 +5222,7 @@ function openFineModal(id = null) {
                         <option
                             value="${escapeHtml(player)}"
                             ${rememberedPlayer === player ? "selected" : ""}
-                        >${escapeHtml(player)}</option>
+                        >${escapeHtml(personNameText(player))}</option>
                     `).join("")}
                 </select>
             `;
@@ -5180,7 +5252,7 @@ function openFineModal(id = null) {
 
             amountInput.value =
                 fine?.custom
-                    ? fine.amount
+                    ? (fine.baseAmount ?? fine.amount)
                     : "";
 
             return;
@@ -5569,6 +5641,8 @@ document
 
             if (isEdit) {
 
+                const adjusted = applyFineMultiplier(customAmount, player);
+
                 fine.player =
                     player;
 
@@ -5590,12 +5664,14 @@ document
                 fine.date =
                     date;
 
-                fine.amount =
-                    customAmount;
+                fine.amount = adjusted.amount;
+                fine.baseAmount = customAmount;
+                fine.roleMultiplier = adjusted.multiplier;
 
             } else {
 
                 selectedPlayers.forEach(playerName => {
+                    const adjusted = applyFineMultiplier(customAmount, playerName);
                     state.fines.push({
                         id: generateId(),
                         date,
@@ -5607,7 +5683,9 @@ document
                         team: recipientMode === "team",
                         createdAt: new Date().toISOString(),
                         quantity: null,
-                        amount: customAmount
+                        amount: adjusted.amount,
+                        baseAmount: customAmount,
+                        roleMultiplier: adjusted.multiplier
                     });
                 });
 
@@ -5760,6 +5838,8 @@ document
 
         if (isEdit) {
 
+            const adjusted = applyFineMultiplier(amount, player);
+
             fine.player =
                 player;
 
@@ -5775,8 +5855,9 @@ document
             fine.date =
                 date;
 
-            fine.amount =
-                amount;
+            fine.amount = adjusted.amount;
+            fine.baseAmount = amount;
+            fine.roleMultiplier = adjusted.multiplier;
 
             fine.quantity =
                 quantity;
@@ -5794,6 +5875,7 @@ document
         else {
 
             selectedPlayers.forEach(playerName => {
+                const adjusted = applyFineMultiplier(amount, playerName);
                 state.fines.push({
                     id: generateId(),
                     date,
@@ -5805,7 +5887,9 @@ document
                     custom: false,
                     team: recipientMode === "team",
                     createdAt: new Date().toISOString(),
-                    amount
+                    amount: adjusted.amount,
+                    baseAmount: amount,
+                    roleMultiplier: adjusted.multiplier
                 });
             });
 
@@ -6044,7 +6128,7 @@ function openPlayerModal() {
 
     openModal(
 
-        "Nuovo giocatore",
+        "Nuova persona",
 
         `
 
@@ -6076,13 +6160,23 @@ function openPlayerModal() {
                 <input
                     id="playerName"
                     type="text"
-                    placeholder="Nome giocatore"
+                    placeholder="Nome e cognome"
                 >
 
             </div>
 
 
             <div class="field"><label for="playerBirthDate">DATA DI NASCITA (facoltativa)</label><input id="playerBirthDate" type="date" min="1900-01-01" max="${birthdayToday()}"></div>
+
+            <div class="field">
+                <label for="playerRole">RUOLO</label>
+                <select id="playerRole">
+                    <option value="player">Giocatore</option>
+                    <option value="captain">Capitano</option>
+                    <option value="staff">Staff</option>
+                </select>
+                <span class="small muted">Può esserci un solo capitano. Lo staff non paga la quota mensile.</span>
+            </div>
 
             <div class="field">
                 <label for="playerStartMonth">CONTEGGIA QUOTE E MULTE DA</label>
@@ -6185,6 +6279,7 @@ function openPlayerModal() {
             if (photoBusy) return showToast("Attendi la preparazione della foto.");
             const birthDate = document.getElementById("playerBirthDate").value;
             const startMonth = document.getElementById("playerStartMonth").value;
+            const role = document.getElementById("playerRole").value;
             const entryFee = Number(document.getElementById("playerEntryFee").value);
             if (birthDate && !validBirthday(birthDate)) return showToast("Inserisci una data di nascita valida.");
             if (!playerStartOptions.includes(startMonth)) return showToast("Seleziona una mensilità valida.");
@@ -6217,7 +6312,7 @@ function openPlayerModal() {
             ) {
 
                 showToast(
-                    "Giocatore già presente."
+                "Persona già presente."
                 );
 
                 return;
@@ -6243,6 +6338,14 @@ function openPlayerModal() {
             };
 
 
+            state.playerRoles = { ...(state.playerRoles || {}) };
+            if (role === "captain") {
+                Object.keys(state.playerRoles).forEach(person => {
+                    if (state.playerRoles[person] === "captain") state.playerRoles[person] = "player";
+                });
+            }
+            state.playerRoles[name] = ["captain", "staff"].includes(role) ? role : "player";
+
             if (pendingPhoto) {
                 state.playerPhotos = {
                     ...(state.playerPhotos || {}),
@@ -6264,7 +6367,7 @@ function openPlayerModal() {
             render();
 
             showToast(
-                "Giocatore aggiunto"
+                role === "staff" ? "Membro dello staff aggiunto" : role === "captain" ? "Capitano aggiunto" : "Giocatore aggiunto"
             );
 
         };
@@ -6695,6 +6798,8 @@ document
                     1
                 );
 
+                if (state.playerRoles) delete state.playerRoles[player];
+
 
                 saveState();
 
@@ -6795,6 +6900,20 @@ document
 
             }
         );
+
+    document.getElementById("saveRoleMultipliers")?.addEventListener("click", () => {
+        if (!requireOnlineAdmin()) return;
+        const captain = Number(document.getElementById("captainFineMultiplier")?.value || 1);
+        const staff = Number(document.getElementById("staffFineMultiplier")?.value || 1);
+        state.seasonConfig = {
+            ...(state.seasonConfig || {}),
+            captainFineMultiplier: Math.min(5, Math.max(1, captain)),
+            staffFineMultiplier: Math.min(5, Math.max(1, staff))
+        };
+        saveState();
+        render();
+        showToast("Moltiplicatori aggiornati.");
+    });
 
 
     /* =========================
@@ -7317,9 +7436,10 @@ function openSeasonSetupModal(editCurrent = false) {
                     <div id="seasonSourceDiscoveryResult" class="calendar-import-result"><span>L’app cercherà campionato e coppa senza modificare i dati attuali.</span></div>
                 </div>
                 <div class="season-calendar-sources">
-                    <div class="field season-calendar-field"><label for="newSeasonLeagueCalendar">CALENDARIO CAMPIONATO</label><div class="season-calendar-input"><input id="newSeasonLeagueCalendar" type="url" value="${editCurrent ? escapeHtml(state.seasonConfig?.calendarSources?.find(source => source.type === "league")?.url || "") : ""}" placeholder="Rileva automaticamente o incolla quando disponibile"><button class="btn secondary calendar-import-button" data-import-calendar="league" type="button">Verifica link</button></div><div class="calendar-import-result" data-import-result="league"></div></div>
+                    <div class="season-widget-note"><strong>Widget Tuttocampo</strong><span>Puoi incollare indifferentemente il link Risultati o Classifica della competizione.</span><a href="https://www.tuttocampo.it/WidgetApi" target="_blank" rel="noopener noreferrer">Crea o gestisci widget ↗</a></div>
+                    <div class="field season-calendar-field"><label for="newSeasonLeagueCalendar">CAMPIONATO · CALENDARIO O WIDGET</label><div class="season-calendar-input"><input id="newSeasonLeagueCalendar" type="url" value="${editCurrent ? escapeHtml(state.seasonConfig?.calendarSources?.find(source => source.type === "league")?.url || "") : ""}" placeholder="Incolla calendario o widget Risultati/Classifica"><button class="btn secondary calendar-import-button" data-import-calendar="league" type="button">Verifica link</button></div><div class="calendar-import-result" data-import-result="league"></div></div>
                     <label class="season-source-toggle"><input id="newSeasonCupEnabled" type="checkbox" ${state.seasonConfig?.calendarSources?.find(source => source.type === "cup")?.enabled ? "checked" : ""}><span><strong>Aggiungi Coppa</strong><small>Competizione dinamica: dopo ogni gara verrà cercato automaticamente il turno successivo.</small></span></label>
-                    <div class="field season-calendar-field" id="newSeasonCupField"><label for="newSeasonCupCalendar">CALENDARIO COPPA</label><div class="season-calendar-input"><input id="newSeasonCupCalendar" type="url" value="${editCurrent ? escapeHtml(state.seasonConfig?.calendarSources?.find(source => source.type === "cup")?.url || "") : ""}" placeholder="Facoltativo: puoi aggiungerlo anche più avanti"><button class="btn secondary calendar-import-button" data-import-calendar="cup" type="button">Verifica link</button></div><div class="calendar-import-result" data-import-result="cup"></div></div>
+                    <div class="field season-calendar-field" id="newSeasonCupField"><label for="newSeasonCupCalendar">COPPA · CALENDARIO O WIDGET</label><div class="season-calendar-input"><input id="newSeasonCupCalendar" type="url" value="${editCurrent ? escapeHtml(state.seasonConfig?.calendarSources?.find(source => source.type === "cup")?.url || "") : ""}" placeholder="Facoltativo: calendario o widget della coppa"><button class="btn secondary calendar-import-button" data-import-calendar="cup" type="button">Verifica link</button></div><div class="calendar-import-result" data-import-result="cup"></div></div>
                 </div>
             </section>
 
@@ -7334,6 +7454,12 @@ function openSeasonSetupModal(editCurrent = false) {
                 </div>
             </section>
 
+            ${editCurrent ? "" : `<section class="season-setup-section season-roster-retention">
+                <div class="season-setup-title"><span>R</span><div><h3>Rosa della nuova stagione</h3><p>Scegli chi mantenere. Tutti sono selezionati inizialmente.</p></div></div>
+                <div class="season-roster-actions"><button class="btn secondary" id="keepAllPlayers" type="button">Seleziona tutti</button><button class="btn secondary" id="clearKeptPlayers" type="button">Deseleziona</button></div>
+                <div class="season-roster-list">${getSortedPlayers().map(player => `<label><input type="checkbox" data-keep-player value="${escapeHtml(player)}" checked><span>${personNameHtml(player)}</span></label>`).join("") || `<p class="small muted">La rosa attuale è vuota.</p>`}</div>
+                <p class="small muted">Chi togli non comparirà nella nuova stagione, ma resterà nel backup e nell’archivio della stagione precedente.</p>
+            </section>`}
             <section class="season-setup-section season-change-summary">
                 <div class="season-setup-title"><span>03</span><div><h3>Cosa succede</h3><p>Controlla l’operazione prima di confermare.</p></div></div>
                 <div class="season-change-list">
@@ -7351,6 +7477,8 @@ function openSeasonSetupModal(editCurrent = false) {
     `);
 
     document.querySelector("#modalRoot .modal")?.classList.add("season-setup-modal");
+    document.getElementById("keepAllPlayers")?.addEventListener("click", () => document.querySelectorAll("[data-keep-player]").forEach(input => { input.checked = true; }));
+    document.getElementById("clearKeptPlayers")?.addEventListener("click", () => document.querySelectorAll("[data-keep-player]").forEach(input => { input.checked = false; }));
     const seasonInput = document.getElementById("newSeasonName");
     const baseInput = document.getElementById("newSeasonBase");
     const confirmInput = document.getElementById("confirmSeasonSetup");
@@ -7520,6 +7648,7 @@ function openSeasonSetupModal(editCurrent = false) {
             const amount = Math.max(0, Number(input.value) || 0);
             if (amount !== monthlyBase) monthOverrides[input.dataset.seasonRate] = amount;
         });
+        const retainedPlayers = editCurrent ? [...state.players] : [...document.querySelectorAll("[data-keep-player]:checked")].map(input => input.value).filter(name => state.players.includes(name));
         if (editCurrent) {
             state.season = season;
             state.teamLogo = pendingTeamLogo || getTeamLogo();
@@ -7532,6 +7661,8 @@ function openSeasonSetupModal(editCurrent = false) {
                 paymentFrequency,
                 paymentMode,
                 paymentDueDay,
+                captainFineMultiplier: Number(state.seasonConfig?.captainFineMultiplier ?? 1),
+                staffFineMultiplier: Number(state.seasonConfig?.staffFineMultiplier ?? 1),
                 monthOverrides,
                 calendarSources: [
                     { type: "league", name: "Campionato", enabled: Boolean(leagueUrl), url: leagueUrl, snapshot: leagueSnapshot, lastCheckedAt: leagueSnapshot ? new Date().toISOString() : "" },
@@ -7552,6 +7683,11 @@ function openSeasonSetupModal(editCurrent = false) {
             closedAt: new Date().toISOString(),
             fines: structuredClone(state.fines),
             payments: structuredClone(state.payments),
+            players: structuredClone(state.players),
+            playerBirthDates: structuredClone(state.playerBirthDates || {}),
+            playerPhotos: structuredClone(state.playerPhotos || {}),
+            playerRoles: structuredClone(state.playerRoles || {}),
+            playerStartMonths: structuredClone(state.playerStartMonths || {}),
             playerEntryFees: structuredClone(state.playerEntryFees || {}),
             seasonConfig: structuredClone(state.seasonConfig || {})
         };
@@ -7569,6 +7705,8 @@ function openSeasonSetupModal(editCurrent = false) {
                 paymentFrequency,
                 paymentMode,
                 paymentDueDay,
+                captainFineMultiplier: Number(state.seasonConfig?.captainFineMultiplier ?? 1),
+                staffFineMultiplier: Number(state.seasonConfig?.staffFineMultiplier ?? 1),
                 monthOverrides,
                 calendarSources: [
                     { type: "league", name: "Campionato", enabled: Boolean(leagueUrl), url: leagueUrl, snapshot: leagueSnapshot, lastCheckedAt: leagueSnapshot ? new Date().toISOString() : "" },
@@ -7576,7 +7714,11 @@ function openSeasonSetupModal(editCurrent = false) {
                 ]
             },
             seasonArchives: [...(state.seasonArchives || []), archive],
-            playerStartMonths: Object.fromEntries(state.players.map(player => [player, `${startYear}-${String(paymentStartMonth).padStart(2, "0")}`])),
+            players: retainedPlayers,
+            playerBirthDates: Object.fromEntries(retainedPlayers.filter(player => Object.hasOwn(state.playerBirthDates || {}, player)).map(player => [player, state.playerBirthDates[player]])),
+            playerPhotos: Object.fromEntries(retainedPlayers.filter(player => Object.hasOwn(state.playerPhotos || {}, player)).map(player => [player, state.playerPhotos[player]])),
+            playerRoles: normalizePlayerRoles(retainedPlayers, state.playerRoles),
+            playerStartMonths: Object.fromEntries(retainedPlayers.map(player => [player, `${startYear}-${String(paymentStartMonth).padStart(2, "0")}`])),
             playerEntryFees: {},
             fines: [],
             payments: {}

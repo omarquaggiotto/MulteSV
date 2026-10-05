@@ -1,4 +1,4 @@
-const CACHE_NAME = "multesv-season-guide-20261005-12";
+const CACHE_NAME = "multesv-season-roster-20261005-13";
 const APP_SHELL = [
     "./widget-reader.mjs",
     "./sports-widgets.mjs",
@@ -102,10 +102,3 @@ self.addEventListener("fetch", event => {
             .then(cached => cached || fetch(request))
     );
 });
-
-
-
-
-
-
-

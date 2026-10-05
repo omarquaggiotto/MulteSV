@@ -2293,7 +2293,7 @@ body.modal-open .global-fab {
 
     box-shadow:
         0 6px 14px rgba(37, 99, 235, 0.20);
-   
+
 }
 @media (max-width: 600px) {
 
@@ -3825,3 +3825,22 @@ body.modal-open::after { visibility: hidden; }
 }
 /* Procedura guidata cambio stagione */
 .season-calendar-discovery{margin:18px 0 12px;padding:16px;border:1px solid color-mix(in srgb,var(--primary,#4f8cff) 28%,var(--border,#334155));border-radius:18px;background:color-mix(in srgb,var(--primary,#4f8cff) 7%,var(--card,#111827));display:grid;gap:10px}.season-calendar-discovery .field{margin:0}.season-calendar-discovery .calendar-import-result{margin:0}
+
+/* Ruoli squadra: capitano e staff */
+.person-name-with-role { display:inline-flex; align-items:center; gap:6px; min-width:0; }
+.person-name-with-role > span:first-child { min-width:0; overflow:hidden; text-overflow:ellipsis; }
+.person-role-badge { display:inline-grid; place-items:center; flex:0 0 auto; min-width:19px; height:19px; padding:0 5px; border-radius:6px; font-size:9px; font-weight:900; line-height:1; }
+.person-role-badge.captain { border:1px solid color-mix(in srgb,var(--yellow) 58%,var(--border)); background:color-mix(in srgb,var(--yellow) 18%,var(--surface)); color:var(--yellow); }
+.person-role-badge.staff { border:1px solid color-mix(in srgb,var(--primary) 32%,var(--border)); background:var(--primary-soft); color:var(--primary); }
+.fine-row-amount .fine-multiplier { display:block; margin-top:3px; color:var(--yellow); font-size:9px; font-weight:900; text-align:right; }
+.role-multiplier-form { grid-template-columns:repeat(2,minmax(0,1fr)); }
+.role-multiplier-form .btn { grid-column:1/-1; }
+@media(max-width:520px){.role-multiplier-form{grid-template-columns:1fr}.role-multiplier-form .btn{grid-column:auto}}
+
+/* Selezione rosa al cambio stagione */
+.season-roster-actions{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}.season-roster-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;max-height:300px;overflow:auto;padding:2px}.season-roster-list label{display:flex;align-items:center;gap:9px;min-width:0;padding:10px 11px;border:1px solid var(--border);border-radius:12px;background:var(--surface-2);font-weight:750}.season-roster-list input{flex:0 0 auto;width:18px;height:18px;accent-color:var(--primary)}@media(max-width:520px){.season-roster-list{grid-template-columns:1fr}}
+
+.season-widget-note{display:grid;gap:5px;padding:12px 14px;border:1px solid var(--border);border-radius:14px;background:var(--surface-2)}
+.season-widget-note strong{font-size:.86rem}
+.season-widget-note span{font-size:.78rem;color:var(--muted)}
+.season-widget-note a{width:max-content;color:var(--primary);font-size:.8rem;font-weight:800;text-decoration:none}

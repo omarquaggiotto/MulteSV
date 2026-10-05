@@ -247,7 +247,7 @@ rules: [
     {
         id: 16,
         category: "Allenamento",
-        type: "Squadra perdente la partitella del giovedÃ¬",
+        type: "Squadra perdente la partitella del giovedì",
         amount: 1,
         calculation: "fixed"
     },
@@ -255,7 +255,7 @@ rules: [
     {
         id: 17,
         category: "Allenamento",
-        type: "Torello: 20 passaggi / errore al 19Â° passaggio",
+        type: "Torello: 20 passaggi / errore al 19° passaggio",
         amount: 1,
         calculation: "fixed"
     },
@@ -445,7 +445,7 @@ function loadState() {
                 loaded.payments || {};
 
             // I campi storici delle multe (compreso "paid") vengono
-            // conservati: Pagamenti Ã¨ la fonte economica attuale, ma
+            // conservati: Pagamenti è la fonte economica attuale, ma
             // il caricamento non deve mai cancellare dati legacy.
             loaded.fines =
                 Array.isArray(loaded.fines)
@@ -488,7 +488,7 @@ function requireOnlineAdmin() {
     showToast(
         navigator.onLine
             ? "Devi accedere come amministratore."
-            : "Offline: l'app Ã¨ in sola lettura."
+            : "Offline: l'app è in sola lettura."
     );
     return false;
 }
@@ -808,15 +808,15 @@ function applyTeamBranding() {
 
 function prepareTeamLogo(file) {
     return new Promise((resolve, reject) => {
-        if (!file || !/^image\/(png|jpeg|webp)$/i.test(file.type)) return reject(new Error("Usa unâ€™immagine PNG, JPG o WebP."));
-        if (file.size > 8 * 1024 * 1024) return reject(new Error("Lâ€™immagine supera 8 MB."));
+        if (!file || !/^image\/(png|jpeg|webp)$/i.test(file.type)) return reject(new Error("Usa un’immagine PNG, JPG o WebP."));
+        if (file.size > 8 * 1024 * 1024) return reject(new Error("L’immagine supera 8 MB."));
         const reader = new FileReader();
-        reader.onerror = () => reject(new Error("Impossibile leggere lâ€™immagine."));
+        reader.onerror = () => reject(new Error("Impossibile leggere l’immagine."));
         reader.onload = () => {
             const image = new Image();
             image.onerror = () => reject(new Error("Immagine non valida."));
             image.onload = () => {
-                if (Math.max(image.naturalWidth, image.naturalHeight) > 12000) return reject(new Error("Lâ€™immagine Ã¨ troppo grande. Usa un file sotto 12000 pixel per lato."));
+                if (Math.max(image.naturalWidth, image.naturalHeight) > 12000) return reject(new Error("L’immagine è troppo grande. Usa un file sotto 12000 pixel per lato."));
                 const working = document.createElement("canvas");
                 const sourceScale = Math.min(1, 1024 / Math.max(image.naturalWidth, image.naturalHeight));
                 working.width = Math.max(1, Math.round(image.naturalWidth * sourceScale));
@@ -831,7 +831,7 @@ function prepareTeamLogo(file) {
                 const opaqueCorners = corners.filter(color => color[3] > 20);
                 const cornerDistance = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
                 const uniformBackground = opaqueCorners.length >= 3 && opaqueCorners.every(color => cornerDistance(color, opaqueCorners[0]) < 72);
-                if (opaqueCorners.length >= 3 && !uniformBackground) return reject(new Error("Lo sfondo Ã¨ troppo complesso da rimuovere automaticamente. Usa uno stemma PNG o una foto con sfondo uniforme."));
+                if (opaqueCorners.length >= 3 && !uniformBackground) return reject(new Error("Lo sfondo è troppo complesso da rimuovere automaticamente. Usa uno stemma PNG o una foto con sfondo uniforme."));
                 if (uniformBackground) {
                     const background = [0, 1, 2].map(channel => opaqueCorners.reduce((sum, color) => sum + color[channel], 0) / opaqueCorners.length);
                     const visited = new Uint8Array(working.width * working.height);
@@ -1462,10 +1462,10 @@ function getYearForMonth(month) {
         getSeasonStartYear();
 
     /*
-       Luglio â†’ Dicembre
+       Luglio → Dicembre
        = anno di inizio stagione
 
-       Gennaio â†’ Giugno
+       Gennaio → Giugno
        = anno successivo
     */
 
@@ -1716,7 +1716,7 @@ function getPlayerArrears(
         // Se paga meno del dovuto,
         // la differenza diventa arretrato.
         //
-        // Se paga piÃ¹ del dovuto,
+        // Se paga più del dovuto,
         // l'eccedenza NON viene trasferita.
         arrears =
             Math.max(
@@ -1809,8 +1809,8 @@ function applyTheme() {
 
         button.textContent =
             deviceTheme === "dark"
-                ? "ðŸŒ™"
-                : "â˜€ï¸";
+                ? "🌙"
+                : "☀️";
 
     }
 
@@ -2130,9 +2130,9 @@ function renderHome() {
                 .map((player, index) => {
 
                     const positions = [
-                        "ðŸ¥‡",
-                        "ðŸ¥ˆ",
-                        "ðŸ¥‰"
+                        "🥇",
+                        "🥈",
+                        "🥉"
                     ];
 
                     return `
@@ -2140,7 +2140,7 @@ function renderHome() {
                         <div class="rank">
 
                             <div class="rank-number">
-                                ${positions[index] || `${index + 1}Â°`}
+                                ${positions[index] || `${index + 1}°`}
                             </div>
 
                             <button class="avatar player-avatar-button" type="button" data-player-history="${escapeHtml(player.player)}" aria-label="Apri situazione di ${escapeHtml(player.player)}">${playerListPortrait(player.player)}</button>
@@ -2176,7 +2176,7 @@ function renderHome() {
                                         margin-top:4px;
                                     "
                                 >
-                                    Quota ${money(player.baseAmount)} Â· ${player.fines} ${player.fines === 1 ? "multa" : "multe"}
+                                    Quota ${money(player.baseAmount)} · ${player.fines} ${player.fines === 1 ? "multa" : "multe"}
                                 </div>
 
                             </div>
@@ -2273,7 +2273,7 @@ function renderHome() {
                                         "
                                     >
 
-                                        Quota ${money(player.baseAmount)} Â· ${player.fines} ${player.fines === 1 ? "multa" : "multe"}
+                                        Quota ${money(player.baseAmount)} · ${player.fines} ${player.fines === 1 ? "multa" : "multe"}
 
                                     </div>
 
@@ -2318,7 +2318,7 @@ function renderHome() {
             </div>
             <div class="team-pass-progress-label"><span>Incassi</span><strong>${paymentPercentage}%</strong></div>
             <div class="team-pass-progress" role="progressbar" aria-label="Percentuale incassata" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.min(100,Math.max(0,paymentPercentage))}"><i style="width:${Math.min(100,Math.max(0,paymentPercentage))}%"></i></div>
-            <div class="team-pass-footer"><span>${fineCount} multe Â· ${finedPlayers} giocatori multati</span><span>Riepilogo ad oggi</span></div>
+            <div class="team-pass-footer"><span>${fineCount} multe · ${finedPlayers} giocatori multati</span><span>Riepilogo ad oggi</span></div>
         </section>
 
         ${window.renderNextMatch ? window.renderNextMatch() : ""}
@@ -2354,10 +2354,10 @@ function renderHome() {
                 ? `
                     <div class="card overdue-card">
                         <div class="payment-due-heading">
-                            <div class="payment-due-icon">â‚¬</div>
+                            <div class="payment-due-icon">€</div>
                             <div>
                                 <strong>Da saldare</strong>
-                                <div class="small muted">${escapeHtml(overdueMonthLabel)} Â· ${rollingPayments ? "passa al mese successivo quando tutti hanno pagato o dopo la prima settimana" : `dal giorno ${paymentDueDay} del mese successivo`}</div>
+                                <div class="small muted">${escapeHtml(overdueMonthLabel)} · ${rollingPayments ? "passa al mese successivo quando tutti hanno pagato o dopo la prima settimana" : `dal giorno ${paymentDueDay} del mese successivo`}</div>
                             </div>
                             <span class="payment-due-count">${overduePlayers.length}</span>
                         </div>
@@ -2392,7 +2392,7 @@ function renderHome() {
 
         <div class="section-head home-monthly-heading">
             <div>
-                <h2>ðŸ“… Andamento mensile</h2>
+                <h2>📅 Andamento mensile</h2>
                 <span>Quote, multe e versamenti</span>
             </div>
             <button class="btn secondary" id="toggleMonthlySummary" type="button">
@@ -2422,7 +2422,7 @@ function renderHome() {
                                     <strong>${escapeHtml(label)}</strong>
                                     <span>Versato ${money(monthTotals.paid)} di ${money(monthTotals.due)}</span>
                                     <strong class="${monthTotals.remaining > 0 ? "history-due" : "history-ok"}">
-                                        ${monthTotals.remaining > 0 ? `${money(monthTotals.remaining)} da saldare` : "âœ“ Saldato"}
+                                        ${monthTotals.remaining > 0 ? `${money(monthTotals.remaining)} da saldare` : "✓ Saldato"}
                                     </strong>
                                 </div>
                             `;
@@ -2440,7 +2440,7 @@ function renderHome() {
         <div class="section-head">
 
             <h2>
-                ðŸ† Classifica
+                🏆 Classifica
             </h2>
 
             <button
@@ -2470,7 +2470,7 @@ function renderHome() {
                 <div class="section-head">
 
                     <h2>
-                        ðŸ“Š Classifica
+                        📊 Classifica
                     </h2>
 
                     <button class="btn secondary" id="toggleRanking" type="button">
@@ -2501,7 +2501,7 @@ function renderHome() {
         <div class="section-head">
 
             <h2>
-                ðŸ•˜ Ultime multe
+                🕘 Ultime multe
             </h2>
 
         </div>
@@ -2672,7 +2672,7 @@ if (fineSearchQuery.trim()) {
                 fines.length === 1
                     ? "multa"
                     : "multe"
-            } Â· ${money(total)} totali`;
+            } · ${money(total)} totali`;
 
 
     /* =====================================================
@@ -2708,7 +2708,7 @@ if (fineSearchQuery.trim()) {
                 <div class="card empty-state">
 
                     <div class="empty-icon">
-                        ðŸ§¾
+                        🧾
                     </div>
 
                     <h3>
@@ -2726,7 +2726,7 @@ if (fineSearchQuery.trim()) {
                                     class="primary-btn"
                                     id="addFineEmpty"
                                 >
-                                    ï¼‹ Aggiungi multa
+                                    ＋ Aggiungi multa
                                 </button>
                             `
                             : ""
@@ -2805,7 +2805,7 @@ if (fineSearchQuery.trim()) {
                 for="monthSelect"
                 class="form-label"
             >
-                ðŸ“… Mese
+                📅 Mese
             </label>
 
             <select
@@ -2848,7 +2848,7 @@ if (fineSearchQuery.trim()) {
                 for="finePlayerSelect"
                 class="form-label"
             >
-                ðŸ‘¤ Giocatore
+                👤 Giocatore
             </label>
 
             <select
@@ -2891,7 +2891,7 @@ if (fineSearchQuery.trim()) {
         <div class="field fines-search-field">
 
             <label for="fineSearch" class="form-label">
-                ðŸ”Ž Cerca
+                🔎 Cerca
             </label>
 
             <input
@@ -2985,7 +2985,7 @@ if (fineSearchQuery.trim()) {
                 <span>
                     ${
                         fines.length
-                            ? "PiÃ¹ recenti in alto"
+                            ? "Più recenti in alto"
                             : "Nessun elemento"
                     }
                 </span>
@@ -3019,14 +3019,14 @@ function openTeamPaymentModal() {
     }
     openModal("Paga le multe", `
         <div class="team-pay-panel">
-            <div class="team-pay-hero"><div><small>${escapeHtml(monthLabel)}</small><strong>Seleziona una o piÃ¹ persone</strong></div><span class="team-pay-mark">â‚¬</span></div>
+            <div class="team-pay-hero"><div><small>${escapeHtml(monthLabel)}</small><strong>Seleziona una o più persone</strong></div><span class="team-pay-mark">€</span></div>
             <div class="team-pay-players">
-                ${candidates.map(({ player, summary }) => `<label class="team-pay-player"><input type="checkbox" data-team-pay-player value="${escapeHtml(player)}"><span class="player-avatar">${playerListPortrait(player)}</span><span><strong>${escapeHtml(player)}</strong><small>${money(summary.remaining)} Â· ${escapeHtml(monthLabel)}</small></span><b>${money(summary.remaining)}</b></label>`).join("")}
+                ${candidates.map(({ player, summary }) => `<label class="team-pay-player"><input type="checkbox" data-team-pay-player value="${escapeHtml(player)}"><span class="player-avatar">${playerListPortrait(player)}</span><span><strong>${escapeHtml(player)}</strong><small>${money(summary.remaining)} · ${escapeHtml(monthLabel)}</small></span><b>${money(summary.remaining)}</b></label>`).join("")}
             </div>
             <div class="team-pay-checkout">
                 <div class="team-pay-total"><span>Totale</span><strong id="teamPayTotal">${money(0)}</strong></div>
                 <div class="team-pay-description"><div><small>Descrizione</small><p id="teamPayDescription">Seleziona almeno una persona</p></div><button class="btn secondary" id="copyTeamPayDescription" type="button" disabled>Copia</button></div>
-                <p class="team-pay-note">Su Satispay inserisci lâ€™importo e incolla la descrizione copiata. PayPal apre giÃ  lâ€™importo corretto.</p>
+                <p class="team-pay-note">Su Satispay inserisci l’importo e incolla la descrizione copiata. PayPal apre già l’importo corretto.</p>
                 <div class="team-pay-actions">
                     ${satispayUrl ? `<button class="team-pay-button is-satispay" id="payWithSatispay" type="button" disabled><span class="team-pay-brand"><img src="satispay-icon.ico" alt=""></span><span><strong>Satispay</strong><small>Copia e apri la colletta</small></span></button>` : ""}
                     ${paypalMeUrl ? `<button class="team-pay-button is-paypal" id="payWithPaypal" type="button" disabled><span class="team-pay-brand">P</span><span><strong>PayPal</strong><small>Importo precompilato</small></span></button>` : ""}
@@ -3043,7 +3043,7 @@ function openTeamPaymentModal() {
         const total = entries.reduce((sum, entry) => sum + entry.summary.remaining, 0);
         const details = entries.map(entry => `${entry.player} ${money(entry.summary.remaining)}`).join(", ");
         const teamName = state.teamCustomization?.shortName || state.team || "Squadra";
-        return { entries, total, description: `${teamName} Â· ${monthLabel} Â· ${details} Â· Totale ${money(total)}` };
+        return { entries, total, description: `${teamName} · ${monthLabel} · ${details} · Totale ${money(total)}` };
     };
     const update = () => {
         const data = paymentData();
@@ -3168,9 +3168,9 @@ function renderPayments() {
                             }">
                                 ${
                                     summary.remaining <= 0
-                                        ? "âœ“ Saldato"
+                                        ? "✓ Saldato"
                                         : summary.paid > 0
-                                            ? "â‚¬ Parziale"
+                                            ? "€ Parziale"
                                             : "! Da saldare"
                                 }
                             </small>
@@ -3217,7 +3217,7 @@ function renderPayments() {
     return `
         <div class="card payment-month-card payment-filter-card">
             <div class="payment-filter-intro">
-                <span class="payment-filter-icon" aria-hidden="true">â–¦</span>
+                <span class="payment-filter-icon" aria-hidden="true">▦</span>
                 <div>
                     <span>PERIODO PAGAMENTI</span>
                     <strong>${rollingPayments ? "Il mese avanza quando tutti hanno pagato o dopo la prima settimana" : "Scegli il mese da consultare"}</strong>
@@ -3268,7 +3268,7 @@ function renderPayments() {
         <div class="payment-summary-grid">
 
             <div class="card payment-summary-card payment-summary-due">
-                <span class="payment-summary-icon">â‚¬</span>
+                <span class="payment-summary-icon">€</span>
                 <div>
                     <small>Dovuto</small>
                     <strong>${money(totalDue)}</strong>
@@ -3276,7 +3276,7 @@ function renderPayments() {
             </div>
 
             <div class="card payment-summary-card payment-summary-paid">
-                <span class="payment-summary-icon">âœ“</span>
+                <span class="payment-summary-icon">✓</span>
                 <div>
                     <small>Versato</small>
                     <strong>${money(totalPaid)}</strong>
@@ -3312,8 +3312,8 @@ function renderPayments() {
 
         ${state.teamCustomization?.satispayUrl || state.teamCustomization?.paypalMeUrl ? `
             <section class="card team-pay-callout">
-                <div><span>PAGAMENTO RAPIDO</span><h2>Paga per una o piÃ¹ persone</h2><p>Lâ€™app calcola il totale e prepara la descrizione completa.</p></div>
-                <button class="btn team-pay-open" id="openTeamPayment" type="button"><span aria-hidden="true">â‚¬</span>Paga ora</button>
+                <div><span>PAGAMENTO RAPIDO</span><h2>Paga per una o più persone</h2><p>L’app calcola il totale e prepara la descrizione completa.</p></div>
+                <button class="btn team-pay-open" id="openTeamPayment" type="button"><span aria-hidden="true">€</span>Paga ora</button>
             </section>
         ` : ""}
 
@@ -3324,14 +3324,14 @@ function renderPayments() {
                 <p>Una panoramica compatta oppure tutte le schede dei giocatori.</p>
             </div>
             <div class="season-report-actions">
-                <button id="exportSeasonImage" class="btn payment-export-button season-report-button" type="button"><span class="export-button-icon" aria-hidden="true">â–¦</span><span class="export-button-copy"><strong>Riepilogo compatto</strong><small>Totali di tutta la rosa</small></span><span aria-hidden="true">â€º</span></button>
-                <button id="exportSeasonDetailedImage" class="btn payment-export-button season-report-button" type="button"><span class="export-button-icon" aria-hidden="true">â˜·</span><span class="export-button-copy"><strong>Schede giocatori</strong><small>Versione dettagliata completa</small></span><span aria-hidden="true">â€º</span></button>
+                <button id="exportSeasonImage" class="btn payment-export-button season-report-button" type="button"><span class="export-button-icon" aria-hidden="true">▦</span><span class="export-button-copy"><strong>Riepilogo compatto</strong><small>Totali di tutta la rosa</small></span><span aria-hidden="true">›</span></button>
+                <button id="exportSeasonDetailedImage" class="btn payment-export-button season-report-button" type="button"><span class="export-button-icon" aria-hidden="true">☷</span><span class="export-button-copy"><strong>Schede giocatori</strong><small>Versione dettagliata completa</small></span><span aria-hidden="true">›</span></button>
             </div>
         </section>
 
         <div class="payment-export-actions payment-month-exports">
-            <button id="exportPaymentsImage" class="btn payment-export-button" type="button"><span class="export-button-icon" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m-4-4 4 4 4-4M5 16v4h14v-4"/></svg></span><span class="export-button-copy"><strong>Tabella completa</strong><small>Tutti i giocatori del mese</small></span><span aria-hidden="true">â€º</span></button>
-            <button id="exportDuePaymentsImage" class="btn payment-export-button" type="button"><span class="export-button-icon" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m-4-4 4 4 4-4M5 16v4h14v-4"/></svg></span><span class="export-button-copy"><strong>Solo da pagare</strong><small>Esclude chi ha saldato</small></span><span aria-hidden="true">â€º</span></button>
+            <button id="exportPaymentsImage" class="btn payment-export-button" type="button"><span class="export-button-icon" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m-4-4 4 4 4-4M5 16v4h14v-4"/></svg></span><span class="export-button-copy"><strong>Tabella completa</strong><small>Tutti i giocatori del mese</small></span><span aria-hidden="true">›</span></button>
+            <button id="exportDuePaymentsImage" class="btn payment-export-button" type="button"><span class="export-button-icon" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m-4-4 4 4 4-4M5 16v4h14v-4"/></svg></span><span class="export-button-copy"><strong>Solo da pagare</strong><small>Esclude chi ha saldato</small></span><span aria-hidden="true">›</span></button>
         </div>
     `;
 }
@@ -3393,7 +3393,7 @@ function createPaymentsExportCanvas(mode = "all") {
 
     const monthLabel = new Date(`${month}-01T12:00:00`)
         .toLocaleDateString("it-IT", { month: "long", year: "numeric" });
-    const title = `${exportMode === "due" ? "Da pagare" : "Pagamenti"} â€” ${monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1)}`;
+    const title = `${exportMode === "due" ? "Da pagare" : "Pagamenti"} — ${monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1)}`;
     const tableWidth = columns.reduce((total, width) => total + width, 0);
     const tableLeft = padding;
 
@@ -3564,14 +3564,14 @@ function openTeamCalendar() {
                 stepsByKey.get(key).push(match);
             });
             const steps = [...stepsByKey.entries()].sort((left, right) => filter === "league-all" ? Number(left[0]) - Number(right[0]) : left[0].localeCompare(right[0]));
-            const labels = steps.map(([key]) => filter === "league-all" ? `${Number(key)}Âª giornata` : `Turno del ${new Date(`${key}T12:00:00`).toLocaleDateString("it-IT", { day: "numeric", month: "long" })}`);
+            const labels = steps.map(([key]) => filter === "league-all" ? `${Number(key)}ª giornata` : `Turno del ${new Date(`${key}T12:00:00`).toLocaleDateString("it-IT", { day: "numeric", month: "long" })}`);
             if (!Number.isInteger(fullViewIndex[filter])) {
                 const nextIndex = steps.findIndex(([, games]) => games.some(game => game.kickoff >= now && game.status !== "played"));
                 fullViewIndex[filter] = nextIndex >= 0 ? nextIndex : Math.max(0, steps.length - 1);
             }
             fullViewIndex[filter] = Math.max(0, Math.min(fullViewIndex[filter], steps.length - 1));
             filtered = steps[fullViewIndex[filter]][1];
-            stepNavigation = `<nav class="team-calendar-round-nav" aria-label="Cambia giornata"><button type="button" data-calendar-step="-1" ${fullViewIndex[filter] === 0 ? "disabled" : ""} aria-label="Giornata precedente">â€¹</button><div><select data-calendar-step-select aria-label="Seleziona giornata">${labels.map((label, index) => `<option value="${index}" ${index === fullViewIndex[filter] ? "selected" : ""}>${escapeHtml(label)}</option>`).join("")}</select><span>${fullViewIndex[filter] + 1} di ${steps.length}</span></div><button type="button" data-calendar-step="1" ${fullViewIndex[filter] === steps.length - 1 ? "disabled" : ""} aria-label="Giornata successiva">â€º</button></nav>`;
+            stepNavigation = `<nav class="team-calendar-round-nav" aria-label="Cambia giornata"><button type="button" data-calendar-step="-1" ${fullViewIndex[filter] === 0 ? "disabled" : ""} aria-label="Giornata precedente">‹</button><div><select data-calendar-step-select aria-label="Seleziona giornata">${labels.map((label, index) => `<option value="${index}" ${index === fullViewIndex[filter] ? "selected" : ""}>${escapeHtml(label)}</option>`).join("")}</select><span>${fullViewIndex[filter] + 1} di ${steps.length}</span></div><button type="button" data-calendar-step="1" ${fullViewIndex[filter] === steps.length - 1 ? "disabled" : ""} aria-label="Giornata successiva">›</button></nav>`;
         }
         if (!filtered.length) {
             list.innerHTML = `<div class="team-calendar-empty"><strong>Nessuna partita disponibile</strong><p>Non risultano gare per questa sezione.</p></div>`;
@@ -3603,15 +3603,15 @@ function openTeamCalendar() {
                 };
                 if (played) return `<article class="team-calendar-match is-played" data-calendar-type="${match.competitionType === "cup" ? "cup" : "league"}">
                     <div class="team-calendar-date"><span>${date.toLocaleDateString("it-IT", { weekday: "short" }).replace(".", "")}</span><strong>${date.getDate()}</strong><small>${date.toLocaleDateString("it-IT", { month: "short" }).replace(".", "")}</small></div>
-                    <div class="team-calendar-copy"><small>${match.competitionType === "cup" ? "Coppa Â· Turno" : `Campionato Â· ${Number(match.round) || "â€”"}Âª giornata`}</small><div class="team-calendar-teams"><div>${teamBadge(homeTeam, home, Number(match.homeId) === 1199590)}<strong>${escapeHtml(home)}</strong></div><em class="is-score">${escapeHtml(match.result || "â€”")}</em><div>${teamBadge(awayTeam, away, Number(match.awayId) === 1199590)}<strong>${escapeHtml(away)}</strong></div></div><span>${escapeHtml(match.place || venue?.name || "Campo da definire")}</span></div>
+                    <div class="team-calendar-copy"><small>${match.competitionType === "cup" ? "Coppa · Turno" : `Campionato · ${Number(match.round) || "—"}ª giornata`}</small><div class="team-calendar-teams"><div>${teamBadge(homeTeam, home, Number(match.homeId) === 1199590)}<strong>${escapeHtml(home)}</strong></div><em class="is-score">${escapeHtml(match.result || "—")}</em><div>${teamBadge(awayTeam, away, Number(match.awayId) === 1199590)}<strong>${escapeHtml(away)}</strong></div></div><span>${escapeHtml(match.place || venue?.name || "Campo da definire")}</span></div>
                     <div class="team-calendar-result"><span>FINALE</span></div>
-                    ${(mapsUrl || matchUrl) ? `<div class="team-calendar-actions">${mapsUrl ? `<a href="${escapeHtml(mapsUrl)}" target="_blank" rel="noopener noreferrer">Apri Maps</a>` : ""}${matchUrl ? `<a href="${escapeHtml(matchUrl)}" target="_blank" rel="noopener noreferrer">Tuttocampo â†—</a>` : ""}</div>` : ""}
+                    ${(mapsUrl || matchUrl) ? `<div class="team-calendar-actions">${mapsUrl ? `<a href="${escapeHtml(mapsUrl)}" target="_blank" rel="noopener noreferrer">Apri Maps</a>` : ""}${matchUrl ? `<a href="${escapeHtml(matchUrl)}" target="_blank" rel="noopener noreferrer">Tuttocampo ↗</a>` : ""}</div>` : ""}
                 </article>`;
                 return `<article class="team-calendar-match" data-calendar-type="${match.competitionType === "cup" ? "cup" : "league"}">
                     <div class="team-calendar-date"><span>${date.toLocaleDateString("it-IT", { weekday: "short" }).replace(".", "")}</span><strong>${date.getDate()}</strong><small>${date.toLocaleDateString("it-IT", { month: "short" }).replace(".", "")}</small></div>
-                    <div class="team-calendar-copy"><small>${match.competitionType === "cup" ? "Coppa Â· Turno" : `Campionato Â· ${Number(match.round) || "â€”"}Âª giornata`}</small><div class="team-calendar-teams"><div>${teamBadge(homeTeam, home, Number(match.homeId) === 1199590)}<strong>${escapeHtml(home)}</strong></div><em>VS</em><div>${teamBadge(awayTeam, away, Number(match.awayId) === 1199590)}<strong>${escapeHtml(away)}</strong></div></div><span>${escapeHtml(match.place || venue?.name || "Campo da definire")}</span></div>
-                    <div class="team-calendar-result"><strong>${escapeHtml(match.time)}</strong><span>${Number(match.round) || "â€”"}Âª G.</span></div>
-                    ${(mapsUrl || matchUrl) ? `<div class="team-calendar-actions">${mapsUrl ? `<a href="${escapeHtml(mapsUrl)}" target="_blank" rel="noopener noreferrer">Apri Maps</a>` : ""}${matchUrl ? `<a href="${escapeHtml(matchUrl)}" target="_blank" rel="noopener noreferrer">Tuttocampo â†—</a>` : ""}</div>` : ""}
+                    <div class="team-calendar-copy"><small>${match.competitionType === "cup" ? "Coppa · Turno" : `Campionato · ${Number(match.round) || "—"}ª giornata`}</small><div class="team-calendar-teams"><div>${teamBadge(homeTeam, home, Number(match.homeId) === 1199590)}<strong>${escapeHtml(home)}</strong></div><em>VS</em><div>${teamBadge(awayTeam, away, Number(match.awayId) === 1199590)}<strong>${escapeHtml(away)}</strong></div></div><span>${escapeHtml(match.place || venue?.name || "Campo da definire")}</span></div>
+                    <div class="team-calendar-result"><strong>${escapeHtml(match.time)}</strong><span>${Number(match.round) || "—"}ª G.</span></div>
+                    ${(mapsUrl || matchUrl) ? `<div class="team-calendar-actions">${mapsUrl ? `<a href="${escapeHtml(mapsUrl)}" target="_blank" rel="noopener noreferrer">Apri Maps</a>` : ""}${matchUrl ? `<a href="${escapeHtml(matchUrl)}" target="_blank" rel="noopener noreferrer">Tuttocampo ↗</a>` : ""}</div>` : ""}
                 </article>`;
             }).join("")}</section>`;
         }).join("");
@@ -3702,10 +3702,10 @@ function exportSeasonDetailedImage() {
         drawTeamLogoOnCanvas(context, padding, 24, 76, 76);
         context.fillStyle = "#ffffff";
         context.font = "800 30px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
-        context.fillText(`Schede giocatori â€” ${state.season}`, padding + 94, 43);
+        context.fillText(`Schede giocatori — ${state.season}`, padding + 94, 43);
         context.fillStyle = "#bcd0e8";
         context.font = "500 15px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
-        context.fillText(`${state.team} Â· aggiornato a ${today.toLocaleDateString("it-IT")}`, padding + 94, 79);
+        context.fillText(`${state.team} · aggiornato a ${today.toLocaleDateString("it-IT")}`, padding + 94, 79);
 
         entries.forEach((entry, index) => {
             const column = index % columns;
@@ -3725,7 +3725,7 @@ function exportSeasonDetailedImage() {
             context.fillText(entry.player, x + 24, y + 31, cardWidth - 48);
             context.fillStyle = entry.remaining > 0 ? "#b4232c" : "#2458b5";
             context.font = "750 13px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
-            context.fillText(entry.remaining > 0 ? `DA SALDARE ${money(entry.remaining)}` : "âœ“ SALDATO", x + 24, y + 59);
+            context.fillText(entry.remaining > 0 ? `DA SALDARE ${money(entry.remaining)}` : "✓ SALDATO", x + 24, y + 59);
             const metrics = [
                 ["QUOTE", money(entry.base)], ["MULTE", money(entry.fines)],
                 ["VERSATO", money(entry.paid)], ["TOTALE", money(entry.total)]
@@ -3741,7 +3741,7 @@ function exportSeasonDetailedImage() {
             });
             context.fillStyle = "#7b8798";
             context.font = "600 12px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
-            context.fillText(`${entry.settled}/${entry.active} mensilitÃ  saldate`, x + 24, y + 155);
+            context.fillText(`${entry.settled}/${entry.active} mensilità saldate`, x + 24, y + 155);
         });
 
         openExportPreview(
@@ -3751,7 +3751,7 @@ function exportSeasonDetailedImage() {
         );
     } catch (error) {
         console.error("Errore export schede stagione:", error);
-        showToast("Errore durante lâ€™esportazione delle schede giocatori");
+        showToast("Errore durante l’esportazione delle schede giocatori");
     }
 }
 
@@ -3814,7 +3814,7 @@ function openSeasonReport(includePlayerPages = true) {
             ${reportHeader("Scheda giocatore")}
             <div class="season-player-hero">${playerPortrait(entry.player)}<div><h2>${escapeHtml(entry.player)}</h2><p>${validBirthday(getBirthday(entry.player)) ? `Nato il ${getBirthday(entry.player).split("-").reverse().join("/")}` : "San Vitale Next Gen"}</p></div><b>#${index + 1}</b></div>
             <div class="season-player-metrics">
-                ${metric("NÂ° multe", entry.finesList.length, "red")}${metric("Totale multe", money(entry.fines), "red")}${metric("Quote", money(entry.base), "green")}${metric("Totale dovuto", money(entry.total), "blue")}${metric("Versato", money(entry.paid), "green")}${metric("Rimanente", money(entry.remaining), entry.remaining > 0 ? "orange" : "green")}
+                ${metric("N° multe", entry.finesList.length, "red")}${metric("Totale multe", money(entry.fines), "red")}${metric("Quote", money(entry.base), "green")}${metric("Totale dovuto", money(entry.total), "blue")}${metric("Versato", money(entry.paid), "green")}${metric("Rimanente", money(entry.remaining), entry.remaining > 0 ? "orange" : "green")}
             </div>
             <h3 class="season-report-section-title">Dettaglio multe</h3>
             <table class="season-report-table season-player-fines"><thead><tr><th>Data</th><th>Descrizione</th><th>Categoria</th><th>Importo</th></tr></thead><tbody>
@@ -3826,10 +3826,10 @@ function openSeasonReport(includePlayerPages = true) {
     openModal(includePlayerPages ? "Riepilogo stagione completo" : "Riepilogo stagione", `
         <div class="season-report-toolbar"><p>${includePlayerPages ? "Anteprima completa" : "Anteprima compatta"}: ${pageCount} pagine</p><button class="btn" id="printSeasonReport" type="button">Salva / stampa PDF</button></div>
         <div class="season-report-document ${includePlayerPages ? "season-report-detailed" : "season-report-compact"}">
-            <section class="season-report-page season-cover-page"><img src="${escapeHtml(getTeamLogo())}" data-team-logo alt="Stemma San Vitale"><h1>Multe <span>SV</span></h1><h2>San Vitale Next Gen</h2><hr><p>Riepilogo stagione</p><strong>${escapeHtml(state.season)}</strong><small>Stessi amici.<br>PiÃ¹ responsabilitÃ .</small><footer>Generato il ${today.toLocaleDateString("it-IT")} <span>Pagina 1 di ${pageCount}</span></footer></section>
+            <section class="season-report-page season-cover-page"><img src="${escapeHtml(getTeamLogo())}" data-team-logo alt="Stemma San Vitale"><h1>Multe <span>SV</span></h1><h2>San Vitale Next Gen</h2><hr><p>Riepilogo stagione</p><strong>${escapeHtml(state.season)}</strong><small>Stessi amici.<br>Più responsabilità.</small><footer>Generato il ${today.toLocaleDateString("it-IT")} <span>Pagina 1 di ${pageCount}</span></footer></section>
             <section class="season-report-page">${reportHeader()}<h2 class="season-report-section-title">Panoramica generale</h2><div class="season-overview-grid">${metric("Quote", money(teamTotals.base), "green")}${metric("Multe", money(teamTotals.fines), "red")}${metric("Totale dovuto", money(teamTotals.total), "blue")}${metric("Totale versato", money(teamTotals.paid), "green")}${metric("Da incassare", money(teamTotals.remaining), "orange")}${metric("Numero multe", totalFinesCount, "purple")}</div><h2 class="season-report-section-title">Andamento mensile</h2><div class="season-month-chart">${monthBars}</div><footer>Multe SV - San Vitale Next Gen <span>Pagina 2 di ${pageCount}</span></footer></section>
             <section class="season-report-page">${reportHeader()}<h2 class="season-report-section-title">Riepilogo pagamenti</h2><table class="season-report-table"><thead><tr><th>#</th><th>Giocatore</th><th>Quote</th><th>Multe</th><th>Totale</th><th>Versato</th><th>Rimanente</th></tr></thead><tbody>${paymentRows}</tbody><tfoot><tr><th colspan="2">Totale squadra</th><th>${money(teamTotals.base)}</th><th>${money(teamTotals.fines)}</th><th>${money(teamTotals.total)}</th><th>${money(teamTotals.paid)}</th><th>${money(teamTotals.remaining)}</th></tr></tfoot></table><footer>Multe SV - San Vitale Next Gen <span>Pagina 3 di ${pageCount}</span></footer></section>
-            <section class="season-report-page">${reportHeader()}<h2 class="season-report-section-title">Classifica generale multe</h2><table class="season-report-table season-ranking-table"><thead><tr><th>#</th><th>Giocatore</th><th>NÂ° multe</th><th>Totale multe</th></tr></thead><tbody>${rankingRows}</tbody></table><footer>Multe SV - San Vitale Next Gen <span>Pagina 4 di ${pageCount}</span></footer></section>
+            <section class="season-report-page">${reportHeader()}<h2 class="season-report-section-title">Classifica generale multe</h2><table class="season-report-table season-ranking-table"><thead><tr><th>#</th><th>Giocatore</th><th>N° multe</th><th>Totale multe</th></tr></thead><tbody>${rankingRows}</tbody></table><footer>Multe SV - San Vitale Next Gen <span>Pagina 4 di ${pageCount}</span></footer></section>
             ${includePlayerPages ? playerPages : ""}
         </div>`);
     document.querySelector("#modalRoot .modal")?.classList.add("season-report-modal");
@@ -3845,9 +3845,9 @@ let disposeExportPreview = null;
 
 async function openExportPreview(canvas, fileName, title) {
     openModal(
-        `${escapeHtml(title)} â€” anteprima`,
+        `${escapeHtml(title)} — anteprima`,
         `<div class="export-preview">
-            <p id="exportStatus" class="muted" role="status">Preparazione immagineâ€¦</p>
+            <p id="exportStatus" class="muted" role="status">Preparazione immagine…</p>
             <div id="exportActions" class="modal-actions" hidden>
                 <button class="btn" id="shareExportImage" type="button" hidden>Condividi / Salva</button>
                 <a class="btn secondary" id="downloadExportImage">Scarica PNG</a>
@@ -3900,7 +3900,7 @@ async function openExportPreview(canvas, fileName, title) {
         } catch (_) { /* Download and image preview remain available. */ }
         status.textContent = canShare
             ? "Immagine pronta. Tocca Condividi / Salva: su iPhone scegli Salva immagine oppure Salva su File."
-            : "Immagine pronta. Scarica il PNG oppure apri lâ€™immagine; su iPhone tienila premuta per salvarla.";
+            : "Immagine pronta. Scarica il PNG oppure apri l’immagine; su iPhone tienila premuta per salvarla.";
         shareButton.hidden = !canShare;
         shareButton.onclick = async () => {
             if (sharing || disposed) return;
@@ -3925,7 +3925,7 @@ async function openExportPreview(canvas, fileName, title) {
     } catch (error) {
         console.error("Errore preparazione PNG:", error);
         if (!disposed && status.isConnected) {
-            status.textContent = "Non Ã¨ stato possibile creare lâ€™immagine. Chiudi lâ€™anteprima e riprova.";
+            status.textContent = "Non è stato possibile creare l’immagine. Chiudi l’anteprima e riprova.";
         }
     } finally {
         // Release the backing store, including when the preview closed mid-encode.
@@ -3964,8 +3964,8 @@ function openPlayerHistoryModal(player) {
     openModal(
         `Scheda giocatore`,
         `
-            <div class="player-profile-hero">${playerPortrait(player)}<div><small>SAN VITALE NEXT GEN</small><h3>${escapeHtml(player)}</h3><p>Stagione ${escapeHtml(state.season)}</p>${validBirthday(getBirthday(player))?'<p>ðŸŽ‚ '+getBirthday(player).split('-').reverse().join('/')+'</p>':''}</div><button class="player-photo-edit-button" id="editSharedPlayerPhoto" type="button" ${navigator.onLine?'':'disabled'} aria-label="Cambia la foto di ${escapeHtml(player)}">ðŸ“·<span>Cambia foto</span></button></div>
-            <div class="player-profile-status">${remainingTotal>0?'Da saldare Â· '+money(remainingTotal):'âœ“ Tutto saldato'}</div>
+            <div class="player-profile-hero">${playerPortrait(player)}<div><small>SAN VITALE NEXT GEN</small><h3>${escapeHtml(player)}</h3><p>Stagione ${escapeHtml(state.season)}</p>${validBirthday(getBirthday(player))?'<p>🎂 '+getBirthday(player).split('-').reverse().join('/')+'</p>':''}</div><button class="player-photo-edit-button" id="editSharedPlayerPhoto" type="button" ${navigator.onLine?'':'disabled'} aria-label="Cambia la foto di ${escapeHtml(player)}">📷<span>Cambia foto</span></button></div>
+            <div class="player-profile-status">${remainingTotal>0?'Da saldare · '+money(remainingTotal):'✓ Tutto saldato'}</div>
             <div class="player-share-controls"><label for="playerShareMonth">Mese da condividere</label><select id="playerShareMonth">${months.map(m=>`<option value="${m}">${escapeHtml(new Date(m+'-01T12:00:00').toLocaleDateString('it-IT',{month:'long',year:'numeric'}))}</option>`).join('')}</select><button class="btn secondary" id="sharePlayerSummary" type="button">Condividi scheda mensile</button></div><div class="player-history-summary">
                 <div><span>Dovuto stagione</span><strong>${money(dueTotal)}</strong></div>
                 <div><span>Versato</span><strong>${money(paidTotal)}</strong></div>
@@ -3973,7 +3973,7 @@ function openPlayerHistoryModal(player) {
             </div>
 
             <section class="player-history-section player-monthly-section">
-            <div class="section-head compact-section-head"><span class="history-section-icon" aria-hidden="true">â–¦</span><div><h3>Situazione mensile</h3><small>Quote, multe e versamenti mese per mese</small></div></div>
+            <div class="section-head compact-section-head"><span class="history-section-icon" aria-hidden="true">▦</span><div><h3>Situazione mensile</h3><small>Quote, multe e versamenti mese per mese</small></div></div>
             <div class="player-history-list">
                 ${months.map(month => {
                     const summary = getPlayerMonthSummary(player, month);
@@ -3981,8 +3981,8 @@ function openPlayerHistoryModal(player) {
                         .toLocaleDateString("it-IT", { month: "long", year: "numeric" });
                     return `
                         <div class="player-history-row">
-                            <div><strong>${escapeHtml(label)}</strong><small>Quote ${money(summary.base)} Â· multe ${money(summary.fines)}</small></div>
-                            <div><small>Versato ${money(summary.paid)}</small><strong class="${summary.remaining > 0 ? "history-due" : "history-ok"}">${summary.remaining > 0 ? `${money(summary.remaining)} da saldare` : "âœ“ Saldato"}</strong></div>
+                            <div><strong>${escapeHtml(label)}</strong><small>Quote ${money(summary.base)} · multe ${money(summary.fines)}</small></div>
+                            <div><small>Versato ${money(summary.paid)}</small><strong class="${summary.remaining > 0 ? "history-due" : "history-ok"}">${summary.remaining > 0 ? `${money(summary.remaining)} da saldare` : "✓ Saldato"}</strong></div>
                         </div>
                     `;
                 }).join("")}
@@ -3994,7 +3994,7 @@ function openPlayerHistoryModal(player) {
             <div class="player-history-list">
                 ${playerFines.length ? playerFines.map(fine => `
                     <div class="player-history-row">
-                        <div><strong>${escapeHtml(fine.type)}</strong><small>${formatDate(fine.date)} Â· ${escapeHtml(fine.category)}</small></div>
+                        <div><strong>${escapeHtml(fine.type)}</strong><small>${formatDate(fine.date)} · ${escapeHtml(fine.category)}</small></div>
                         <strong>${money(fine.amount)}</strong>
                     </div>
                 `).join("") : `<p class="muted small">Nessuna multa registrata.</p>`}
@@ -4178,7 +4178,7 @@ function renderRules() {
                                                     </strong>
 
                                                     <span class="rule-calculation">
-                                                        ${getRuleCalculation(rule) === "per_minute" ? "A minuti" : getRuleCalculation(rule) === "per_piece" ? "A quantitÃ " : getRuleCalculation(rule) === "custom_min" ? "Importo personalizzato" : "Importo fisso"}
+                                                        ${getRuleCalculation(rule) === "per_minute" ? "A minuti" : getRuleCalculation(rule) === "per_piece" ? "A quantità" : getRuleCalculation(rule) === "custom_min" ? "Importo personalizzato" : "Importo fisso"}
                                                     </span>
 
                                                 </div>
@@ -4196,7 +4196,7 @@ function renderRules() {
                                                         data-edit-rule="${rule.id}"
                                                         type="button"
                                                     >
-                                                        âœï¸
+                                                        ✏️
                                                     </button>
 
 
@@ -4205,7 +4205,7 @@ function renderRules() {
                                                         data-delete-rule="${rule.id}"
                                                         type="button"
                                                     >
-                                                        ðŸ—‘ï¸
+                                                        🗑️
                                                     </button>
 
                                                 </div>
@@ -4231,7 +4231,7 @@ function renderRules() {
             `
                 <div class="card empty">
 
-                    Il multario Ã¨ vuoto.
+                    Il multario è vuoto.
 
                 </div>
             `
@@ -4268,12 +4268,12 @@ function openChangeAdminPasswordModal() {
         if (currentPassword === nextPassword) return showToast("Scegli una password diversa da quella attuale.");
         const button = document.getElementById("saveAdminPassword");
         button.disabled = true;
-        button.textContent = "Aggiornamentoâ€¦";
+        button.textContent = "Aggiornamento…";
         const { error: signInError } = await supabaseClient.auth.signInWithPassword({ email: ADMIN_EMAIL, password: currentPassword });
         if (signInError) {
             button.disabled = false;
             button.textContent = "Aggiorna password";
-            showToast("La password attuale non Ã¨ corretta.");
+            showToast("La password attuale non è corretta.");
             return;
         }
         const { error } = await supabaseClient.auth.updateUser({ password: nextPassword });
@@ -4294,7 +4294,7 @@ function renderSettings() {
 
         ${renderBirthdaySettings()}
         <details class="card team-settings-details">
-          <summary><span class="settings-menu-icon" aria-hidden="true">âš™</span><span class="settings-menu-label"><strong>Squadra e stagione</strong><small>Preferenze della squadra</small></span><span class="settings-chevron" aria-hidden="true">âŒ„</span></summary>
+          <summary><span class="settings-menu-icon" aria-hidden="true">⚙</span><span class="settings-menu-label"><strong>Squadra e stagione</strong><small>Preferenze della squadra</small></span><span class="settings-chevron" aria-hidden="true">⌄</span></summary>
           <p class="small muted">La stagione determina i mesi dei pagamenti e i riepiloghi.</p>
           <div class="form">
             <div class="field"><label for="teamName">Nome squadra</label><input id="teamName" type="text" value="${escapeHtml(state.team)}"></div>
@@ -4308,7 +4308,7 @@ function renderSettings() {
         <div class="section-head">
 
             <h2>
-                ðŸ’¾ Dati
+                💾 Dati
             </h2>
 
         </div>
@@ -4316,7 +4316,7 @@ function renderSettings() {
 
         <div class="data-management">
 
-            <details class="card data-section settings-collapse"><summary><span class="settings-menu-icon" aria-hidden="true">â†¥</span><span class="settings-menu-label"><strong>Backup</strong><small>Salva e recupera i tuoi dati</small></span><span class="settings-chevron" aria-hidden="true">âŒ„</span></summary><div class="data-section-heading"><p>Salva o recupera una copia completa dei dati della squadra.</p></div>
+            <details class="card data-section settings-collapse"><summary><span class="settings-menu-icon" aria-hidden="true">↥</span><span class="settings-menu-label"><strong>Backup</strong><small>Salva e recupera i tuoi dati</small></span><span class="settings-chevron" aria-hidden="true">⌄</span></summary><div class="data-section-heading"><p>Salva o recupera una copia completa dei dati della squadra.</p></div>
 
                 <div class="data-action-row">
                     <div>
@@ -4343,26 +4343,26 @@ function renderSettings() {
                 </div>
             </details>
 
-            <details class="card data-section settings-collapse"><summary><span class="settings-menu-icon" aria-hidden="true">â–¦</span><span class="settings-menu-label"><strong>Gestione stagione</strong><small>Quote, calendario e nuova annata</small></span><span class="settings-chevron" aria-hidden="true">âŒ„</span></summary><div class="data-section-heading"><p>Configura la quota mensile e prepara la prossima stagione mantenendo giocatori e Multario.</p></div>
+            <details class="card data-section settings-collapse"><summary><span class="settings-menu-icon" aria-hidden="true">▦</span><span class="settings-menu-label"><strong>Gestione stagione</strong><small>Quote, calendario e nuova annata</small></span><span class="settings-chevron" aria-hidden="true">⌄</span></summary><div class="data-section-heading"><p>Configura la quota mensile e prepara la prossima stagione mantenendo giocatori e Multario.</p></div>
 
                 <div class="season-settings-overview">
                     <div><span>Stagione attiva</span><strong>${escapeHtml(state.season)}</strong></div>
                     <div><span>Quota ordinaria</span><strong>${money(state.seasonConfig?.monthlyBase ?? 5)}</strong></div>
-                    <div><span>Scadenza multe</span><strong>${state.seasonConfig?.paymentMode === "rolling" ? "Mese corrente automatico" : `Mensile Â· giorno ${Math.min(28, Math.max(1, Number(state.seasonConfig?.paymentDueDay ?? 15) || 15))}`}</strong></div>
+                    <div><span>Scadenza multe</span><strong>${state.seasonConfig?.paymentMode === "rolling" ? "Mese corrente automatico" : `Mensile · giorno ${Math.min(28, Math.max(1, Number(state.seasonConfig?.paymentDueDay ?? 15) || 15))}`}</strong></div>
                     <div><span>Archiviate</span><strong>${state.seasonArchives?.length || 0}</strong></div>
                 </div>
 
                 <div class="data-action-row">
                     <div>
                         <strong>Configurazione attuale</strong>
-                        <div class="small muted">Modifica quote e calendari anche a stagione giÃ  iniziata, senza azzerare dati.</div>
+                        <div class="small muted">Modifica quote e calendari anche a stagione già iniziata, senza azzerare dati.</div>
                     </div>
                     <button class="btn secondary" id="editSeasonConfig" type="button">Modifica</button>
                 </div>
 
                 ${LOCAL_CUSTOMIZATION_PREVIEW ? `<div class="data-action-row team-code-preview-row">
                     <div><strong>Configura con codice Tuttocampo</strong><div class="small muted">Prova locale: rileva automaticamente squadra, stemma e competizioni senza modificare i dati online.</div></div>
-                    <div class="team-code-row-actions"><button class="btn secondary" id="refreshAllTeamInfo" type="button">â†» Aggiorna info</button><button class="btn secondary" id="openTeamCodeSetup" type="button">Configura</button></div>
+                    <div class="team-code-row-actions"><button class="btn secondary" id="refreshAllTeamInfo" type="button">↻ Aggiorna info</button><button class="btn secondary" id="openTeamCodeSetup" type="button">Configura</button></div>
                 </div>` : ""}
 
                 <div class="data-action-row">
@@ -4374,14 +4374,14 @@ function renderSettings() {
                 </div>
             </details>
 
-            <details class="card data-section settings-collapse"><summary><span class="settings-menu-icon" aria-hidden="true">ðŸ”</span><span class="settings-menu-label"><strong>Sicurezza Admin</strong><small>Password dellâ€™account amministratore</small></span><span class="settings-chevron" aria-hidden="true">âŒ„</span></summary><div class="data-section-heading"><p>Cambia la password dellâ€™account Admin giÃ  esistente.</p></div>
+            <details class="card data-section settings-collapse"><summary><span class="settings-menu-icon" aria-hidden="true">🔐</span><span class="settings-menu-label"><strong>Sicurezza Admin</strong><small>Password dell’account amministratore</small></span><span class="settings-chevron" aria-hidden="true">⌄</span></summary><div class="data-section-heading"><p>Cambia la password dell’account Admin già esistente.</p></div>
                 <div class="data-action-row">
                     <div><strong>Cambia password</strong><div class="small muted">Richiede la password attuale e una nuova password di almeno 8 caratteri.</div></div>
                     <button class="btn secondary" id="changeAdminPassword" type="button">Modifica</button>
                 </div>
             </details>
 
-            <details class="card data-section settings-collapse data-section-danger"><summary><span class="settings-menu-icon" aria-hidden="true">!</span><span class="settings-menu-label"><strong>Operazioni irreversibili</strong><small>Ripristino e reset dei dati</small></span><span class="settings-chevron" aria-hidden="true">âŒ„</span></summary><div class="data-section-heading"><p>Usale soltanto se sei sicuro: i backup automatici restano disponibili per sicurezza.</p></div>
+            <details class="card data-section settings-collapse data-section-danger"><summary><span class="settings-menu-icon" aria-hidden="true">!</span><span class="settings-menu-label"><strong>Operazioni irreversibili</strong><small>Ripristino e reset dei dati</small></span><span class="settings-chevron" aria-hidden="true">⌄</span></summary><div class="data-section-heading"><p>Usale soltanto se sei sicuro: i backup automatici restano disponibili per sicurezza.</p></div>
 
                 <div class="data-action-row">
                     <div>
@@ -4444,7 +4444,7 @@ function openModal(title, content) {
                         id="closeModal"
                         type="button"
                     >
-                        Ã—
+                        ×
                     </button>
 
                 </div>
@@ -4473,7 +4473,7 @@ function openModal(title, content) {
         .onclick = closeModal;
 
 
-    /* Su iPhone la modale si chiude solo con Ã— o Annulla:        un tocco sui selettori non puÃ² piÃ¹ essere intercettato dallo sfondo. */
+    /* Su iPhone la modale si chiude solo con × o Annulla:        un tocco sui selettori non può più essere intercettato dallo sfondo. */
 
 }
 
@@ -4577,7 +4577,7 @@ function openFineModal(id = null) {
                             <label>DESTINATARI</label>
                             <select id="fineRecipients">
                                 <option value="single">Un giocatore</option>
-                                <option value="multiple">PiÃ¹ giocatori</option>
+                                <option value="multiple">Più giocatori</option>
                                 <option value="team">Tutta la squadra</option>
                             </select>
                         </div>
@@ -4702,7 +4702,7 @@ function openFineModal(id = null) {
                                         }
                                     >
                                         ${escapeHtml(rule.type)}
-                                        Â·
+                                        ·
                                         ${formatRuleAmount(rule)}
                                     </option>
 
@@ -4715,7 +4715,7 @@ function openFineModal(id = null) {
                         value="${CUSTOM_RULE_ID}"
                         ${fine?.custom ? "selected" : ""}
                     >
-                        âœï¸ Multa personalizzata
+                        ✏️ Multa personalizzata
                     </option>
 
                 </select>
@@ -4754,7 +4754,7 @@ function openFineModal(id = null) {
             </div>
 
 
-            <!-- QUANTITÃ€ -->
+            <!-- QUANTITÀ -->
 
             <div
                 class="field"
@@ -4763,7 +4763,7 @@ function openFineModal(id = null) {
             >
 
                 <label id="quantityLabel">
-                    QUANTITÃ€
+                    QUANTITÀ
                 </label>
 
                 <input
@@ -4814,7 +4814,7 @@ function openFineModal(id = null) {
             <div class="field">
 
                 <label>
-                    IMPORTO (â‚¬)
+                    IMPORTO (€)
                 </label>
 
                 <input
@@ -5095,7 +5095,7 @@ function openFineModal(id = null) {
         if (recipientMode === "team") {
             finePlayerContainer.innerHTML = `
                 <div class="recipient-notice" id="teamFinePlayersNotice">
-                    ðŸ‘¥ La multa sarÃ  assegnata automaticamente a tutti i giocatori della rosa.
+                    👥 La multa sarà assegnata automaticamente a tutti i giocatori della rosa.
                 </div>
             `;
         } else if (recipientMode === "multiple") {
@@ -5253,4 +5253,15 @@ function openFineModal(id = null) {
 
         /* =========================
            IMPORTO PER PEZZO
-           =================[Truncated]
+           ========================= */
+
+        if (
+            rule.calculation ===
+            "per_piece"
+        ) {
+
+            quantityField.style.display =
+                "block";
+
+            quantityLabel.textContent =
+                [Truncated]

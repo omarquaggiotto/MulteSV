@@ -61,6 +61,7 @@ const defaultState = {
         paymentDueDay: 15,
         captainFineMultiplier: 1,
         staffFineMultiplier: 1,
+        staffMonthlyFeeExempt: false,
         doubleFineMonths: [],
         monthOverrides: { "08": 10 },
         calendarSources: [
@@ -382,6 +383,7 @@ function loadState() {
                 paymentDueDay: Math.min(28, Math.max(1, Number(savedSeasonConfig.paymentDueDay ?? 15) || 15)),
                 captainFineMultiplier: Math.min(5, Math.max(1, Number(savedSeasonConfig.captainFineMultiplier ?? 1) || 1)),
                 staffFineMultiplier: Math.min(5, Math.max(1, Number(savedSeasonConfig.staffFineMultiplier ?? 1) || 1)),
+                staffMonthlyFeeExempt: savedSeasonConfig.staffMonthlyFeeExempt === true,
                 doubleFineMonths: [...new Set((Array.isArray(savedSeasonConfig.doubleFineMonths) ? savedSeasonConfig.doubleFineMonths : []).map(Number).filter(month => month >= 1 && month <= 12))],
                 monthOverrides: savedSeasonConfig.monthOverrides && typeof savedSeasonConfig.monthOverrides === "object"
                     ? { ...savedSeasonConfig.monthOverrides }
@@ -523,6 +525,7 @@ function normalizeIncomingState(raw) {
         paymentDueDay: Math.min(28, Math.max(1, Number(savedConfig.paymentDueDay ?? 15) || 15)),
         captainFineMultiplier: Math.min(5, Math.max(1, Number(savedConfig.captainFineMultiplier ?? 1) || 1)),
         staffFineMultiplier: Math.min(5, Math.max(1, Number(savedConfig.staffFineMultiplier ?? 1) || 1)),
+        staffMonthlyFeeExempt: savedConfig.staffMonthlyFeeExempt === true,
         doubleFineMonths: [...new Set((Array.isArray(savedConfig.doubleFineMonths) ? savedConfig.doubleFineMonths : []).map(Number).filter(month => month >= 1 && month <= 12))],
         monthOverrides: savedConfig.monthOverrides && typeof savedConfig.monthOverrides === "object" && !Array.isArray(savedConfig.monthOverrides) ? { ...savedConfig.monthOverrides } : { "08": 10 },
         calendarSources: Array.isArray(savedConfig.calendarSources) ? savedConfig.calendarSources.map(source => ({
@@ -1694,7 +1697,7 @@ function getPlayerStartMonth(player) {
 }
 
 function getPlayerMonthBase(player, monthId) {
-    if (getPersonRole(player) === "staff") return 0;
+    if (getPersonRole(player) === "staff" && state.seasonConfig?.staffMonthlyFeeExempt === true) return 0;
     const startMonth = getPlayerStartMonth(player);
     if (monthId < startMonth) return 0;
     if (monthId === startMonth && Object.hasOwn(state.playerEntryFees || {}, player)) {
@@ -4433,6 +4436,7 @@ function renderSettings() {
           <div class="form role-multiplier-form">
             <div class="field"><label for="captainFineMultiplier">Multe capitano</label><select id="captainFineMultiplier">${[1,1.5,2,3].map(value => `<option value="${value}" ${Number(state.seasonConfig?.captainFineMultiplier ?? 1) === value ? "selected" : ""}>${value === 1 ? "Normali" : `× ${value}`}</option>`).join("")}</select></div>
             <div class="field"><label for="staffFineMultiplier">Multe staff</label><select id="staffFineMultiplier">${[1,1.5,2,3].map(value => `<option value="${value}" ${Number(state.seasonConfig?.staffFineMultiplier ?? 1) === value ? "selected" : ""}>${value === 1 ? "Normali" : `× ${value}`}</option>`).join("")}</select></div>
+            <label class="settings-toggle"><input id="staffMonthlyFeeExempt" type="checkbox" ${state.seasonConfig?.staffMonthlyFeeExempt === true ? "checked" : ""}><span><strong>Staff esente dalla quota mensile</strong><small>Disattivata: lo staff paga la quota come i giocatori.</small></span></label>
             <div class="field fine-months-field"><label>Mesi con multe doppie</label><div class="fine-month-grid">${fineMonthLabels.map((label, index) => `<label><input type="checkbox" data-double-fine-month value="${index + 1}" ${doubleFineMonths.has(index + 1) ? "checked" : ""}><span>${label}</span></label>`).join("")}</div><small>In questi mesi ogni nuova multa viene moltiplicata ×2. Si combina con il moltiplicatore del ruolo.</small></div>
             <button class="btn secondary" id="saveRoleMultipliers" type="button">Salva regole multe</button>
           </div>
@@ -6966,6 +6970,7 @@ document
             ...(state.seasonConfig || {}),
             captainFineMultiplier: Math.min(5, Math.max(1, captain)),
             staffFineMultiplier: Math.min(5, Math.max(1, staff)),
+            staffMonthlyFeeExempt: document.getElementById("staffMonthlyFeeExempt")?.checked === true,
             doubleFineMonths: [...document.querySelectorAll("[data-double-fine-month]:checked")].map(input => Number(input.value)).filter(month => month >= 1 && month <= 12)
         };
         saveState();
@@ -7722,6 +7727,7 @@ function openSeasonSetupModal(editCurrent = false) {
                 paymentDueDay,
                 captainFineMultiplier: Number(state.seasonConfig?.captainFineMultiplier ?? 1),
                 staffFineMultiplier: Number(state.seasonConfig?.staffFineMultiplier ?? 1),
+                staffMonthlyFeeExempt: state.seasonConfig?.staffMonthlyFeeExempt === true,
                 doubleFineMonths: [...(state.seasonConfig?.doubleFineMonths || [])],
                 monthOverrides,
                 calendarSources: [
@@ -7767,6 +7773,7 @@ function openSeasonSetupModal(editCurrent = false) {
                 paymentDueDay,
                 captainFineMultiplier: Number(state.seasonConfig?.captainFineMultiplier ?? 1),
                 staffFineMultiplier: Number(state.seasonConfig?.staffFineMultiplier ?? 1),
+                staffMonthlyFeeExempt: state.seasonConfig?.staffMonthlyFeeExempt === true,
                 doubleFineMonths: [...(state.seasonConfig?.doubleFineMonths || [])],
                 monthOverrides,
                 calendarSources: [

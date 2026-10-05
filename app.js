@@ -4356,11 +4356,65 @@ function openChangeAdminPasswordModal() {
     };
 }
 
+let teamInstallPrompt = null;
+window.addEventListener("beforeinstallprompt", event => { event.preventDefault(); teamInstallPrompt = event; });
+
+function teamInviteUrl() {
+    const url = new URL(location.href);
+    url.search = "";
+    url.hash = "";
+    url.searchParams.set("install", "1");
+    return url.href;
+}
+
+async function shareTeamInvite() {
+    if (!requireOnlineAdmin()) return;
+    const url = teamInviteUrl();
+    const payload = { title: state.team, text: `Apri l'app di ${state.team} e segui la guida per installarla.`, url };
+    try {
+        if (navigator.share) await navigator.share(payload);
+        else {
+            await navigator.clipboard.writeText(url);
+            showToast("Link giocatori copiato.");
+        }
+    } catch (error) {
+        if (error?.name !== "AbortError") showToast("Condivisione non riuscita.");
+    }
+}
+
+function showTeamInstallGuide() {
+    if (new URLSearchParams(location.search).get("install") !== "1") return;
+    const standalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+    const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    openModal("Installa l'app della squadra", `
+        <div class="team-install-guide">
+            <div class="team-install-identity"><img src="${escapeHtml(getTeamLogo())}" alt=""><div><strong>${escapeHtml(state.team)}</strong><span>Accesso giocatore · sola lettura</span></div></div>
+            ${standalone ? `<div class="install-ready">✓ L'app è già installata su questo dispositivo.</div>` : `
+            <p>Aggiungila alla schermata Home: resterai collegato direttamente alla squadra.</p>
+            <div class="install-device-steps ${ios ? "is-current" : ""}"><strong>iPhone e iPad</strong><span>1. Tocca <b>Condividi</b> in Safari.</span><span>2. Scegli <b>Aggiungi alla schermata Home</b>.</span><span>3. Conferma con <b>Aggiungi</b>.</span></div>
+            <div class="install-device-steps ${!ios ? "is-current" : ""}"><strong>Android</strong><span>1. Tocca <b>Installa ora</b> oppure il menu del browser.</span><span>2. Scegli <b>Installa app</b> o <b>Aggiungi a schermata Home</b>.</span></div>`}
+            <div class="modal-actions"><button class="btn secondary" id="continueTeamApp" type="button">Continua nell'app</button>${!standalone && !ios ? `<button class="btn" id="installTeamApp" type="button">Installa ora</button>` : ""}</div>
+        </div>`);
+    document.getElementById("continueTeamApp").onclick = () => {
+        const clean = new URL(location.href); clean.searchParams.delete("install"); history.replaceState({}, "", clean.href); closeModal();
+    };
+    document.getElementById("installTeamApp")?.addEventListener("click", async () => {
+        if (!teamInstallPrompt) return showToast("Apri il menu del browser e scegli Installa app.");
+        teamInstallPrompt.prompt(); await teamInstallPrompt.userChoice; teamInstallPrompt = null;
+    });
+}
+
+window.addEventListener("load", () => setTimeout(showTeamInstallGuide, 350));
+
 function renderSettings() {
 
     return `
 
         ${renderBirthdaySettings()}
+        <details class="card team-settings-details">
+          <summary><span class="settings-menu-icon" aria-hidden="true">↗</span><span class="settings-menu-label"><strong>Invita giocatori</strong><small>Link con installazione guidata</small></span><span class="settings-chevron" aria-hidden="true">⌄</span></summary>
+          <div class="data-action-row"><div><strong>Condividi l'app</strong><div class="small muted">Chi apre il link vede subito i passaggi per installare la PWA su iPhone o Android.</div></div><button class="btn secondary" id="shareTeamInvite" type="button">Condividi</button></div>
+        </details>
         <details class="card team-settings-details">
           <summary><span class="settings-menu-icon" aria-hidden="true">×2</span><span class="settings-menu-label"><strong>Moltiplicatori multe</strong><small>Capitano e staff</small></span><span class="settings-chevron" aria-hidden="true">⌄</span></summary>
           <p class="small muted">Si applicano solo alle nuove multe. Gli importi già registrati non vengono modificati.</p>
@@ -6914,6 +6968,7 @@ document
         render();
         showToast("Moltiplicatori aggiornati.");
     });
+    document.getElementById("shareTeamInvite")?.addEventListener("click", shareTeamInvite);
 
 
     /* =========================

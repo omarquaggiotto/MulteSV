@@ -3844,3 +3844,6 @@ body.modal-open::after { visibility: hidden; }
 .season-widget-note strong{font-size:.86rem}
 .season-widget-note span{font-size:.78rem;color:var(--muted)}
 .season-widget-note a{width:max-content;color:var(--primary);font-size:.8rem;font-weight:800;text-decoration:none}
+
+/* Invito squadra e installazione PWA guidata */
+.team-install-guide{display:grid;gap:14px}.team-install-identity{display:flex;align-items:center;gap:13px;padding:14px;border:1px solid var(--border);border-radius:17px;background:var(--surface-2)}.team-install-identity img{width:52px;height:52px;object-fit:contain;flex:0 0 auto}.team-install-identity div{display:grid;gap:3px;min-width:0}.team-install-identity strong{font-size:1rem}.team-install-identity span{font-size:.76rem;color:var(--muted)}.install-device-steps{display:grid;gap:7px;padding:14px;border:1px solid var(--border);border-radius:16px;background:var(--surface-2);opacity:.72}.install-device-steps.is-current{border-color:color-mix(in srgb,var(--primary) 55%,var(--border));background:var(--primary-soft);opacity:1}.install-device-steps strong{color:var(--primary)}.install-device-steps span{font-size:.84rem}.install-ready{padding:14px;border-radius:15px;background:var(--primary-soft);color:var(--primary);font-weight:850}

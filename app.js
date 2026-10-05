@@ -61,6 +61,7 @@ const defaultState = {
         paymentDueDay: 15,
         captainFineMultiplier: 1,
         staffFineMultiplier: 1,
+        doubleFineMonths: [],
         monthOverrides: { "08": 10 },
         calendarSources: [
             { type: "league", name: "Campionato", enabled: true, url: "https://www.tuttocampo.it/Veneto/TerzaCategoria/GironeAVicenza/Squadra/SanVitale1995SqB/1199590/Calendario" },
@@ -381,6 +382,7 @@ function loadState() {
                 paymentDueDay: Math.min(28, Math.max(1, Number(savedSeasonConfig.paymentDueDay ?? 15) || 15)),
                 captainFineMultiplier: Math.min(5, Math.max(1, Number(savedSeasonConfig.captainFineMultiplier ?? 1) || 1)),
                 staffFineMultiplier: Math.min(5, Math.max(1, Number(savedSeasonConfig.staffFineMultiplier ?? 1) || 1)),
+                doubleFineMonths: [...new Set((Array.isArray(savedSeasonConfig.doubleFineMonths) ? savedSeasonConfig.doubleFineMonths : []).map(Number).filter(month => month >= 1 && month <= 12))],
                 monthOverrides: savedSeasonConfig.monthOverrides && typeof savedSeasonConfig.monthOverrides === "object"
                     ? { ...savedSeasonConfig.monthOverrides }
                     : { "08": 10 },
@@ -521,6 +523,7 @@ function normalizeIncomingState(raw) {
         paymentDueDay: Math.min(28, Math.max(1, Number(savedConfig.paymentDueDay ?? 15) || 15)),
         captainFineMultiplier: Math.min(5, Math.max(1, Number(savedConfig.captainFineMultiplier ?? 1) || 1)),
         staffFineMultiplier: Math.min(5, Math.max(1, Number(savedConfig.staffFineMultiplier ?? 1) || 1)),
+        doubleFineMonths: [...new Set((Array.isArray(savedConfig.doubleFineMonths) ? savedConfig.doubleFineMonths : []).map(Number).filter(month => month >= 1 && month <= 12))],
         monthOverrides: savedConfig.monthOverrides && typeof savedConfig.monthOverrides === "object" && !Array.isArray(savedConfig.monthOverrides) ? { ...savedConfig.monthOverrides } : { "08": 10 },
         calendarSources: Array.isArray(savedConfig.calendarSources) ? savedConfig.calendarSources.map(source => ({
             type: source?.type === "cup" ? "cup" : "league",
@@ -1276,8 +1279,11 @@ function getFineMultiplier(name) {
     return 1;
 }
 
-function applyFineMultiplier(amount, name) {
-    const multiplier = getFineMultiplier(name);
+function applyFineMultiplier(amount, name, fineDate = "") {
+    const roleMultiplier = getFineMultiplier(name);
+    const dateMonth = Number(String(fineDate || "").slice(5, 7));
+    const monthMultiplier = (state.seasonConfig?.doubleFineMonths || []).map(Number).includes(dateMonth) ? 2 : 1;
+    const multiplier = roleMultiplier * monthMultiplier;
     return { amount: Math.round((Number(amount) || 0) * multiplier * 100) / 100, multiplier };
 }
 
@@ -4408,42 +4414,38 @@ function showTeamInstallGuide() {
 window.addEventListener("load", () => setTimeout(showTeamInstallGuide, 350));
 
 function renderSettings() {
+    const fineMonthLabels = ["Gen", "Feb", "Mar", "Apr", "Mag", "Giu", "Lug", "Ago", "Set", "Ott", "Nov", "Dic"];
+    const doubleFineMonths = new Set((state.seasonConfig?.doubleFineMonths || []).map(Number));
 
     return `
 
+        <div class="section-head settings-group-heading"><div><span>GESTIONE</span><h2>👥 Squadra</h2><p>Rosa, ruoli e configurazione della squadra.</p></div></div>
         ${renderBirthdaySettings()}
         <details class="card team-settings-details">
-          <summary><span class="settings-menu-icon" aria-hidden="true">↗</span><span class="settings-menu-label"><strong>Invita giocatori</strong><small>Link con installazione guidata</small></span><span class="settings-chevron" aria-hidden="true">⌄</span></summary>
-          <div class="data-action-row"><div><strong>Condividi l'app</strong><div class="small muted">Chi apre il link vede subito i passaggi per installare la PWA su iPhone o Android.</div></div><button class="btn secondary" id="shareTeamInvite" type="button">Condividi</button></div>
+          <summary><span class="settings-menu-icon" aria-hidden="true">⚙</span><span class="settings-menu-label"><strong>Squadra e stagione</strong><small>Preferenze della squadra</small></span><span class="settings-chevron" aria-hidden="true">⌄</span></summary>
+          <p class="small muted">La stagione determina i mesi dei pagamenti e i riepiloghi.</p>
+          <div class="form"><div class="field"><label for="teamName">Nome squadra</label><input id="teamName" type="text" value="${escapeHtml(state.team)}"></div><div class="field"><label for="season">Stagione</label><input id="season" type="text" value="${escapeHtml(state.season)}" placeholder="2026/27"></div><button class="btn secondary" id="saveSettings" type="button">Salva</button></div>
         </details>
+        <div class="section-head settings-group-heading"><div><span>REGOLE</span><h2>⚖️ Regole multe</h2><p>Moltiplicatori legati al ruolo e al periodo.</p></div></div>
         <details class="card team-settings-details">
-          <summary><span class="settings-menu-icon" aria-hidden="true">×2</span><span class="settings-menu-label"><strong>Moltiplicatori multe</strong><small>Capitano e staff</small></span><span class="settings-chevron" aria-hidden="true">⌄</span></summary>
+          <summary><span class="settings-menu-icon" aria-hidden="true">×2</span><span class="settings-menu-label"><strong>Moltiplicatori multe</strong><small>Ruoli e mesi speciali</small></span><span class="settings-chevron" aria-hidden="true">⌄</span></summary>
           <p class="small muted">Si applicano solo alle nuove multe. Gli importi già registrati non vengono modificati.</p>
           <div class="form role-multiplier-form">
             <div class="field"><label for="captainFineMultiplier">Multe capitano</label><select id="captainFineMultiplier">${[1,1.5,2,3].map(value => `<option value="${value}" ${Number(state.seasonConfig?.captainFineMultiplier ?? 1) === value ? "selected" : ""}>${value === 1 ? "Normali" : `× ${value}`}</option>`).join("")}</select></div>
             <div class="field"><label for="staffFineMultiplier">Multe staff</label><select id="staffFineMultiplier">${[1,1.5,2,3].map(value => `<option value="${value}" ${Number(state.seasonConfig?.staffFineMultiplier ?? 1) === value ? "selected" : ""}>${value === 1 ? "Normali" : `× ${value}`}</option>`).join("")}</select></div>
-            <button class="btn secondary" id="saveRoleMultipliers" type="button">Salva moltiplicatori</button>
+            <div class="field fine-months-field"><label>Mesi con multe doppie</label><div class="fine-month-grid">${fineMonthLabels.map((label, index) => `<label><input type="checkbox" data-double-fine-month value="${index + 1}" ${doubleFineMonths.has(index + 1) ? "checked" : ""}><span>${label}</span></label>`).join("")}</div><small>In questi mesi ogni nuova multa viene moltiplicata ×2. Si combina con il moltiplicatore del ruolo.</small></div>
+            <button class="btn secondary" id="saveRoleMultipliers" type="button">Salva regole multe</button>
           </div>
         </details>
+        <div class="section-head settings-group-heading"><div><span>ACCESSI</span><h2>🔐 Condivisione</h2><p>Invita i giocatori con una guida dedicata.</p></div></div>
         <details class="card team-settings-details">
-          <summary><span class="settings-menu-icon" aria-hidden="true">⚙</span><span class="settings-menu-label"><strong>Squadra e stagione</strong><small>Preferenze della squadra</small></span><span class="settings-chevron" aria-hidden="true">⌄</span></summary>
-          <p class="small muted">La stagione determina i mesi dei pagamenti e i riepiloghi.</p>
-          <div class="form">
-            <div class="field"><label for="teamName">Nome squadra</label><input id="teamName" type="text" value="${escapeHtml(state.team)}"></div>
-            <div class="field"><label for="season">Stagione</label><input id="season" type="text" value="${escapeHtml(state.season)}" placeholder="2026/27"></div>
-            <button class="btn secondary" id="saveSettings" type="button">Salva</button>
-          </div>
+          <summary><span class="settings-menu-icon" aria-hidden="true">↗</span><span class="settings-menu-label"><strong>Invita giocatori</strong><small>Link con installazione guidata</small></span><span class="settings-chevron" aria-hidden="true">⌄</span></summary>
+          <div class="data-action-row"><div><strong>Condividi l'app</strong><div class="small muted">Chi apre il link vede subito i passaggi per installare la PWA su iPhone o Android.</div></div><button class="btn secondary" id="shareTeamInvite" type="button">Condividi</button></div>
         </details>
 
         <!-- DATI -->
 
-        <div class="section-head">
-
-            <h2>
-                💾 Dati
-            </h2>
-
-        </div>
+        <div class="section-head settings-group-heading"><div><span>ARCHIVIO</span><h2>💾 Dati</h2><p>Backup, stagione e ripristino.</p></div></div>
 
 
         <div class="data-management">
@@ -5696,7 +5698,7 @@ document
 
             if (isEdit) {
 
-                const adjusted = applyFineMultiplier(customAmount, player);
+                const adjusted = applyFineMultiplier(customAmount, player, date);
 
                 fine.player =
                     player;
@@ -5726,7 +5728,7 @@ document
             } else {
 
                 selectedPlayers.forEach(playerName => {
-                    const adjusted = applyFineMultiplier(customAmount, playerName);
+                    const adjusted = applyFineMultiplier(customAmount, playerName, date);
                     state.fines.push({
                         id: generateId(),
                         date,
@@ -5893,7 +5895,7 @@ document
 
         if (isEdit) {
 
-            const adjusted = applyFineMultiplier(amount, player);
+            const adjusted = applyFineMultiplier(amount, player, date);
 
             fine.player =
                 player;
@@ -5930,7 +5932,7 @@ document
         else {
 
             selectedPlayers.forEach(playerName => {
-                const adjusted = applyFineMultiplier(amount, playerName);
+                const adjusted = applyFineMultiplier(amount, playerName, date);
                 state.fines.push({
                     id: generateId(),
                     date,
@@ -6963,11 +6965,12 @@ document
         state.seasonConfig = {
             ...(state.seasonConfig || {}),
             captainFineMultiplier: Math.min(5, Math.max(1, captain)),
-            staffFineMultiplier: Math.min(5, Math.max(1, staff))
+            staffFineMultiplier: Math.min(5, Math.max(1, staff)),
+            doubleFineMonths: [...document.querySelectorAll("[data-double-fine-month]:checked")].map(input => Number(input.value)).filter(month => month >= 1 && month <= 12)
         };
         saveState();
         render();
-        showToast("Moltiplicatori aggiornati.");
+        showToast("Regole multe aggiornate.");
     });
     document.getElementById("shareTeamInvite")?.addEventListener("click", shareTeamInvite);
 
@@ -7719,6 +7722,7 @@ function openSeasonSetupModal(editCurrent = false) {
                 paymentDueDay,
                 captainFineMultiplier: Number(state.seasonConfig?.captainFineMultiplier ?? 1),
                 staffFineMultiplier: Number(state.seasonConfig?.staffFineMultiplier ?? 1),
+                doubleFineMonths: [...(state.seasonConfig?.doubleFineMonths || [])],
                 monthOverrides,
                 calendarSources: [
                     { type: "league", name: "Campionato", enabled: Boolean(leagueUrl), url: leagueUrl, snapshot: leagueSnapshot, lastCheckedAt: leagueSnapshot ? new Date().toISOString() : "" },
@@ -7763,6 +7767,7 @@ function openSeasonSetupModal(editCurrent = false) {
                 paymentDueDay,
                 captainFineMultiplier: Number(state.seasonConfig?.captainFineMultiplier ?? 1),
                 staffFineMultiplier: Number(state.seasonConfig?.staffFineMultiplier ?? 1),
+                doubleFineMonths: [...(state.seasonConfig?.doubleFineMonths || [])],
                 monthOverrides,
                 calendarSources: [
                     { type: "league", name: "Campionato", enabled: Boolean(leagueUrl), url: leagueUrl, snapshot: leagueSnapshot, lastCheckedAt: leagueSnapshot ? new Date().toISOString() : "" },

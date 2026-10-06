@@ -4549,56 +4549,81 @@ function renderSettings() {
 function setupSettingsNavigation() {
     const page = document.querySelector(".settings-page");
     if (!page) return;
-    const headings = [...page.querySelectorAll(":scope > .settings-group-heading")];
-    if (!headings.length) return;
 
-    const teamSettings = [...page.querySelectorAll(":scope > details")].find(item => item.querySelector("summary strong")?.textContent?.trim() === "Squadra e stagione");
-    const peopleCard = page.querySelector(":scope > .birthday-settings");
-    if (teamSettings && peopleCard) peopleCard.after(teamSettings);
+    const details = [...page.querySelectorAll("details")];
+    const byTitle = title => details.find(item => item.querySelector("summary strong")?.textContent?.trim() === title);
+    const people = page.querySelector(".birthday-settings");
+    const team = byTitle("Squadra e stagione");
+    const fines = byTitle("Moltiplicatori multe");
+    const invite = byTitle("Invita giocatori");
+    const security = byTitle("Sicurezza Admin");
+    const backup = byTitle("Backup");
+    const history = byTitle("Cronologia e backup online");
+    const season = byTitle("Gestione stagione");
+    const danger = byTitle("Operazioni irreversibili");
+    const staffFeeToggle = document.getElementById("staffMonthlyFeeExempt")?.closest(".settings-toggle");
 
-    const sections = [];
-    headings.forEach((heading, index) => {
-        const panel = document.createElement("section");
-        panel.className = "settings-area";
-        panel.dataset.settingsArea = String(index);
-        panel.hidden = true;
-        const back = document.createElement("button");
-        back.type = "button";
-        back.className = "settings-area-back";
-        back.textContent = "‹ Tutte le impostazioni";
-        panel.append(back);
-        page.insertBefore(panel, heading);
-        let node = heading;
-        while (node && (node === heading || !node.classList?.contains("settings-group-heading"))) {
-            const next = node.nextSibling;
-            panel.append(node);
-            node = next;
-        }
-        sections.push(panel);
+    page.querySelectorAll(".settings-group-heading").forEach(node => node.remove());
+    page.querySelectorAll(":scope > .data-management").forEach(wrapper => {
+        [...wrapper.children].forEach(child => page.append(child));
+        wrapper.remove();
     });
 
-    const meta = [
-        { icon: "👥", title: "Squadra e persone", note: "Rosa, ruoli e dati della squadra" },
-        { icon: "⚖️", title: "Quote e multe", note: "Moltiplicatori e mesi speciali" },
-        { icon: "🔐", title: "Accessi", note: "Inviti e sicurezza Admin" },
-        { icon: "💾", title: "Stagione e dati", note: "Calendari, backup e ripristino" }
+    const definitions = [
+        { key: "team", icon: "🛡️", title: "Squadra", note: "Nome, identità, colori e stemma", nodes: [team] },
+        { key: "people", icon: "👥", title: "Persone", note: "Giocatori, staff, capitano e compleanni", nodes: [people] },
+        { key: "fines", icon: "⚖️", title: "Multe", note: "Multario, categorie e moltiplicatori", nodes: [fines] },
+        { key: "payments", icon: "💶", title: "Quote e pagamenti", note: "Quote, scadenze ed esenzioni", nodes: [] },
+        { key: "season", icon: "🗓️", title: "Calendario e stagione", note: "Widget, competizioni e nuova stagione", nodes: [season] },
+        { key: "access", icon: "🔐", title: "Accessi", note: "Inviti giocatori e sicurezza Admin", nodes: [invite, security] },
+        { key: "data", icon: "💾", title: "Backup e reset", note: "Copie, cronologia e ripristino", nodes: [backup, history, danger] }
     ];
+
+    const panels = definitions.map(definition => {
+        const panel = document.createElement("section");
+        panel.className = "settings-area";
+        panel.dataset.settingsArea = definition.key;
+        panel.hidden = true;
+        panel.innerHTML = `<button type="button" class="settings-area-back">‹ Tutte le impostazioni</button><div class="section-head settings-area-title"><div><span>IMPOSTAZIONI</span><h2>${definition.icon} ${definition.title}</h2><p>${definition.note}</p></div></div>`;
+        definition.nodes.filter(Boolean).forEach(node => panel.append(node));
+        page.append(panel);
+        return panel;
+    });
+
+    const finesPanel = panels.find(panel => panel.dataset.settingsArea === "fines");
+    finesPanel?.insertAdjacentHTML("beforeend", `<section class="card settings-shortcut"><div><strong>Multario e categorie</strong><p class="small muted">Crea e modifica regole, categorie, importi e tipo di calcolo.</p></div><button class="btn secondary" type="button" data-open-multario>Apri Multario</button></section>`);
+
+    const paymentsPanel = panels.find(panel => panel.dataset.settingsArea === "payments");
+    const paymentCard = document.createElement("section");
+    paymentCard.className = "card settings-payment-card";
+    paymentCard.innerHTML = `<div class="section-title"><h2>Quote e scadenze</h2></div><p class="small muted">Gestisci la quota base, il giorno di riferimento e il comportamento dello staff.</p>`;
+    if (staffFeeToggle) paymentCard.append(staffFeeToggle);
+    paymentCard.insertAdjacentHTML("beforeend", `<div class="settings-payment-actions"><button class="btn secondary" type="button" data-save-payment-preferences>Salva preferenze</button><button class="btn" type="button" data-open-payment-config>Configura quote e scadenze</button></div>`);
+    paymentsPanel?.append(paymentCard);
+
     const hub = document.createElement("section");
     hub.className = "settings-hub";
-    hub.innerHTML = `<div class="settings-hub-intro"><span>IMPOSTAZIONI</span><h2>Cosa vuoi configurare?</h2><p>Scegli un’area. Ogni pagina contiene solo le opzioni collegate.</p></div><div class="settings-hub-grid">${sections.map((_, index) => `<button type="button" data-settings-open="${index}"><span>${meta[index]?.icon || "⚙"}</span><strong>${meta[index]?.title || "Impostazioni"}</strong><small>${meta[index]?.note || "Configura questa area"}</small><b>›</b></button>`).join("")}</div>`;
+    hub.innerHTML = `<div class="settings-hub-intro"><span>IMPOSTAZIONI</span><h2>Cosa vuoi configurare?</h2><p>Ogni funzione è raccolta nella sua area.</p></div><div class="settings-hub-grid">${definitions.map(item => `<button type="button" data-settings-open="${item.key}"><span>${item.icon}</span><strong>${item.title}</strong><small>${item.note}</small><b>›</b></button>`).join("")}</div>`;
     page.prepend(hub);
 
     const showHub = () => {
-        sections.forEach(panel => { panel.hidden = true; });
+        panels.forEach(panel => { panel.hidden = true; });
         hub.hidden = false;
         window.scrollTo({ top: 0, behavior: "smooth" });
     };
     hub.querySelectorAll("[data-settings-open]").forEach(button => button.addEventListener("click", () => {
         hub.hidden = true;
-        sections.forEach((panel, index) => { panel.hidden = index !== Number(button.dataset.settingsOpen); });
+        panels.forEach(panel => { panel.hidden = panel.dataset.settingsArea !== button.dataset.settingsOpen; });
         window.scrollTo({ top: 0, behavior: "smooth" });
     }));
-    sections.forEach(panel => panel.querySelector(".settings-area-back")?.addEventListener("click", showHub));
+    panels.forEach(panel => panel.querySelector(".settings-area-back")?.addEventListener("click", showHub));
+    page.querySelector("[data-open-multario]")?.addEventListener("click", () => { currentPage = "rules"; render(); });
+    page.querySelector("[data-open-payment-config]")?.addEventListener("click", () => document.getElementById("editSeasonConfig")?.click());
+    page.querySelector("[data-save-payment-preferences]")?.addEventListener("click", () => {
+        state.seasonConfig = { ...state.seasonConfig, staffMonthlyFeeExempt: document.getElementById("staffMonthlyFeeExempt")?.checked === true };
+        saveState();
+        showToast("Preferenze pagamenti salvate.");
+    });
 }
 
 

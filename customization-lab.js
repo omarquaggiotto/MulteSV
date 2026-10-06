@@ -214,7 +214,8 @@
         const page = document.querySelector(".settings-page");
         if (!page) return;
         page.querySelector(".team-settings-details")?.remove();
-        page.insertAdjacentHTML("afterbegin", `<section class="card customization-entry"><div><span>ASPETTO</span><h2>Personalizza squadra</h2><p>Nome, colori, collegamento dello stemma e contenuti dei report.</p></div><button class="btn" id="openCustomizationLab" type="button">Configura</button></section>`);
+        const teamArea = page.querySelector('[data-settings-area="team"]') || page;
+        teamArea.insertAdjacentHTML(teamArea === page ? "afterbegin" : "beforeend", `<section class="card customization-entry"><div><span>ASPETTO</span><h2>Personalizza squadra</h2><p>Nome, colori, collegamento dello stemma e contenuti dei report.</p></div><button class="btn" id="openCustomizationLab" type="button">Configura</button></section>`);
         document.getElementById("openCustomizationLab").onclick = openCustomizationLab;
     }
 

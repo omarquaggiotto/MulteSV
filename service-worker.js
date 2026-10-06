@@ -1,4 +1,4 @@
-const CACHE_NAME = "multesv-settings-semantic-20261006-19";
+const CACHE_NAME = "multesv-settings-navigation-20261006-20";
 const APP_SHELL = [
     "./widget-reader.mjs",
     "./sports-widgets.mjs",

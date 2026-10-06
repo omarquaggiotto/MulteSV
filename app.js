@@ -4482,19 +4482,17 @@ function renderSettings() {
                 </div>
             </details>
 
-            <details class="card data-section settings-collapse"><summary><span class="settings-menu-icon" aria-hidden="true">▦</span><span class="settings-menu-label"><strong>Gestione stagione</strong><small>Quote, calendario e nuova annata</small></span><span class="settings-chevron" aria-hidden="true">⌄</span></summary><div class="data-section-heading"><p>Configura la quota mensile e prepara la prossima stagione mantenendo giocatori e Multario.</p></div>
+            <details class="card data-section settings-collapse"><summary><span class="settings-menu-icon" aria-hidden="true">▦</span><span class="settings-menu-label"><strong>Gestione stagione</strong><small>Calendari, widget e nuova annata</small></span><span class="settings-chevron" aria-hidden="true">⌄</span></summary><div class="data-section-heading"><p>Gestisci calendari e competizioni oppure prepara la prossima stagione mantenendo giocatori e Multario.</p></div>
 
                 <div class="season-settings-overview">
                     <div><span>Stagione attiva</span><strong>${escapeHtml(state.season)}</strong></div>
-                    <div><span>Quota ordinaria</span><strong>${money(state.seasonConfig?.monthlyBase ?? 5)}</strong></div>
-                    <div><span>Scadenza multe</span><strong>${state.seasonConfig?.paymentMode === "rolling" ? "Mese corrente automatico" : `Mensile · giorno ${Math.min(28, Math.max(1, Number(state.seasonConfig?.paymentDueDay ?? 15) || 15))}`}</strong></div>
                     <div><span>Archiviate</span><strong>${state.seasonArchives?.length || 0}</strong></div>
                 </div>
 
                 <div class="data-action-row">
                     <div>
                         <strong>Configurazione attuale</strong>
-                        <div class="small muted">Modifica quote e calendari anche a stagione già iniziata, senza azzerare dati.</div>
+                        <div class="small muted">Aggiorna stemma, codice squadra, campionato e coppa senza azzerare dati.</div>
                     </div>
                     <button class="btn secondary" id="editSeasonConfig" type="button">Modifica</button>
                 </div>
@@ -4570,13 +4568,14 @@ function setupSettingsNavigation() {
     });
 
     const definitions = [
-        { key: "team", icon: "🛡️", title: "Squadra", note: "Nome, identità, colori e stemma", nodes: [team] },
-        { key: "people", icon: "👥", title: "Persone", note: "Giocatori, staff, capitano e compleanni", nodes: [people] },
-        { key: "fines", icon: "⚖️", title: "Multe", note: "Multario, categorie e moltiplicatori", nodes: [fines] },
-        { key: "payments", icon: "💶", title: "Quote e pagamenti", note: "Quote, scadenze ed esenzioni", nodes: [] },
-        { key: "season", icon: "🗓️", title: "Calendario e stagione", note: "Widget, competizioni e nuova stagione", nodes: [season] },
-        { key: "access", icon: "🔐", title: "Accessi", note: "Inviti giocatori e sicurezza Admin", nodes: [invite, security] },
-        { key: "data", icon: "💾", title: "Backup e reset", note: "Copie, cronologia e ripristino", nodes: [backup, history, danger] }
+        { key: "team", group: "Squadra", icon: "🛡️", title: "Squadra", note: "Nome, identità, colori e stemma", nodes: [team] },
+        { key: "people", group: "Squadra", icon: "👥", title: "Persone", note: "Giocatori, staff, capitano e compleanni", nodes: [people] },
+        { key: "fines", group: "Gestione", icon: "⚖️", title: "Multe", note: "Multario, categorie e moltiplicatori", nodes: [fines] },
+        { key: "payments", group: "Gestione", icon: "💶", title: "Quote e pagamenti", note: "Quote, scadenze ed esenzioni", nodes: [] },
+        { key: "season", group: "Gestione", icon: "🗓️", title: "Calendario e stagione", note: "Widget, competizioni e nuova stagione", nodes: [season] },
+        { key: "access", group: "Sicurezza e dati", icon: "🔐", title: "Accessi", note: "Inviti giocatori e sicurezza Admin", nodes: [invite, security] },
+        { key: "exports", group: "Sicurezza e dati", icon: "📄", title: "Esportazioni", note: "Contenuti e aspetto dei report", nodes: [] },
+        { key: "data", group: "Sicurezza e dati", icon: "💾", title: "Backup e reset", note: "Copie, cronologia e ripristino", nodes: [backup, history, danger] }
     ];
 
     const panels = definitions.map(definition => {
@@ -4584,27 +4583,29 @@ function setupSettingsNavigation() {
         panel.className = "settings-area";
         panel.dataset.settingsArea = definition.key;
         panel.hidden = true;
-        panel.innerHTML = `<button type="button" class="settings-area-back">‹ Tutte le impostazioni</button><div class="section-head settings-area-title"><div><span>IMPOSTAZIONI</span><h2>${definition.icon} ${definition.title}</h2><p>${definition.note}</p></div></div>`;
+        panel.innerHTML = `<button type="button" class="settings-area-back"><span aria-hidden="true">‹</span><b>Tutte le impostazioni</b></button><div class="section-head settings-area-title"><div><span>IMPOSTAZIONI</span><h2>${definition.icon} ${definition.title}</h2><p>${definition.note}</p></div></div>`;
         definition.nodes.filter(Boolean).forEach(node => panel.append(node));
         page.append(panel);
         return panel;
     });
 
     const finesPanel = panels.find(panel => panel.dataset.settingsArea === "fines");
-    finesPanel?.insertAdjacentHTML("beforeend", `<section class="card settings-shortcut"><div><strong>Multario e categorie</strong><p class="small muted">Crea e modifica regole, categorie, importi e tipo di calcolo.</p></div><button class="btn secondary" type="button" data-open-multario>Apri Multario</button></section>`);
+    finesPanel?.insertAdjacentHTML("beforeend", `<section class="card settings-shortcut"><div class="settings-card-heading"><span class="settings-card-icon" aria-hidden="true">📋</span><div><span>MULTARIO</span><h3>Regole e categorie</h3><p>Crea e modifica descrizioni, importi e tipo di calcolo.</p></div></div><button class="btn secondary" type="button" data-open-multario>Apri Multario</button></section>`);
 
     const paymentsPanel = panels.find(panel => panel.dataset.settingsArea === "payments");
     const paymentCard = document.createElement("section");
     paymentCard.className = "card settings-payment-card";
-    paymentCard.innerHTML = `<div class="section-title"><h2>Quote e scadenze</h2></div><p class="small muted">Gestisci la quota base, il giorno di riferimento e il comportamento dello staff.</p>`;
+    paymentCard.innerHTML = `<div class="settings-card-heading"><span class="settings-card-icon" aria-hidden="true">€</span><div><span>GESTIONE ECONOMICA</span><h3>Quote e scadenze</h3><p>Configura importi, mese di riferimento e comportamento dello staff.</p></div></div>`;
     if (staffFeeToggle) paymentCard.append(staffFeeToggle);
     paymentCard.insertAdjacentHTML("beforeend", `<div class="settings-payment-actions"><button class="btn secondary" type="button" data-save-payment-preferences>Salva preferenze</button><button class="btn" type="button" data-open-payment-config>Configura quote e scadenze</button></div>`);
     paymentsPanel?.append(paymentCard);
 
     const hub = document.createElement("section");
     hub.className = "settings-hub";
-    hub.innerHTML = `<div class="settings-hub-intro"><span>IMPOSTAZIONI</span><h2>Cosa vuoi configurare?</h2><p>Ogni funzione è raccolta nella sua area.</p></div><div class="settings-hub-grid">${definitions.map(item => `<button type="button" data-settings-open="${item.key}"><span>${item.icon}</span><strong>${item.title}</strong><small>${item.note}</small><b>›</b></button>`).join("")}</div>`;
+    const menuGroups = ["Squadra", "Gestione", "Sicurezza e dati"];
+    hub.innerHTML = `<div class="settings-hub-intro"><span>IMPOSTAZIONI</span><h2>Gestisci la squadra</h2><p>Scegli l’argomento: ogni voce apre una pagina dedicata.</p></div><div class="settings-menu-groups">${menuGroups.map(group => `<section class="settings-menu-group"><h3>${group}</h3><div class="settings-menu-list">${definitions.filter(item => item.group === group).map(item => `<button type="button" data-settings-open="${item.key}"><span>${item.icon}</span><span class="settings-menu-copy"><strong>${item.title}</strong><small>${item.note}</small></span><b aria-hidden="true">›</b></button>`).join("")}</div></section>`).join("")}</div>`;
     page.prepend(hub);
+    window.scrollTo(0, 0);
 
     const showHub = () => {
         panels.forEach(panel => { panel.hidden = true; });
@@ -4616,13 +4617,75 @@ function setupSettingsNavigation() {
         panels.forEach(panel => { panel.hidden = panel.dataset.settingsArea !== button.dataset.settingsOpen; });
         window.scrollTo({ top: 0, behavior: "smooth" });
     }));
-    panels.forEach(panel => panel.querySelector(".settings-area-back")?.addEventListener("click", showHub));
+    panels.forEach(panel => {
+        panel.querySelector(".settings-area-back")?.addEventListener("click", showHub);
+        const sections = [...panel.querySelectorAll(":scope > details")];
+        sections.forEach(section => {
+            section.open = true;
+            section.classList.add("settings-static-section");
+            section.querySelector("summary")?.addEventListener("click", event => event.preventDefault());
+        });
+        if (sections.length > 1) {
+            const areaTitle = panel.querySelector(".settings-area-title h2")?.textContent?.trim() || "Impostazioni";
+            const submenu = document.createElement("div");
+            submenu.className = "settings-submenu settings-menu-list";
+            submenu.innerHTML = sections.map((section, index) => {
+                const summary = section.querySelector("summary");
+                const icon = summary?.querySelector(".settings-menu-icon")?.textContent?.trim() || "›";
+                const title = summary?.querySelector("strong")?.textContent?.trim() || `Sezione ${index + 1}`;
+                const note = summary?.querySelector("small")?.textContent?.trim() || "Apri configurazione";
+                return `<button type="button" data-settings-subopen="${index}"><span>${escapeHtml(icon)}</span><span class="settings-menu-copy"><strong>${escapeHtml(title)}</strong><small>${escapeHtml(note)}</small></span><b aria-hidden="true">›</b></button>`;
+            }).join("");
+            const subBack = document.createElement("button");
+            subBack.type = "button";
+            subBack.className = "settings-subarea-back";
+            subBack.innerHTML = `<span aria-hidden="true">‹</span><b>${escapeHtml(areaTitle)}</b>`;
+            subBack.hidden = true;
+            panel.querySelector(".settings-area-title")?.after(subBack, submenu);
+            sections.forEach(section => { section.hidden = true; });
+            const showSubmenu = () => {
+                sections.forEach(section => { section.hidden = true; });
+                submenu.hidden = false;
+                subBack.hidden = true;
+                window.scrollTo({ top: 0, behavior: "smooth" });
+            };
+            submenu.querySelectorAll("[data-settings-subopen]").forEach(button => button.addEventListener("click", () => {
+                submenu.hidden = true;
+                subBack.hidden = false;
+                sections.forEach((section, index) => { section.hidden = index !== Number(button.dataset.settingsSubopen); });
+                window.scrollTo({ top: 0, behavior: "smooth" });
+            }));
+            subBack.addEventListener("click", showSubmenu);
+        }
+    });
     page.querySelector("[data-open-multario]")?.addEventListener("click", () => { currentPage = "rules"; render(); });
-    page.querySelector("[data-open-payment-config]")?.addEventListener("click", () => document.getElementById("editSeasonConfig")?.click());
+    page.querySelector("[data-open-payment-config]")?.addEventListener("click", () => openSeasonSetupModal(true, "payments"));
     page.querySelector("[data-save-payment-preferences]")?.addEventListener("click", () => {
         state.seasonConfig = { ...state.seasonConfig, staffMonthlyFeeExempt: document.getElementById("staffMonthlyFeeExempt")?.checked === true };
         saveState();
         showToast("Preferenze pagamenti salvate.");
+    });
+    ["captainFineMultiplier", "staffFineMultiplier"].forEach(id => {
+        const select = document.getElementById(id);
+        if (!select || select.nextElementSibling?.classList.contains("multiplier-segmented")) return;
+        select.classList.add("native-control-hidden");
+        const choices = document.createElement("div");
+        choices.className = "multiplier-segmented";
+        const renderChoices = () => {
+            choices.querySelectorAll("button").forEach(button => {
+                const active = button.dataset.value === select.value;
+                button.classList.toggle("is-active", active);
+                button.setAttribute("aria-pressed", String(active));
+            });
+        };
+        choices.innerHTML = [...select.options].map(option => `<button type="button" data-value="${escapeHtml(option.value)}">${escapeHtml(option.textContent.trim())}</button>`).join("");
+        choices.querySelectorAll("button").forEach(button => button.addEventListener("click", () => {
+            select.value = button.dataset.value;
+            select.dispatchEvent(new Event("change", { bubbles: true }));
+            renderChoices();
+        }));
+        select.after(choices);
+        renderChoices();
     });
 }
 
@@ -4654,6 +4717,15 @@ function openModal(title, content) {
             <div class="modal">
 
                 <div class="row">
+
+                    <button
+                        class="modal-back-control"
+                        id="modalBack"
+                        type="button"
+                        aria-label="Torna alla pagina precedente"
+                    >
+                        <span aria-hidden="true">‹</span> Indietro
+                    </button>
 
                     <h2>
                         ${title}
@@ -4689,6 +4761,12 @@ function openModal(title, content) {
     document
         .getElementById(
             "closeModal"
+        )
+        .onclick = closeModal;
+
+    document
+        .getElementById(
+            "modalBack"
         )
         .onclick = closeModal;
 
@@ -7121,7 +7199,7 @@ document
 
     document
         .getElementById("editSeasonConfig")
-        ?.addEventListener("click", () => openSeasonSetupModal(true));
+        ?.addEventListener("click", () => openSeasonSetupModal(true, "season"));
     document
         .getElementById("openTeamCodeSetup")
         ?.addEventListener("click", openTeamCodeSetupModal);
@@ -7531,7 +7609,7 @@ async function openGeneralTeamRefreshModal() {
     }
 }
 
-function openSeasonSetupModal(editCurrent = false) {
+function openSeasonSetupModal(editCurrent = false, focus = "all") {
     if (!requireOnlineAdmin()) return;
 
     const nextSeason = editCurrent ? state.season : getSuggestedNextSeason();
@@ -7553,7 +7631,7 @@ function openSeasonSetupModal(editCurrent = false) {
         return `<option value="${month}">${getMonthName(month)}</option>`;
     }).join("");
 
-    openModal(editCurrent ? "Modifica stagione" : "Prepara nuova stagione", `
+    openModal(editCurrent ? (focus === "payments" ? "Quote e pagamenti" : focus === "season" ? "Calendario e stagione" : "Modifica stagione") : "Prepara nuova stagione", `
         <div class="season-setup">
             <section class="season-setup-hero">
                 <span>${editCurrent ? "CONFIGURAZIONE ATTUALE" : "PASSAGGIO GUIDATO"}</span>
@@ -7623,6 +7701,27 @@ function openSeasonSetupModal(editCurrent = false) {
     `);
 
     document.querySelector("#modalRoot .modal")?.classList.add("season-setup-modal");
+    const focusedPayments = editCurrent && focus === "payments";
+    const focusedSeason = editCurrent && focus === "season";
+    if (focusedPayments || focusedSeason) {
+        const hide = selector => document.querySelector(selector)?.setAttribute("hidden", "");
+        const hideField = id => document.getElementById(id)?.closest(".field")?.setAttribute("hidden", "");
+        const hero = document.querySelector(".season-setup-hero");
+        if (focusedPayments) {
+            hideField("newSeasonName");
+            hide(".season-logo-editor"); hide(".season-calendar-discovery"); hide(".season-calendar-sources"); hide(".season-change-summary");
+            const title = document.querySelector(".season-setup-section .season-setup-title div"); if (title) title.innerHTML = `<h3>Quote della squadra</h3><p>Importi, periodo e regole di scadenza.</p>`;
+            if (hero) hero.innerHTML = `<span>QUOTE E PAGAMENTI</span><h3>Configurazione economica</h3><p>Importi, mesi, scadenze e modalità di pagamento. Multe e versamenti registrati non vengono modificati.</p>`;
+            const confirmLabel = document.querySelector(".season-confirm span"); if (confirmLabel) confirmLabel.textContent = "Ho controllato quote, mesi e scadenze.";
+        }
+        if (focusedSeason) {
+            ["newSeasonFeeMode","newSeasonBase","newSeasonEntryFee","newSeasonStartMonth","newSeasonEndMonth","newSeasonPaymentMode","newSeasonPaymentDueDay"].forEach(hideField);
+            hide(".season-rates-section"); hide(".season-change-summary");
+            const title = document.querySelector(".season-setup-section .season-setup-title div"); if (title) title.innerHTML = `<h3>Squadra e competizioni</h3><p>Stemma, codice Tuttocampo, campionato e coppa.</p>`;
+            if (hero) hero.innerHTML = `<span>CALENDARIO E STAGIONE</span><h3>Stagione attiva</h3><p>Stemma, codice squadra, campionato e coppa. I dati economici restano invariati.</p>`;
+            const confirmLabel = document.querySelector(".season-confirm span"); if (confirmLabel) confirmLabel.textContent = "Ho controllato squadra e calendari.";
+        }
+    }
     document.getElementById("keepAllPlayers")?.addEventListener("click", () => document.querySelectorAll("[data-keep-player]").forEach(input => { input.checked = true; }));
     document.getElementById("clearKeptPlayers")?.addEventListener("click", () => document.querySelectorAll("[data-keep-player]").forEach(input => { input.checked = false; }));
     const seasonInput = document.getElementById("newSeasonName");
@@ -7645,7 +7744,7 @@ function openSeasonSetupModal(editCurrent = false) {
     pendingTeamLogo = getTeamLogo();
     startMonthInput.value = String(paymentStartMonth);
     endMonthInput.value = String(paymentEndMonth);
-    const updatePaymentMode = () => { paymentDueDayField.hidden = paymentModeInput.value === "rolling"; };
+    const updatePaymentMode = () => { paymentDueDayField.hidden = focusedSeason || paymentModeInput.value === "rolling"; };
     paymentModeInput.addEventListener("change", updatePaymentMode);
     updatePaymentMode();
     const updatePreview = () => {

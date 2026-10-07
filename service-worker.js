@@ -1,4 +1,4 @@
-const CACHE_NAME = "multesv-lightweight-shell-20261007-29-solid-migration";
+const CACHE_NAME = "multesv-lightweight-shell-20261007-30-forced-migration";
 const APP_SHELL = [
     "./widget-reader.mjs",
     "./sports-widgets.mjs",
@@ -25,6 +25,7 @@ self.addEventListener("install", event => {
     event.waitUntil(
         caches.open(CACHE_NAME)
             .then(cache => cache.addAll(APP_SHELL.map(url => new Request(url, { cache: "reload" }))))
+            .then(() => self.skipWaiting())
     );
 });
 
@@ -42,6 +43,8 @@ self.addEventListener("activate", event => {
                     .map(key => caches.delete(key))
             ))
             .then(() => self.clients.claim())
+            .then(() => self.clients.matchAll({ type: "window" }))
+            .then(clients => Promise.all(clients.map(client => client.navigate(client.url))))
     );
 });
 

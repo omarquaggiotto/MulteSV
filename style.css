@@ -3190,6 +3190,10 @@ body.modal-open .global-fab {
     color: var(--red);
 }
 
+.overdue-person { min-width: 0; display: grid; gap: 3px; }
+.overdue-person > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; }
+.overdue-person > small { color: var(--muted); font-size: 10px; line-height: 1.25; }
+
 .player-history-summary {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));

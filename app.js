@@ -2449,7 +2449,7 @@ function renderHome() {
                                     <div class="overdue-list">
                                         ${overduePlayers.slice(0, showAllOverduePlayers ? overduePlayers.length : 5).map(item => `
                                             <div class="overdue-row">
-                                                <span>${escapeHtml(item.player)}</span>
+                                                <div class="overdue-person"><span>${escapeHtml(item.player)}</span>${item.summary.arrears > 0 ? `<small>Include ${money(item.summary.arrears)} di arretrati</small>` : ""}</div>
                                                 <strong>${money(item.summary.remaining)}</strong>
                                             </div>
                                         `).join("")}

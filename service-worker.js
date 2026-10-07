@@ -1,4 +1,4 @@
-const CACHE_NAME = "multesv-lightweight-shell-20261007-28-migration-screen";
+const CACHE_NAME = "multesv-lightweight-shell-20261007-29-solid-migration";
 const APP_SHELL = [
     "./widget-reader.mjs",
     "./sports-widgets.mjs",

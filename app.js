@@ -8156,7 +8156,6 @@ if ("serviceWorker" in navigator) {
         navigator.serviceWorker
             .register("./service-worker.js")
             .then(registration => {
-                console.log("Multe SV: Service Worker attivo");
                 watchServiceWorkerUpdate(registration);
                 registration.update().catch(() => {});
             })

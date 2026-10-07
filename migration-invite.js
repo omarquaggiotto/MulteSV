@@ -1,5 +1,5 @@
 (function () {
-    const NEW_APP_URL = "https://multesquadra.pages.dev/?configured=1&install=1&migration=sv&invite=_BJvgyQPkH8pdiTrVPQjCUtaRpcwVjwQrFz6nzihphM";
+    const NEW_APP_URL = "https://multesquadra.pages.dev/?configured=1&install=1&migration=sv&pwaName=Multe+SV&pwaTeam=San+Vitale+1995+Sq.+B&pwaLogo=https%3A%2F%2Fb2-content.tuttocampo.it%2FTeams%2FOriginal%2F1199590.png%3Fv%3D2&pwaColor=%232563eb&appTeam=5ec10f47-f401-4207-9c61-97bc2642e87a&invite=_BJvgyQPkH8pdiTrVPQjCUtaRpcwVjwQrFz6nzihphM";
 
     async function copyNewAppLink() {
         try {

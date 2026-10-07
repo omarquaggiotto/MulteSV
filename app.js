@@ -31,6 +31,7 @@ let isAdmin = LOCAL_CUSTOMIZATION_PREVIEW;
 let cloudReady = false;
 let cloudChannel = null;
 let cloudSaveTimer = null;
+let lastCloudStateSnapshot = "";
 let modalScrollPosition = 0;
 let pendingCalendarImports = { league: null, cup: null };
 let pendingTeamLogo = null;
@@ -948,6 +949,8 @@ function queueCloudSave() {
 
     clearTimeout(cloudSaveTimer);
     cloudSaveTimer = setTimeout(async () => {
+        const snapshot = JSON.stringify(state);
+        if (snapshot === lastCloudStateSnapshot) return;
         const { error } = await supabaseClient
             .from("app_state")
             .upsert(
@@ -958,8 +961,8 @@ function queueCloudSave() {
         if (error) {
             console.error("Errore salvataggio online:", error);
             showToast("Salvataggio online non riuscito.");
-        }
-    }, 250);
+        } else lastCloudStateSnapshot = snapshot;
+    }, 600);
 }
 
 function applyAccessMode() {
@@ -1049,6 +1052,7 @@ async function loadCloudState() {
 
     if (data?.data && Object.keys(data.data).length) {
         state = normalizeIncomingState(data.data);
+        lastCloudStateSnapshot = JSON.stringify(state);
         saveLocalState();
         return true;
     }
@@ -1071,7 +1075,11 @@ function subscribeToCloud() {
             },
             payload => {
                 if (!payload.new?.data) return;
-                state = normalizeIncomingState(payload.new.data);
+                const incomingState = normalizeIncomingState(payload.new.data);
+                const incomingSnapshot = JSON.stringify(incomingState);
+                if (incomingSnapshot === lastCloudStateSnapshot) return;
+                state = incomingState;
+                lastCloudStateSnapshot = incomingSnapshot;
                 saveLocalState();
                 render();
                 showToast("Dati aggiornati online.");

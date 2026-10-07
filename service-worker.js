@@ -1,4 +1,4 @@
-const CACHE_NAME = "multesv-arrears-detail-20261007-24";
+const CACHE_NAME = "multesv-lightweight-shell-20261007-25";
 const APP_SHELL = [
     "./widget-reader.mjs",
     "./sports-widgets.mjs",
@@ -17,8 +17,7 @@ const APP_SHELL = [
     "./manifest.json",
     "./assets/multe-sv-icon.png",
     "./san-vitale-logo.png",
-    "./san-vitale-background.png",
-    "./vendor/html2canvas.min.js"
+    "./san-vitale-background.png"
 ];
 
 self.addEventListener("install", event => {

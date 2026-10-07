@@ -1,4 +1,4 @@
-const CACHE_NAME = "multesv-staff-table-import-20261006-22";
+const CACHE_NAME = "multesv-fine-select-fix-20261007-23";
 const APP_SHELL = [
     "./widget-reader.mjs",
     "./sports-widgets.mjs",

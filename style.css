@@ -2715,16 +2715,20 @@ body.modal-open .global-fab {
     }
 
     .modal .fine-select-trigger::after {
-        content: "âŒ„";
+        content: "";
         flex: 0 0 auto;
         margin-left: 12px;
-        color: var(--muted);
-        font-size: 22px;
-        line-height: 1;
+        width: 8px;
+        height: 8px;
+        border-right: 2px solid var(--muted);
+        border-bottom: 2px solid var(--muted);
+        transform: rotate(45deg) translateY(-2px);
+        transform-origin: center;
+        transition: transform .18s ease;
     }
 
     .modal .fine-select-trigger[aria-expanded="true"]::after {
-        transform: rotate(180deg);
+        transform: rotate(225deg) translate(-2px, -2px);
     }
 
     .modal .fine-select-menu {

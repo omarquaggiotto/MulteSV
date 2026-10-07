@@ -33,5 +33,8 @@
     }
 
     document.getElementById("openMigrationGuide")?.addEventListener("click", openMigrationGuide);
+    document.getElementById("dismissMigrationBanner")?.addEventListener("click", () => {
+        document.getElementById("migrationBanner")?.remove();
+    });
     window.MULTE_SV_NEW_APP_URL = NEW_APP_URL;
 })();
